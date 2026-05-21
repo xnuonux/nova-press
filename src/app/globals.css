@@ -47,7 +47,7 @@
     max-width: 65ch;
     font-family: var(--font-serif);
     font-size: 18px;
-    line-height: 1.75;
+    line-height: 1.7;
     color: var(--lunari-fg-primary);
   }
 
@@ -62,12 +62,19 @@
     color: var(--lunari-fg-muted);
   }
 
+  /* reading view drops to 16px on phones, per the design system */
+  @media (max-width: 640px) {
+    .prose-nova {
+      font-size: 16px;
+    }
+  }
+
   .editor-canvas {
     max-width: 720px;
     margin: 0 auto;
     padding: 96px 24px 128px;
     font-family: var(--font-serif);
     font-size: 18px;
-    line-height: 1.75;
+    line-height: 1.7;
   }
 }
