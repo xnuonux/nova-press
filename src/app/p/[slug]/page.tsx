@@ -6,16 +6,19 @@ interface ReadingPageProps {
 }
 
 const PLACEHOLDER = {
-  title: "the thing nobody says about ai writing tools",
+  title: "the thing nobody says about AI writing tools",
   byline: "dom · founder, lunari",
   publishedAt: "may 21, 2026",
-  readingTime: "4 min",
+  readingTime: "3 min",
   paragraphs: [
-    "most ai writing tools auto-complete you out of your own voice. you start with something sharp, hit tab once, and ten sentences later you're reading a corporate ghost of the thing you actually meant. that's the wedge nova bites.",
-    "the way to fix it isn't smarter completions. it's smaller ones. one sentence at a time. one suggestion at a time. the AI as a sparring partner, never the closer.",
-    "the model has to read you back to you. your last twenty paragraphs. your last ten essays. your function-word fingerprint, your sentence rhythm, your em-dash policy. then it speaks in that grammar.",
-    "and the published piece. that's the artifact. that's what people share. that's what their friends screenshot and send to other friends. if the editor is the kitchen, the published page is the plating. press treats the plate like the product.",
-    "everything else is plumbing.",
+    "every AI writing tool sells the same promise. write faster. and every one of them keeps it the same way ... by writing for you instead of with you. you press tab, the screen fills, and somewhere in the fill your voice goes quiet. you ship the draft anyway. it reads fine. that's the problem. fine is how a sentence sounds when nobody was home when it got written.",
+    "your voice was never your vocabulary. it's the small wrong choices. the comma you keep that the rule says to cut. the sentence that runs long because the thought ran long. the word you reach for at 2am that you'd never reach for at noon. a model trained on everyone reads all of that as error and sands it off. what's left is smooth, and smooth is nobody.",
+    "nova works from the other end. before it writes a word, it reads you ... your last essays, your last paragraphs, the rhythm of how you actually move down a page. it builds a fingerprint and stays inside it. when it hands you a line, the line sounds like you on a good day, not like the internet on an average one.",
+    "and it knows when to shut up. one sentence at a time, never the whole paragraph. it offers, you decide, it never closes the deal for you. catch a real flow and it goes dark, because the worst thing a writing tool can do is talk while you're talking.",
+    "then there's the part the other tools forget. the published piece. the thing a stranger actually opens. that's the artifact. that's what gets screenshotted at midnight and sent to one friend with no caption. if the editor is the kitchen, this page is the plate. most tools hand you the food on a napkin.",
+    "so the page is the product too. wide margins. type that was chosen, not defaulted. a column you can sit inside for an hour without your eyes giving out. it should feel like print, because print spent four hundred years earning that feeling ... a screen can have it too, if anyone bothers to try.",
+    "that's the whole thing. write in your voice. keep your voice. publish something that looks like you meant it. everything nova does underneath that is plumbing, and plumbing works best when you can't see it.",
+    "the tools that write for you will keep getting faster. let them. speed was never the hard part. sounding like yourself on the page, every time ... that's the part worth building.",
   ],
 };
 
