@@ -14,7 +14,7 @@ export default function LandingPage() {
         </div>
 
         <h1
-          className="font-serif text-5xl font-medium tracking-tight md:text-6xl"
+          className="font-mono text-5xl font-medium tracking-tight md:text-6xl"
           style={{ color: "var(--lunari-fg-primary)" }}
         >
           nova press

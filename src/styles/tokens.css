@@ -15,7 +15,8 @@
   /* fonts (assigned by next/font in layout.tsx) */
   --font-serif: "IBM Plex Serif", Georgia, serif;
   --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --font-mono: "Iosevka", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    monospace;
 
   /* motion */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);

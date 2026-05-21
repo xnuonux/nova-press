@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Serif, Inter } from "next/font/google";
+import "@fontsource/iosevka/latin-400.css";
+import "@fontsource/iosevka/latin-500.css";
 import "./globals.css";
 
 const plexSerif = IBM_Plex_Serif({
