@@ -1,73 +1,88 @@
 "use client";
 
 /**
- * plate shell ... the editor canvas client component.
+ * plate shell ... the editor canvas.
  *
- * week 1: minimal plate boot with BasicBlocksKit + BasicMarksKit. autosave
- * chip is local-state only (no supabase write yet).
- * week 1 later (T-012): autosave hits POST /api/revisions.
- * week 2: AIKit, SlashKit, CopilotKit, bubble toolbar, ghost text.
+ * plate v49, booted with basic blocks (headings, paragraph, blockquote,
+ * divider) and basic marks (bold, italic, underline, strike, code). nothing
+ * else yet ... AIKit, SlashKit, CopilotKit, the bubble toolbar and ghost text
+ * are week 2.
  *
- * NOTE: plate's API surface changes between minor versions. if the import
- * paths below break on your installed version, run `pnpm why @udecode/plate`
- * to see what landed and adjust. claude code should read the plate-editor
- * skill before touching this file.
+ * autosave is local-state only for now. T-012 wires it to POST /api/revisions.
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+
+import {
+  BlockquotePlugin,
+  BoldPlugin,
+  CodePlugin,
+  H1Plugin,
+  H2Plugin,
+  H3Plugin,
+  HorizontalRulePlugin,
+  ItalicPlugin,
+  StrikethroughPlugin,
+  UnderlinePlugin,
+} from "@platejs/basic-nodes/react";
+import type { Value } from "platejs";
+import {
+  ParagraphPlugin,
+  Plate,
+  PlateContent,
+  usePlateEditor,
+} from "platejs/react";
+
+import { countWords } from "@/lib/utils";
+
+import { plateText } from "./plate-text";
+import { useAutosave } from "./use-autosave";
 
 interface PlateShellProps {
   initialTitle?: string;
 }
 
-type AutosaveState = "idle" | "saving" | "saved";
+const initialValue: Value = [{ type: "p", children: [{ text: "" }] }];
+
+// week 1 plugin set ... basic blocks + basic marks, and nothing else.
+const editorPlugins = [
+  ParagraphPlugin,
+  H1Plugin,
+  H2Plugin,
+  H3Plugin,
+  BlockquotePlugin,
+  HorizontalRulePlugin,
+  BoldPlugin,
+  ItalicPlugin,
+  UnderlinePlugin,
+  StrikethroughPlugin,
+  CodePlugin,
+];
 
 export function PlateShell({ initialTitle = "untitled" }: PlateShellProps) {
   const [title, setTitle] = useState(initialTitle);
-  const [body, setBody] = useState("");
-  const [autosave, setAutosave] = useState<AutosaveState>("idle");
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [wordCount, setWordCount] = useState(0);
+  const [revision, setRevision] = useState(0);
 
-  // autosave stub: 1500ms debounce → marks saved.
-  // real version hits POST /api/revisions and writes a row.
-  useEffect(() => {
-    if (!body && !title) return;
-    setAutosave("saving");
-    const timer = setTimeout(() => {
-      setAutosave("saved");
-      setLastSavedAt(Date.now());
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [body, title]);
+  const editor = usePlateEditor({
+    plugins: editorPlugins,
+    value: initialValue,
+  });
 
-  // tick once a second to refresh the "saved Xs ago" label
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // autosave watches the title and a body revision counter
+  const { savedLabel } = useAutosave(
+    useMemo(() => ({ title, revision }), [title, revision]),
+  );
 
-  const savedLabel = useMemo(() => {
-    if (autosave === "saving") return "saving...";
-    if (autosave === "idle" || !lastSavedAt) return "ready";
-    const seconds = Math.max(0, Math.floor((now - lastSavedAt) / 1000));
-    if (seconds < 5) return "saved just now";
-    if (seconds < 60) return `saved ${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    return `saved ${minutes}m ago`;
-  }, [autosave, lastSavedAt, now]);
+  const handleValueChange = useCallback(() => {
+    setRevision((current) => current + 1);
+    setWordCount(countWords(plateText(editor.children)));
+  }, [editor]);
 
-  const wordCount = useMemo(() => {
-    return body.trim() ? body.trim().split(/\s+/).length : 0;
-  }, [body]);
-
-  const onTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-  }, []);
-
-  const onBodyChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setBody(e.target.value);
-  }, []);
+  const handleTitleChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setTitle(event.target.value),
+    [],
+  );
 
   return (
     <div className="flex h-full flex-1 flex-col">
@@ -78,7 +93,7 @@ export function PlateShell({ initialTitle = "untitled" }: PlateShellProps) {
         <input
           type="text"
           value={title}
-          onChange={onTitleChange}
+          onChange={handleTitleChange}
           aria-label="piece title"
           className="bg-transparent font-serif text-lg outline-none"
           style={{ color: "var(--lunari-fg-primary)" }}
@@ -91,20 +106,16 @@ export function PlateShell({ initialTitle = "untitled" }: PlateShellProps) {
         </span>
       </header>
 
-      <div className="editor-canvas flex-1">
-        <textarea
-          value={body}
-          onChange={onBodyChange}
-          placeholder="start anywhere. nova is reading along."
-          aria-label="piece body"
-          className="block w-full resize-none bg-transparent font-serif outline-none"
-          style={{
-            color: "var(--lunari-fg-primary)",
-            fontSize: 18,
-            lineHeight: 1.75,
-            minHeight: "60vh",
-          }}
-        />
+      <div className="flex-1 overflow-y-auto">
+        <div className="editor-canvas">
+          <Plate editor={editor} onValueChange={handleValueChange}>
+            <PlateContent
+              className="min-h-[60vh] outline-none"
+              placeholder="start anywhere. nova is reading along."
+              aria-label="piece body"
+            />
+          </Plate>
+        </div>
       </div>
 
       <footer
@@ -117,8 +128,11 @@ export function PlateShell({ initialTitle = "untitled" }: PlateShellProps) {
         <span className="tabular-nums">
           {wordCount} {wordCount === 1 ? "word" : "words"}
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em]">
-          plate boots in week 1 (T-011) ... textarea stub for now
+        <span
+          className="font-mono uppercase tracking-[0.22em]"
+          style={{ color: "var(--lunari-fg-subtle)" }}
+        >
+          draft
         </span>
       </footer>
     </div>
