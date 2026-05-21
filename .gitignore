@@ -1,0 +1,58 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+.pnp.cjs
+.yarn/install-state.gz
+
+# build output
+.next
+out
+dist
+build
+*.tsbuildinfo
+next-env.d.ts
+
+# env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# claude local
+.claude/settings.local.json
+CLAUDE.local.md
+
+# voice corpus (added later by dom, never committed)
+docs/voice-corpus.md
+docs/voice-corpus/
+
+# private (never committed, per CLAUDE.md invariants)
+/private
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+
+# os
+.DS_Store
+Thumbs.db
+
+# test coverage
+coverage
+.vitest
+
+# misc
+*.log
+.cache
+.turbo

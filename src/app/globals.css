@@ -1,0 +1,73 @@
+@import "../styles/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: var(--lunari-bg-deep);
+    color: var(--lunari-fg-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--lunari-bg-deep);
+    color: var(--lunari-fg-primary);
+  }
+
+  ::selection {
+    background: var(--nova-accent-soft);
+    color: var(--lunari-fg-primary);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--nova-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .prose-nova {
+    max-width: 65ch;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.75;
+    color: var(--lunari-fg-primary);
+  }
+
+  .prose-nova p {
+    margin-top: 0;
+    margin-bottom: 1.25em;
+  }
+
+  .prose-nova p:first-of-type {
+    font-size: 22px;
+    line-height: 1.6;
+    color: var(--lunari-fg-muted);
+  }
+
+  .editor-canvas {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 96px 24px 128px;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.75;
+  }
+}

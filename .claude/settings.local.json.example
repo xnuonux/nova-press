@@ -1,0 +1,6 @@
+{
+  "// note": "rename this file to settings.local.json. it's gitignored. put any personal overrides here.",
+  "permissions": {
+    "allow": []
+  }
+}
