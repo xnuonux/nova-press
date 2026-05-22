@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Serif, Inter } from "next/font/google";
 import "@fontsource/iosevka/latin-400.css";
 import "@fontsource/iosevka/latin-500.css";
@@ -27,6 +27,9 @@ export const metadata: Metadata = {
     description: "the writing studio where AI matches your voice, not the other way around.",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
   themeColor: "#0a0a0f",
 };
 
