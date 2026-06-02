@@ -6,6 +6,24 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type State = "idle" | "sending" | "sent" | "error";
 
+// map supabase auth error wording to nova-voice strings. supabase error
+// messages are not a stable api surface (sentence-cased, period-
+// terminated, can leak rate-limit windows + signup-allowlist state) so
+// we never render error.message raw.
+function novaVoiceErrorFor(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("rate limit") || m.includes("for security purposes")) {
+    return "too many tries ... wait a minute and try again.";
+  }
+  if (m.includes("invalid") && m.includes("email")) {
+    return "that email doesn't look right.";
+  }
+  if (m.includes("signups not allowed")) {
+    return "signups are paused right now.";
+  }
+  return "something broke on our end ... try again in a sec.";
+}
+
 export function LoginForm({ next }: { next?: string }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<State>("idle");
@@ -24,8 +42,11 @@ export function LoginForm({ next }: { next?: string }) {
     });
 
     if (error) {
+      // raw error stays in the console for debugging until sentry lands.
+      // user only sees the voice-mapped version.
+      console.error("[signin-with-otp-failed]", error);
       setState("error");
-      setErrorMessage(error.message);
+      setErrorMessage(novaVoiceErrorFor(error.message));
       return;
     }
     setState("sent");
@@ -60,7 +81,7 @@ export function LoginForm({ next }: { next?: string }) {
         {state === "sending" ? "sending..." : "send the link"}
       </button>
       {state === "error" && errorMessage ? (
-        <p className="text-destructive text-sm">that didn&apos;t work ... {errorMessage}</p>
+        <p className="text-destructive text-sm">{errorMessage}</p>
       ) : null}
     </form>
   );

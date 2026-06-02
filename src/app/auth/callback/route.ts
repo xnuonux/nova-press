@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { ensureNovaUserProfile } from "@/lib/auth/ensure-user-profile";
+import { sanitizeNextPath } from "@/lib/auth/sanitize-next";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // magic-link callback. supabase redirects here with ?code=... after the
@@ -10,7 +11,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = sanitizeNext(searchParams.get("next"));
+  const next = sanitizeNextPath(searchParams.get("next"));
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
@@ -26,18 +27,13 @@ export async function GET(request: NextRequest) {
   // ensure nova's row in the shared user_profiles. no-op if it exists
   // (lunari user signing into nova, repeat nova logins, etc.). a failure
   // here is not fatal for the session ... user is logged in regardless.
-  // sentry will catch the throw once wired in chunk 5.
+  // log so the failure is grep-able in vercel logs until sentry lands in
+  // chunk 5. layout-level idempotent backfill is a deliberate follow-up.
   try {
     await ensureNovaUserProfile(data.session.user.id);
-  } catch {
-    // swallowed on purpose ... see comment above.
+  } catch (err) {
+    console.error("[ensure-profile-failed]", data.session.user.id, err);
   }
 
   return NextResponse.redirect(`${origin}${next ?? "/library"}`);
-}
-
-function sanitizeNext(next: string | null): string | undefined {
-  if (!next) return undefined;
-  if (next.startsWith("/") && !next.startsWith("//")) return next;
-  return undefined;
 }

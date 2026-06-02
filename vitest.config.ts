@@ -12,6 +12,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // `server-only` is a next.js build-time guard that throws if
+      // imported into a client bundle. vitest doesn't run a real next
+      // bundler, so alias it to an empty stub for tests.
+      "server-only": fileURLToPath(new URL("./test/stubs/server-only.ts", import.meta.url)),
     },
   },
 });
