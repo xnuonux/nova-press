@@ -30,7 +30,7 @@ export default function LandingPage() {
 
         <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <Link
-            href="/editor"
+            href="/library"
             className="inline-flex h-11 items-center justify-center rounded-md px-6 font-sans text-sm font-medium transition-colors"
             style={{
               background: "var(--nova-accent)",

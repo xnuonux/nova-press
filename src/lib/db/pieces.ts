@@ -22,6 +22,14 @@ export type PieceListItem = Pick<
 >;
 
 export type Piece = Database["public"]["Tables"]["np_pieces"]["Row"];
+type NpPiecesJson = Database["public"]["Tables"]["np_pieces"]["Row"]["body"];
+
+export interface PieceContentUpdate {
+  title: string;
+  body: NpPiecesJson;
+  word_count: number;
+  excerpt: string;
+}
 
 // list a user's pieces for the library view. RLS gates auth.uid() = user_id
 // so we don't pass user_id explicitly. archived pieces are hidden by
@@ -67,4 +75,33 @@ export async function getPieceById(client: ServerClient, id: string): Promise<Pi
     throw new Error(`failed to fetch np_pieces row: ${error.message}`);
   }
   return (data as Piece | null) ?? null;
+}
+
+// persist editor content back to a piece. RLS scopes the write to the
+// caller's rows via .eq("id"), so the owner check is enforced by postgres,
+// not by us passing user_id. word_count + excerpt are derived server-side
+// (never trusted from the client) before this is called. both nova-owned
+// autosave timestamps are stamped here ... the tg_set_updated_at trigger
+// handles updated_at separately.
+export async function savePieceContent(
+  client: ServerClient,
+  id: string,
+  update: PieceContentUpdate,
+): Promise<void> {
+  const typed = client as unknown as TypedClient;
+  const nowIso = new Date().toISOString();
+  const { error } = await typed
+    .from("np_pieces")
+    .update({
+      title: update.title,
+      body: update.body,
+      word_count: update.word_count,
+      excerpt: update.excerpt,
+      last_autosaved_at: nowIso,
+      last_edited_at: nowIso,
+    })
+    .eq("id", id);
+  if (error) {
+    throw new Error(`failed to save np_pieces content: ${error.message}`);
+  }
 }

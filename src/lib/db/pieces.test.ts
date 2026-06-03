@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createDraftPiece, getPieceById, listPiecesForUser } from "./pieces";
+import { createDraftPiece, getPieceById, listPiecesForUser, savePieceContent } from "./pieces";
 
 type ServerClient = Parameters<typeof listPiecesForUser>[0];
 
@@ -152,5 +152,56 @@ describe("getPieceById", () => {
   it("throws when the client returns an error", async () => {
     const { client } = makeGetMock(null, { message: "nope" });
     await expect(getPieceById(client, "any")).rejects.toThrow(/nope/);
+  });
+});
+
+function makeUpdateMock(error: unknown = null) {
+  const eq = vi.fn().mockResolvedValue({ error });
+  const update = vi.fn(() => ({ eq }));
+  const from = vi.fn(() => ({ update }));
+  return {
+    client: { from } as unknown as ServerClient,
+    from,
+    update,
+    eq,
+  };
+}
+
+const sampleUpdate = {
+  title: "a title",
+  body: [{ type: "p", children: [{ text: "hi" }] }],
+  word_count: 1,
+  excerpt: "hi",
+};
+
+describe("savePieceContent", () => {
+  it("updates the np_pieces table", async () => {
+    const { client, from } = makeUpdateMock();
+    await savePieceContent(client, "piece-uuid", sampleUpdate);
+    expect(from).toHaveBeenCalledWith("np_pieces");
+  });
+
+  it("writes title, body, word_count, excerpt plus both autosave timestamps", async () => {
+    const { client, update } = makeUpdateMock();
+    await savePieceContent(client, "piece-uuid", sampleUpdate);
+    expect(update).toHaveBeenCalledTimes(1);
+    const payload = (update.mock.calls[0] as unknown as [Record<string, unknown>])[0];
+    expect(payload.title).toBe("a title");
+    expect(payload.body).toEqual(sampleUpdate.body);
+    expect(payload.word_count).toBe(1);
+    expect(payload.excerpt).toBe("hi");
+    expect(typeof payload.last_autosaved_at).toBe("string");
+    expect(typeof payload.last_edited_at).toBe("string");
+  });
+
+  it("scopes the update to the piece id (RLS gates user_id)", async () => {
+    const { client, eq } = makeUpdateMock();
+    await savePieceContent(client, "piece-uuid", sampleUpdate);
+    expect(eq).toHaveBeenCalledWith("id", "piece-uuid");
+  });
+
+  it("throws when the client returns an error", async () => {
+    const { client } = makeUpdateMock({ message: "denied" });
+    await expect(savePieceContent(client, "piece-uuid", sampleUpdate)).rejects.toThrow(/denied/);
   });
 });

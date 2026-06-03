@@ -1,14 +1,15 @@
 /**
  * autosave for the writing room.
  *
- * week 1: local-state only. the debounce and the chip states are real, but
- * nothing leaves the browser yet. T-012 swaps the timeout body for a POST to
- * /api/revisions ... the hook shape stays the same.
+ * watches a trigger value, debounces 1500ms, then calls onSave and reflects
+ * the real result in the chip label. the next edit after a failed save
+ * re-triggers the debounce, so a transient failure self-heals as the writer
+ * keeps typing.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export type AutosaveState = "idle" | "saving" | "saved";
+export type AutosaveState = "idle" | "saving" | "saved" | "error";
 
 const DEBOUNCE_MS = 1500;
 
@@ -21,6 +22,7 @@ export function formatSavedLabel(
   now: number,
 ): string {
   if (state === "saving") return "saving...";
+  if (state === "error") return "couldn't save";
   if (state === "idle" || lastSavedAt === null) return "ready";
   const seconds = Math.max(0, Math.floor((now - lastSavedAt) / 1000));
   if (seconds < 5) return "saved just now";
@@ -28,35 +30,56 @@ export function formatSavedLabel(
   return `saved ${Math.floor(seconds / 60)}m ago`;
 }
 
+export interface UseAutosaveOptions {
+  // a lightweight value that changes whenever the piece changes (title +
+  // a body revision counter). the actual content to persist is read inside
+  // onSave, so we don't mirror the whole document into react state.
+  trigger: unknown;
+  onSave: () => Promise<void>;
+}
+
 export interface UseAutosaveResult {
   state: AutosaveState;
   savedLabel: string;
 }
 
-/**
- * watches a value, debounces 1500ms, and reports a human autosave label.
- * pass whatever changes when the piece changes (the title and a body revision).
- */
-export function useAutosave(watched: unknown): UseAutosaveResult {
+export function useAutosave({ trigger, onSave }: UseAutosaveOptions): UseAutosaveResult {
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const isFirstRun = useRef(true);
 
-  // skip the mount pass so a blank draft never flashes "saving..."
+  // keep the latest onSave without making it a dependency of the debounce
+  // effect ... otherwise a new closure on every render would reset the timer.
+  const onSaveRef = useRef(onSave);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  // skip the mount pass so a freshly loaded piece never flashes "saving..."
   useEffect(() => {
     if (isFirstRun.current) {
       isFirstRun.current = false;
       return;
     }
+    let cancelled = false;
     setState("saving");
-    const timer = setTimeout(() => {
-      // T-012: POST /api/revisions here, then mark saved on the response.
-      setState("saved");
-      setLastSavedAt(Date.now());
+    const timer = setTimeout(async () => {
+      try {
+        await onSaveRef.current();
+        if (cancelled) return;
+        setState("saved");
+        setLastSavedAt(Date.now());
+      } catch {
+        if (cancelled) return;
+        setState("error");
+      }
     }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [watched]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [trigger]);
 
   // tick once a second so "saved Xs ago" stays honest
   useEffect(() => {

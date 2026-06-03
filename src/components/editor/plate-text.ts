@@ -16,3 +16,15 @@ export function plateText(value: Value): string {
   // narrow against them ... walk a clean structural shape instead.
   return (value as unknown as PlateNode[]).map(nodeText).join("\n");
 }
+
+/**
+ * derives a one-line excerpt from a plate document ... feeds np_pieces.excerpt
+ * and the library card preview. collapses block newlines and whitespace runs
+ * into single spaces, trims, and truncates with a trailing ellipsis.
+ * pure, so it can be unit-tested without booting the editor.
+ */
+export function deriveExcerpt(value: Value, maxChars = 160): string {
+  const flat = plateText(value).replace(/\s+/g, " ").trim();
+  if (flat.length <= maxChars) return flat;
+  return flat.slice(0, maxChars).trimEnd() + "...";
+}
