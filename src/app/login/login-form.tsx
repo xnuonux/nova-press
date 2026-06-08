@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
+import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type State = "idle" | "sending" | "sent" | "error";
@@ -42,9 +43,9 @@ export function LoginForm({ next }: { next?: string }) {
     });
 
     if (error) {
-      // raw error stays in the console for debugging until sentry lands.
-      // user only sees the voice-mapped version.
-      console.error("[signin-with-otp-failed]", error);
+      // raw error goes to sentry + console for debugging; the user only
+      // ever sees the voice-mapped version.
+      reportError(error, { tag: "signin-with-otp-failed" });
       setState("error");
       setErrorMessage(novaVoiceErrorFor(error.message));
       return;

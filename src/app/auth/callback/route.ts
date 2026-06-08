@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { ensureNovaUserProfile } from "@/lib/auth/ensure-user-profile";
 import { sanitizeNextPath } from "@/lib/auth/sanitize-next";
+import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // magic-link callback. supabase redirects here with ?code=... after the
@@ -27,12 +28,16 @@ export async function GET(request: NextRequest) {
   // ensure nova's row in the shared user_profiles. no-op if it exists
   // (lunari user signing into nova, repeat nova logins, etc.). a failure
   // here is not fatal for the session ... user is logged in regardless.
-  // log so the failure is grep-able in vercel logs until sentry lands in
-  // chunk 5. layout-level idempotent backfill is a deliberate follow-up.
+  // reportError routes to sentry + console so the failure is visible.
+  // layout-level idempotent backfill is the recovery path.
   try {
     await ensureNovaUserProfile(data.session.user.id);
   } catch (err) {
-    console.error("[ensure-profile-failed]", data.session.user.id, err);
+    reportError(err, {
+      tag: "ensure-profile-failed",
+      userId: data.session.user.id,
+      surface: "auth-callback",
+    });
   }
 
   return NextResponse.redirect(`${origin}${next ?? "/library"}`);

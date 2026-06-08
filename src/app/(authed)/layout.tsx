@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { ensureNovaUserProfile } from "@/lib/auth/ensure-user-profile";
+import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // authenticated route group. every page inside this group is gated by a
@@ -24,11 +25,14 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   try {
     await ensureNovaUserProfile(user.id);
   } catch (err) {
-    // logged so the failure is grep-able until sentry lands in chunk 5.
-    // do NOT block the page render ... a missing user_profiles row is
-    // recoverable (next page render retries), so users still see their
-    // library / editor while ops gets paged.
-    console.error("[layout-ensure-profile-failed]", user.id, err);
+    // reported, never blocks the page render ... a missing user_profiles
+    // row is recoverable (next render retries the upsert), so users still
+    // see their library / editor while ops gets paged via sentry.
+    reportError(err, {
+      tag: "layout-ensure-profile-failed",
+      userId: user.id,
+      surface: "authed-layout",
+    });
   }
 
   return <>{children}</>;

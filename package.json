@@ -20,6 +20,7 @@
     "@fontsource/iosevka": "^5.2.5",
     "@platejs/ai": "^49.0.0",
     "@platejs/basic-nodes": "^49.0.0",
+    "@sentry/nextjs": "^10.56.0",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",
     "ai": "^4.0.0",
