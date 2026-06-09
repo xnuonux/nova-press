@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Atmosphere } from "@/components/chrome/atmosphere";
+import { ShareRow } from "@/components/reading/share-row";
+
 interface ReadingPageProps {
   params: Promise<{ slug: string }>;
 }
@@ -31,66 +34,88 @@ export default async function ReadingPage({ params }: ReadingPageProps) {
     notFound();
   }
 
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const canonical = `${base}/p/${slug}`;
+
   return (
-    <main
-      className="min-h-screen w-full"
-      style={{
-        background: "var(--lunari-bg-deep)",
-      }}
-    >
-      <nav
-        className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6 font-sans text-xs uppercase tracking-[0.28em]"
-        style={{ color: "var(--lunari-fg-subtle)" }}
-      >
-        <Link href="/" className="transition-colors hover:opacity-80">
-          nova press
-        </Link>
-        <Link href="/" className="transition-colors hover:opacity-80">
-          all pieces
-        </Link>
-      </nav>
+    <main className="relative min-h-screen w-full overflow-hidden">
+      <Atmosphere />
+      <div className="np-skyline absolute inset-x-0 top-0 h-px" aria-hidden />
 
-      <article className="mx-auto px-6 pb-32 pt-16 md:pt-24">
-        <header className="mx-auto mb-12 max-w-[65ch] md:mb-16">
-          <h1
-            className="font-serif text-4xl font-medium leading-[1.05] tracking-tight md:text-5xl"
-            style={{ color: "var(--lunari-fg-primary)" }}
-          >
-            {PLACEHOLDER.title}
-          </h1>
-          <div
-            className="mt-6 flex items-center gap-3 font-sans text-sm tabular-nums"
-            style={{ color: "var(--lunari-fg-muted)" }}
-          >
-            <span>{PLACEHOLDER.byline}</span>
-            <span aria-hidden>·</span>
-            <span>{PLACEHOLDER.publishedAt}</span>
-            <span aria-hidden>·</span>
-            <span>{PLACEHOLDER.readingTime}</span>
-          </div>
-          <div
-            className="mt-8 h-px w-12"
-            style={{ background: "var(--nova-accent)" }}
-            aria-hidden
-          />
-        </header>
-
-        <div className="prose-nova mx-auto">
-          {PLACEHOLDER.paragraphs.map((paragraph, i) => (
-            <p key={i}>{paragraph}</p>
-          ))}
-        </div>
-
-        <footer
-          className="mx-auto mt-24 max-w-[65ch] border-t pt-8 font-sans text-xs uppercase tracking-[0.22em]"
-          style={{
-            borderColor: "var(--lunari-border)",
-            color: "var(--lunari-fg-subtle)",
-          }}
+      <div className="relative z-10">
+        <nav
+          className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6 font-mono text-[11px] uppercase tracking-[0.3em]"
+          style={{ color: "var(--lunari-fg-subtle)" }}
         >
-          published with nova press
-        </footer>
-      </article>
+          <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: "var(--nova-accent)" }}
+              aria-hidden
+            />
+            nova press
+          </Link>
+          <Link href="/" className="transition-opacity hover:opacity-80">
+            all pieces
+          </Link>
+        </nav>
+
+        <article className="mx-auto px-6 pb-32 pt-16 md:pt-24">
+          <header className="mx-auto mb-12 max-w-[65ch] md:mb-16">
+            <h1
+              className="font-serif text-4xl font-medium leading-[1.05] tracking-tight md:text-[3.25rem]"
+              style={{ color: "var(--lunari-fg-primary)" }}
+            >
+              {PLACEHOLDER.title}
+            </h1>
+            <div
+              className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tabular-nums tracking-[0.22em]"
+              style={{ color: "var(--lunari-fg-muted)" }}
+            >
+              <span>{PLACEHOLDER.byline}</span>
+              <span aria-hidden style={{ color: "var(--lunari-fg-subtle)" }}>
+                ·
+              </span>
+              <span>{PLACEHOLDER.publishedAt}</span>
+              <span aria-hidden style={{ color: "var(--lunari-fg-subtle)" }}>
+                ·
+              </span>
+              <span>{PLACEHOLDER.readingTime}</span>
+            </div>
+            <div
+              className="mt-8 h-px w-14"
+              style={{ background: "var(--nova-accent)" }}
+              aria-hidden
+            />
+          </header>
+
+          <div className="prose-nova np-dropcap mx-auto">
+            {PLACEHOLDER.paragraphs.map((paragraph, i) => (
+              <p key={i}>{paragraph}</p>
+            ))}
+          </div>
+
+          <div className="mx-auto mt-16 max-w-[65ch]">
+            <div
+              className="mb-6 h-px w-full"
+              style={{ background: "var(--lunari-border)" }}
+              aria-hidden
+            />
+            <ShareRow url={canonical} title={PLACEHOLDER.title} />
+          </div>
+
+          <footer
+            className="mx-auto mt-20 max-w-[65ch] font-mono text-[11px] uppercase tracking-[0.24em]"
+            style={{ color: "var(--lunari-fg-subtle)" }}
+          >
+            <span style={{ color: "var(--nova-accent)" }}>nova press</span>
+            <span className="px-2" aria-hidden>
+              ·
+            </span>
+            the writing studio
+          </footer>
+        </article>
+      </div>
     </main>
   );
 }
