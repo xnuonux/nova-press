@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/openai": "^1",
     "@fontsource/iosevka": "^5.2.5",
     "@platejs/ai": "^49.0.0",
     "@platejs/basic-nodes": "^49.0.0",
