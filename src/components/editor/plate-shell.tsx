@@ -216,7 +216,9 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
   };
 
   return (
-    <div className={`flex h-full flex-1 flex-col${focusMode ? "np-focus" : ""}`}>
+    <div
+      className={focusMode ? "np-focus flex h-full flex-1 flex-col" : "flex h-full flex-1 flex-col"}
+    >
       <header className="flex items-center justify-end gap-4 px-8 py-3" style={chromeStyle}>
         <RepurposeLauncher
           getSource={() => ({ title, source: plateText(editor.children as Value) })}
