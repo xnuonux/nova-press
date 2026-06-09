@@ -12,7 +12,14 @@
  * debounced 1500ms. word count + excerpt are derived server-side.
  */
 
-import { type ChangeEvent, type KeyboardEvent, useCallback, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   BlockquotePlugin,
@@ -66,6 +73,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
   const [title, setTitle] = useState(initialTitle);
   const [wordCount, setWordCount] = useState(() => countWords(plateText(initialValue)));
   const [revision, setRevision] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
 
   const editor = usePlateEditor({
     plugins: editorPlugins,
@@ -152,9 +160,64 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
     [editor, charBeforeCaret],
   );
 
+  // focus mode ... cmd+. / ctrl+. drops the chrome and dims everything but
+  // the line you're on. esc leaves. a calm room to write in.
+  useEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === ".") {
+        event.preventDefault();
+        setFocusMode((on) => !on);
+      } else if (event.key === "Escape") {
+        setFocusMode((on) => (on ? false : on));
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  // focus mode also reaches outside this component ... a body class lets the
+  // partner rail (a sibling in the editor page) fade away too.
+  useEffect(() => {
+    document.body.classList.toggle("np-focus-on", focusMode);
+    return () => document.body.classList.remove("np-focus-on");
+  }, [focusMode]);
+
+  // while focused, tag the block holding the caret so css can lift it back to
+  // full opacity. slate re-renders strip the attribute on a keystroke, but
+  // selectionchange fires right after and re-tags ... fast enough to read as
+  // steady.
+  useEffect(() => {
+    if (!focusMode) return;
+    const tag = () => {
+      const editable = document.querySelector('[data-slate-editor="true"]');
+      if (!editable) return;
+      const selection = window.getSelection();
+      const node =
+        selection && selection.rangeCount > 0 ? selection.getRangeAt(0).startContainer : null;
+      for (const block of Array.from(editable.children)) {
+        if (node && block.contains(node)) block.setAttribute("data-active-line", "true");
+        else block.removeAttribute("data-active-line");
+      }
+    };
+    tag();
+    document.addEventListener("selectionchange", tag);
+    return () => {
+      document.removeEventListener("selectionchange", tag);
+      document
+        .querySelectorAll("[data-active-line]")
+        .forEach((el) => el.removeAttribute("data-active-line"));
+    };
+  }, [focusMode]);
+
+  const chromeStyle = {
+    opacity: focusMode ? 0 : 1,
+    pointerEvents: focusMode ? ("none" as const) : undefined,
+    transition: "opacity 0.24s var(--ease-out-quart)",
+  };
+
   return (
-    <div className="flex h-full flex-1 flex-col">
-      <header className="flex items-center justify-end gap-4 px-8 py-3">
+    <div className={`flex h-full flex-1 flex-col${focusMode ? "np-focus" : ""}`}>
+      <header className="flex items-center justify-end gap-4 px-8 py-3" style={chromeStyle}>
         <RepurposeLauncher
           getSource={() => ({ title, source: plateText(editor.children as Value) })}
         />
@@ -196,6 +259,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
         style={{
           borderColor: "var(--lunari-border)",
           color: "var(--lunari-fg-subtle)",
+          ...chromeStyle,
         }}
       >
         <span className="tabular-nums">
@@ -218,6 +282,12 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
           {initialStatus}
         </span>
       </footer>
+
+      {focusMode ? (
+        <div className="np-focus-hint" aria-hidden>
+          focus ... esc to leave
+        </div>
+      ) : null}
     </div>
   );
 }

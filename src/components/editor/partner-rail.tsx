@@ -49,7 +49,7 @@ export function PartnerRail() {
 
   return (
     <aside
-      className="hidden h-screen w-80 shrink-0 flex-col border-l lg:flex"
+      className="np-partner-rail hidden h-screen w-80 shrink-0 flex-col border-l lg:flex"
       style={{
         background: "var(--lunari-bg-surface)",
         borderColor: "var(--lunari-border)",

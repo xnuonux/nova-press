@@ -247,7 +247,7 @@ function VariantView({ state, onRetry }: { state: VariantState; onRetry: () => v
           className="pt-2 font-mono text-[11px] uppercase tracking-[0.2em]"
           style={{ color: "var(--lunari-fg-subtle)" }}
         >
-          nova is recompiling ...
+          nova... recompiling
         </p>
       </div>
     );

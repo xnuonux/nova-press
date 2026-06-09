@@ -102,7 +102,20 @@ await step("select", async () => {
 });
 await step("shot-toolbar", () => shot("editor-toolbar"));
 
-// 6. repurpose panel (just open it ... do not wait on the model)
+// 6. focus mode ... ctrl+. drops the chrome and dims everything but the line
+await step("focus-mode", async () => {
+  await page.keyboard.press("Escape"); // clear the selection + toolbar
+  await page.locator('[data-slate-editor="true"]').click();
+  await page.keyboard.press("Control+.");
+  await page.waitForTimeout(500);
+});
+await step("shot-focus", () => shot("editor-focus"));
+await step("focus-exit", async () => {
+  await page.keyboard.press("Escape"); // leave focus mode
+  await page.waitForTimeout(300);
+});
+
+// 7. repurpose panel (just open it ... do not wait on the model)
 await step("repurpose-open", async () => {
   await page.click('button:has-text("repurpose")', { timeout: 10000 });
   await page.waitForTimeout(700);

@@ -129,6 +129,65 @@
       font-size: 28px;
     }
   }
+
+  /* focus mode (cmd+. / ctrl+.) ... the chrome falls away, the page goes
+     bare, and every block but the line you're on dims back. a calm room. */
+  .np-focus .editor-sheet {
+    width: min(640px, 100%);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .np-focus .editor-title {
+    opacity: 0.3;
+    transition: opacity 0.24s var(--ease-out-quart);
+  }
+
+  .np-focus .editor-title:focus {
+    opacity: 1;
+  }
+
+  .np-focus .editor-body > * {
+    opacity: 0.3;
+    transition: opacity 0.24s var(--ease-out-quart);
+  }
+
+  .np-focus .editor-body > [data-active-line="true"] {
+    opacity: 1;
+  }
+
+  /* the partner rail lives outside the editor shell; a body class set in focus
+     mode lets it fade away with the rest of the chrome. */
+  .np-focus-on .np-partner-rail {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.24s var(--ease-out-quart);
+  }
+
+  .np-focus-hint {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    z-index: 40;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--lunari-fg-subtle);
+    pointer-events: none;
+    animation: np-fade-in 0.4s var(--ease-out-quart);
+  }
+
+  @keyframes np-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 @layer components {
