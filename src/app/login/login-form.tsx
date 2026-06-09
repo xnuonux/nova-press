@@ -54,7 +54,18 @@ export function LoginForm({ next }: { next?: string }) {
   }
 
   if (state === "sent") {
-    return <p className="text-muted-foreground text-sm">link sent ... check your inbox.</p>;
+    return (
+      <div
+        className="rounded-lg border px-5 py-6 font-serif text-lg leading-relaxed"
+        style={{
+          borderColor: "var(--lunari-border)",
+          background: "var(--nova-accent-soft)",
+          color: "var(--lunari-fg-primary)",
+        }}
+      >
+        link sent ... check your inbox.
+      </div>
+    );
   }
 
   return (
@@ -72,17 +83,29 @@ export function LoginForm({ next }: { next?: string }) {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="your email"
         disabled={state === "sending"}
-        className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-md border px-4 py-3 font-sans text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        style={{
+          background: "var(--lunari-bg-surface)",
+          borderColor: "var(--lunari-border)",
+          color: "var(--lunari-fg-primary)",
+        }}
       />
       <button
         type="submit"
         disabled={state === "sending" || !email}
-        className="w-full rounded-md bg-[#c9a84c] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#b8983e] disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-md px-4 py-3 font-sans text-sm font-medium transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+        style={{
+          background: "var(--nova-accent)",
+          color: "var(--lunari-bg-deep)",
+          boxShadow: "0 8px 24px -12px rgba(201, 168, 76, 0.7)",
+        }}
       >
         {state === "sending" ? "sending..." : "send the link"}
       </button>
       {state === "error" && errorMessage ? (
-        <p className="text-destructive text-sm">{errorMessage}</p>
+        <p className="font-sans text-sm" style={{ color: "var(--nova-accent)" }}>
+          {errorMessage}
+        </p>
       ) : null}
     </form>
   );

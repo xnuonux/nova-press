@@ -78,3 +78,100 @@
     line-height: 1.7;
   }
 }
+
+@layer components {
+  /* atmosphere ... fixed, behind content, never intercepts clicks.
+     two layers: a golden-hour dawn glow bleeding from the top, and a 3%
+     paper grain over the whole canvas (the texture the design system
+     always specced). */
+  .np-atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .np-dawn {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 80% at 50% -20%, rgba(201, 168, 76, 0.1), transparent 60%),
+      radial-gradient(70% 50% at 100% 0%, rgba(201, 168, 76, 0.05), transparent 55%);
+  }
+
+  .np-grain {
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  /* a single hairline of golden light ... used as a top-edge accent on
+     the front-door surfaces. */
+  .np-skyline {
+    background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.55) 50%, transparent);
+  }
+
+  /* reading-view share links: muted, warming to golden on hover. */
+  .np-share-link {
+    color: var(--lunari-fg-muted);
+    transition: color 160ms var(--ease-out-quart);
+  }
+
+  .np-share-link:hover,
+  .np-share-link[data-active="true"] {
+    color: var(--nova-accent);
+  }
+}
+
+@layer utilities {
+  /* one orchestrated page-load reveal. stagger with np-rise-N. the global
+     prefers-reduced-motion rule collapses the duration so content snaps to
+     its end state rather than getting stuck invisible. */
+  @keyframes np-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .np-rise {
+    opacity: 0;
+    animation: np-rise 0.62s var(--ease-out-expo) forwards;
+  }
+
+  .np-rise-1 {
+    animation-delay: 0.04s;
+  }
+  .np-rise-2 {
+    animation-delay: 0.12s;
+  }
+  .np-rise-3 {
+    animation-delay: 0.22s;
+  }
+  .np-rise-4 {
+    animation-delay: 0.34s;
+  }
+  .np-rise-5 {
+    animation-delay: 0.48s;
+  }
+  .np-rise-6 {
+    animation-delay: 0.62s;
+  }
+
+  /* drop cap for the reading view's first body paragraph. */
+  .np-dropcap > p:first-of-type::first-letter {
+    float: left;
+    margin: 0.02em 0.09em 0 0;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 3.5em;
+    line-height: 0.74;
+    color: var(--nova-accent);
+  }
+}
