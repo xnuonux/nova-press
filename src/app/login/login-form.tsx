@@ -112,6 +112,10 @@ export function LoginForm({ next }: { next?: string }) {
 }
 
 function buildCallbackUrl(next?: string): string {
+  // `next` arrives already run through sanitizeNextPath (same-origin path
+  // only) on the server before it reaches this client form, and the
+  // callback re-sanitizes it before redirecting. it's only ever a query
+  // param here, never a redirect target, so it can't open-redirect.
   const url = new URL("/auth/callback", window.location.origin);
   if (next) url.searchParams.set("next", next);
   return url.toString();

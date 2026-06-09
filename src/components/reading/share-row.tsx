@@ -26,7 +26,13 @@ export function ShareRow({ url, title }: { url: string; title: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 font-mono text-[11px] uppercase tracking-[0.22em]">
-      <button type="button" onClick={copy} className="np-share-link" data-active={copied}>
+      <button
+        type="button"
+        onClick={copy}
+        className="np-share-link"
+        data-active={copied}
+        aria-label={copied ? "link copied to clipboard" : "copy link"}
+      >
         {copied ? "copied." : "copy link"}
       </button>
       <a href={x} target="_blank" rel="noopener noreferrer" className="np-share-link">
