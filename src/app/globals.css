@@ -68,13 +68,66 @@
     }
   }
 
+  /* the writing surface ... a soft raised sheet floating on the deep
+     canvas, the grain showing through behind it like a desk. word-doc /
+     x-article feel, kept minimal. the warmth in the shadow is the golden
+     hour leaking under the page. */
   .editor-canvas {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 96px 24px 128px;
+    min-height: 100%;
+    padding: 0 16px;
+  }
+
+  .editor-sheet {
+    position: relative;
+    width: min(760px, 100%);
+    margin: 56px auto 120px;
+    padding: 64px clamp(28px, 6vw, 72px) 104px;
+    background: var(--lunari-bg-surface);
+    border: 1px solid var(--lunari-border);
+    border-radius: 14px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.025),
+      0 2px 4px rgba(0, 0, 0, 0.22),
+      0 30px 70px -26px rgba(0, 0, 0, 0.5),
+      0 46px 120px -46px rgba(201, 168, 76, 0.09);
+  }
+
+  .editor-title {
+    width: 100%;
+    margin-bottom: 24px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--font-serif);
+    font-size: 34px;
+    line-height: 1.18;
+    letter-spacing: -0.015em;
+    color: var(--lunari-fg-primary);
+  }
+
+  .editor-title::placeholder {
+    color: var(--lunari-fg-subtle);
+  }
+
+  .editor-body {
     font-family: var(--font-serif);
     font-size: 18px;
     line-height: 1.7;
+    color: var(--lunari-fg-primary);
+    /* the classic: a tab renders as a real 4-wide indent. slate's editable
+       is white-space: pre-wrap, so tab chars survive and tab-size applies. */
+    tab-size: 4;
+  }
+
+  @media (max-width: 640px) {
+    .editor-sheet {
+      margin: 28px auto 80px;
+      border-radius: 10px;
+    }
+
+    .editor-title {
+      font-size: 28px;
+    }
   }
 }
 
@@ -110,6 +163,151 @@
      the front-door surfaces. */
   .np-skyline {
     background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.55) 50%, transparent);
+  }
+
+  /* the bubble toolbar ... floats above a selection, portaled to body and
+     positioned off the dom selection rect (fixed coords). the translate puts
+     it centered + lifted above the text; the keyframe eases it the last few
+     px in. */
+  .np-bubble {
+    position: fixed;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    transform: translate(-50%, calc(-100% - 10px));
+    background: var(--lunari-bg-elevated);
+    border: 1px solid var(--lunari-border);
+    border-radius: 11px;
+    box-shadow:
+      0 10px 28px -10px rgba(0, 0, 0, 0.62),
+      0 2px 6px rgba(0, 0, 0, 0.32);
+    animation: np-bubble-in 140ms var(--ease-out-quart);
+  }
+
+  @keyframes np-bubble-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-100% - 3px));
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, calc(-100% - 10px));
+    }
+  }
+
+  .np-bubble button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 9px;
+    border-radius: 7px;
+    font-size: 14px;
+    line-height: 1;
+    color: var(--lunari-fg-muted);
+    transition:
+      color 120ms var(--ease-out-quart),
+      background 120ms var(--ease-out-quart);
+  }
+
+  .np-bubble button:hover {
+    color: var(--lunari-fg-primary);
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  .np-bubble button[data-active="true"] {
+    color: var(--nova-accent);
+    background: var(--nova-accent-soft);
+  }
+
+  /* emoji picker ... floats just under the caret, same lunari surface as the
+     bubble. quiet helper, lowercase labels, golden highlight on the active
+     row. */
+  .np-emoji {
+    position: fixed;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 198px;
+    max-width: 252px;
+    padding: 5px;
+    background: var(--lunari-bg-elevated);
+    border: 1px solid var(--lunari-border);
+    border-radius: 11px;
+    box-shadow:
+      0 12px 30px -10px rgba(0, 0, 0, 0.6),
+      0 2px 6px rgba(0, 0, 0, 0.3);
+    animation: np-emoji-in 120ms var(--ease-out-quart);
+  }
+
+  @keyframes np-emoji-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .np-emoji button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 9px;
+    border-radius: 7px;
+    text-align: left;
+    color: var(--lunari-fg-muted);
+    transition:
+      background 110ms var(--ease-out-quart),
+      color 110ms var(--ease-out-quart);
+  }
+
+  .np-emoji button[data-active="true"] {
+    background: var(--nova-accent-soft);
+    color: var(--lunari-fg-primary);
+  }
+
+  .np-emoji-glyph {
+    width: 22px;
+    text-align: center;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .np-emoji-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+  }
+
+  /* skeleton shimmer ... the repurpose panel while nova recompiles. a band of
+     light sweeping a muted bar. */
+  .np-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--lunari-bg-elevated) 25%,
+      color-mix(in srgb, var(--lunari-fg-subtle) 22%, var(--lunari-bg-elevated)) 50%,
+      var(--lunari-bg-elevated) 75%
+    );
+    background-size: 220% 100%;
+    animation: np-shimmer 1.4s var(--ease-out-quart) infinite;
+  }
+
+  @keyframes np-shimmer {
+    from {
+      background-position: 220% 0;
+    }
+    to {
+      background-position: -220% 0;
+    }
   }
 
   /* reading-view share links: muted, warming to golden on hover. */
