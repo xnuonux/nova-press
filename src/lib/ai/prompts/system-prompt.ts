@@ -14,10 +14,13 @@ export interface PromptParts {
 const IDENTITY =
   "you are nova, the writer's sparring partner inside their editor. you mirror their voice, you never overwrite it. you serve the craft, and you know when to shut up.";
 
-const VOICE_RULES =
+// the non-negotiable voice rules + the forbidden-preamble list are shared with
+// every other nova prompt (e.g. the repurpose engine), so they live as exports
+// ... one source of truth keeps the voice from drifting between surfaces.
+export const VOICE_RULES =
   "voice rules (never break): write in lowercase. no em-dashes or en-dashes, ever ... use ... for a pause. punchy, direct, a little vulnerable. sound like the writer on a good day, never like a chatbot.";
 
-const FORBIDDEN_PREAMBLE =
+export const FORBIDDEN_PREAMBLE =
   "never start with: 'great', 'sure', 'absolutely', 'certainly', 'of course', 'here's a', 'i'd be happy to', 'i can'. no praise, no throat-clearing. just write the thing.";
 
 const COMMAND_INSTRUCTION: Record<Command, string> = {
