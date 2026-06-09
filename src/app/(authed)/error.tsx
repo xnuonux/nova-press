@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 
+import { Atmosphere } from "@/components/chrome/atmosphere";
 import { reportError } from "@/lib/observability/report-error";
 
 // graceful boundary for the authed tree (library, editor). a thrown
@@ -20,22 +21,49 @@ export default function AuthedError({
   }, [error]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 text-center">
-      <div className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.22em] text-[#c9a84c]">nova press</p>
-        <h1 className="font-serif text-2xl">this corner broke</h1>
-        <p className="text-muted-foreground text-sm">reload it, or head back to your pieces.</p>
-      </div>
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => reset()}
-          className="rounded-md bg-[#c9a84c] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#b8983e]"
-        >
-          reload
-        </button>
-        <Link href="/library" className="text-muted-foreground text-sm hover:underline">
-          your pieces
-        </Link>
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center">
+      <Atmosphere />
+      <div className="relative z-10 flex flex-col items-center gap-7">
+        <div className="space-y-3">
+          <p
+            className="font-mono text-[11px] uppercase tracking-[0.3em]"
+            style={{ color: "var(--lunari-fg-subtle)" }}
+          >
+            nova press
+          </p>
+          <h1
+            className="font-serif text-3xl font-medium tracking-tight"
+            style={{ color: "var(--lunari-fg-primary)" }}
+          >
+            this corner broke
+          </h1>
+          <p
+            className="font-serif text-lg leading-relaxed"
+            style={{ color: "var(--lunari-fg-muted)" }}
+          >
+            reload it, or head back to your pieces.
+          </p>
+        </div>
+        <div className="flex items-center gap-5">
+          <button
+            onClick={() => reset()}
+            className="inline-flex h-11 items-center rounded-md px-6 font-sans text-sm font-medium transition-all duration-200 hover:brightness-110"
+            style={{
+              background: "var(--nova-accent)",
+              color: "var(--lunari-bg-deep)",
+              boxShadow: "0 8px 24px -12px rgba(201, 168, 76, 0.7)",
+            }}
+          >
+            reload
+          </button>
+          <Link
+            href="/library"
+            className="font-sans text-sm transition-colors hover:opacity-80"
+            style={{ color: "var(--lunari-fg-muted)" }}
+          >
+            your pieces
+          </Link>
+        </div>
       </div>
     </main>
   );

@@ -94,7 +94,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
   return (
     <div className="flex h-full flex-1 flex-col">
       <header
-        className="flex items-center justify-between border-b px-8 py-4"
+        className="flex items-center justify-between gap-4 border-b px-8 py-4"
         style={{ borderColor: "var(--lunari-border)" }}
       >
         <input
@@ -102,12 +102,13 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
           value={title}
           onChange={handleTitleChange}
           aria-label="piece title"
-          className="bg-transparent font-serif text-lg outline-none"
+          placeholder="untitled"
+          className="min-w-0 flex-1 bg-transparent font-serif text-xl tracking-tight outline-none"
           style={{ color: "var(--lunari-fg-primary)" }}
         />
         <span
-          className="font-sans text-xs tabular-nums"
-          style={{ color: "var(--lunari-fg-muted)" }}
+          className="shrink-0 font-mono text-[11px] uppercase tabular-nums tracking-[0.2em]"
+          style={{ color: "var(--lunari-fg-subtle)" }}
         >
           {savedLabel}
         </span>
@@ -126,18 +127,28 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
       </div>
 
       <footer
-        className="flex items-center justify-between border-t px-8 py-3 font-sans text-xs"
+        className="flex items-center justify-between border-t px-8 py-3 font-mono text-[11px] uppercase tracking-[0.2em]"
         style={{
           borderColor: "var(--lunari-border)",
-          color: "var(--lunari-fg-muted)",
+          color: "var(--lunari-fg-subtle)",
         }}
       >
         <span className="tabular-nums">
           {wordCount} {wordCount === 1 ? "word" : "words"}
         </span>
         <span
-          className="font-mono uppercase tracking-[0.22em]"
-          style={{ color: "var(--lunari-fg-subtle)" }}
+          className="rounded-full px-2.5 py-1"
+          style={
+            initialStatus === "published" || initialStatus === "scheduled"
+              ? {
+                  background: "var(--nova-accent-soft)",
+                  color: "var(--nova-accent)",
+                }
+              : {
+                  border: "1px solid var(--lunari-border)",
+                  color: "var(--lunari-fg-subtle)",
+                }
+          }
         >
           {initialStatus}
         </span>

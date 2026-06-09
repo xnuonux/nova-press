@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { Atmosphere } from "@/components/chrome/atmosphere";
 import { listPiecesForUser, type PieceListItem } from "@/lib/db/pieces";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -8,58 +11,156 @@ export default async function LibraryPage() {
   const pieces = await listPiecesForUser(supabase);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <header className="mb-10 flex items-center justify-between">
-        <h1 className="font-serif text-2xl">your pieces</h1>
-        <form action={newPieceAction}>
-          <button
-            type="submit"
-            className="rounded-md bg-[#c9a84c] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#b8983e]"
-          >
-            new piece
-          </button>
-        </form>
-      </header>
+    <div className="relative min-h-screen overflow-hidden">
+      <Atmosphere />
 
-      {pieces.length === 0 ? <EmptyState /> : <PieceList pieces={pieces} />}
-    </main>
+      <div className="relative z-10">
+        <header
+          className="flex items-center justify-between border-b px-6 py-4 sm:px-10"
+          style={{ borderColor: "var(--lunari-border)" }}
+        >
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.32em] transition-opacity hover:opacity-80"
+            style={{ color: "var(--lunari-fg-subtle)" }}
+          >
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: "var(--nova-accent)" }}
+              aria-hidden
+            />
+            nova press
+          </Link>
+          <form action="/auth/signout" method="post">
+            <button
+              type="submit"
+              className="font-mono text-[11px] uppercase tracking-[0.22em] transition-colors hover:opacity-80"
+              style={{ color: "var(--lunari-fg-subtle)" }}
+            >
+              sign out
+            </button>
+          </form>
+        </header>
+
+        <main className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
+          <div className="np-rise np-rise-1 mb-12 flex items-end justify-between gap-6">
+            <div>
+              <h1
+                className="font-serif text-4xl font-medium tracking-tight"
+                style={{ color: "var(--lunari-fg-primary)" }}
+              >
+                your pieces
+              </h1>
+              {pieces.length > 0 ? (
+                <p
+                  className="mt-2 font-mono text-[11px] uppercase tabular-nums tracking-[0.26em]"
+                  style={{ color: "var(--lunari-fg-subtle)" }}
+                >
+                  {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}
+                </p>
+              ) : null}
+            </div>
+            <form action={newPieceAction}>
+              <button
+                type="submit"
+                className="inline-flex h-11 items-center rounded-md px-5 font-sans text-sm font-medium transition-all duration-200 hover:brightness-110"
+                style={{
+                  background: "var(--nova-accent)",
+                  color: "var(--lunari-bg-deep)",
+                  boxShadow: "0 8px 24px -12px rgba(201, 168, 76, 0.7)",
+                }}
+              >
+                new piece
+              </button>
+            </form>
+          </div>
+
+          <div className="np-rise np-rise-2">
+            {pieces.length === 0 ? <EmptyState /> : <PieceList pieces={pieces} />}
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="border-border rounded-md border border-dashed py-16 text-center">
-      <p className="text-foreground text-lg">nothing yet</p>
-      <p className="text-muted-foreground mt-2 text-sm">the page is open. drop something here.</p>
+    <div
+      className="rounded-xl border border-dashed px-6 py-20 text-center"
+      style={{ borderColor: "var(--lunari-border)" }}
+    >
+      <p className="font-serif text-2xl" style={{ color: "var(--lunari-fg-primary)" }}>
+        nothing yet
+      </p>
+      <p
+        className="mx-auto mt-3 max-w-xs font-serif text-base leading-relaxed"
+        style={{ color: "var(--lunari-fg-muted)" }}
+      >
+        the page is open. drop something here.
+      </p>
     </div>
   );
 }
 
 function PieceList({ pieces }: { pieces: PieceListItem[] }) {
   return (
-    <ul className="divide-border divide-y">
+    <ul className="flex flex-col gap-2">
       {pieces.map((piece) => (
-        <li key={piece.id} className="py-4">
-          <a
+        <li key={piece.id}>
+          <Link
             href={`/editor/${piece.id}`}
-            className="hover:bg-muted/50 -mx-2 block rounded-md px-2 py-2 transition"
+            className="block rounded-lg border border-transparent px-5 py-5 transition-all duration-200 hover:-translate-y-0.5"
+            style={{ background: "var(--lunari-bg-surface)" }}
           >
             <div className="flex items-baseline justify-between gap-4">
-              <h2 className="font-serif text-lg">{piece.title}</h2>
-              <span className="text-muted-foreground text-xs uppercase tracking-wider">
-                {piece.status}
-              </span>
+              <h2
+                className="font-serif text-xl leading-snug"
+                style={{ color: "var(--lunari-fg-primary)" }}
+              >
+                {piece.title}
+              </h2>
+              <StatusPill status={piece.status} />
             </div>
             {piece.excerpt ? (
-              <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{piece.excerpt}</p>
+              <p
+                className="mt-2 line-clamp-2 font-serif text-base leading-relaxed"
+                style={{ color: "var(--lunari-fg-muted)" }}
+              >
+                {piece.excerpt}
+              </p>
             ) : null}
-            <p className="text-muted-foreground mt-2 text-xs">
-              {piece.word_count} words · {formatRelativeTime(piece.last_edited_at)}
+            <p
+              className="mt-3 font-mono text-[11px] uppercase tabular-nums tracking-[0.2em]"
+              style={{ color: "var(--lunari-fg-subtle)" }}
+            >
+              {piece.word_count} {piece.word_count === 1 ? "word" : "words"}
+              {" · "}
+              {formatRelativeTime(piece.last_edited_at)}
             </p>
-          </a>
+          </Link>
         </li>
       ))}
     </ul>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const live = status === "published" || status === "scheduled";
+  return (
+    <span
+      className="shrink-0 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em]"
+      style={
+        live
+          ? { background: "var(--nova-accent-soft)", color: "var(--nova-accent)" }
+          : {
+              border: "1px solid var(--lunari-border)",
+              color: "var(--lunari-fg-subtle)",
+            }
+      }
+    >
+      {status}
+    </span>
   );
 }
 
