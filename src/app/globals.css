@@ -283,6 +283,19 @@
     transition: opacity 0.24s var(--ease-out-quart);
   }
 
+  /* flow detector: nova's rail ducks away while you're typing (body.np-flow,
+     set on each real edit) and eases back on a pause. it leaves quick, returns
+     gentle ... the partner is invisible until you stop to think. */
+  .np-partner-rail {
+    transition: opacity var(--t-emphasis) var(--ease-out-soft);
+  }
+
+  .np-flow .np-partner-rail {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-base) var(--ease-out-quart);
+  }
+
   .np-focus-hint {
     position: fixed;
     bottom: 22px;

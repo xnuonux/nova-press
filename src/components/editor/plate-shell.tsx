@@ -18,6 +18,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -107,26 +108,37 @@ export function PlateShell({
     onSave: handleSave,
   });
 
-  // plate fires onValueChange on selection changes too, not just content edits.
-  // since each re-render re-applies the dom selection (which slate reports as
-  // another change), reacting to every fire would loop: revision bumps ->
-  // re-render -> selection re-applied -> onValueChange -> revision bumps ...
-  // (react caps it as "maximum update depth"). slate only swaps the children
-  // reference on real content ops, never on a caret move, so we gate on that.
-  // bonus: autosave now ignores pure caret moves, which is what we wanted.
+  // flow detector: while the writer is actively editing, nova's partner rail
+  // fades away ("it goes dark while you're talking") and returns on a pause. a
+  // body class lets the rail (a sibling in the editor page) duck via css. this
+  // is the "invisible until called" principle, made literal.
+  const flowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markFlow = useCallback(() => {
+    document.body.classList.add("np-flow");
+    if (flowTimer.current) clearTimeout(flowTimer.current);
+    flowTimer.current = setTimeout(() => document.body.classList.remove("np-flow"), 2500);
+  }, []);
+  useEffect(() => {
+    return () => {
+      document.body.classList.remove("np-flow");
+      if (flowTimer.current) clearTimeout(flowTimer.current);
+    };
+  }, []);
+
   // plate fires onValueChange on caret moves too, not just edits. since every
   // re-render re-applies the dom selection (which plate then reports as another
   // change), reacting to a caret move would loop: bump revision -> re-render ->
   // selection re-applied -> onValueChange -> bump ... until react trips its
   // "maximum update depth" guard. the canonical slate test gates it: a caret
   // move carries only set_selection ops, a real edit carries at least one more.
-  // bonus, autosave now ignores pure caret moves, which is what we always
-  // wanted.
+  // bonus: autosave + the flow detector only react to real edits, never a caret
+  // move.
   const handleValueChange = useCallback(() => {
     if (!editor.operations.some((op) => op.type !== "set_selection")) return;
+    markFlow();
     setRevision((current) => current + 1);
     setWordCount(countWords(plateText(editor.children as Value)));
-  }, [editor]);
+  }, [editor, markFlow]);
 
   const handleTitleChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => setTitle(event.target.value),
