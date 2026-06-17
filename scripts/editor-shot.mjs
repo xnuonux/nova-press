@@ -115,12 +115,47 @@ await step("focus-exit", async () => {
   await page.waitForTimeout(300);
 });
 
-// 7. repurpose panel (just open it ... do not wait on the model)
+// 7. repurpose panel + STREAMING verification. open it, catch the text
+// mid-stream (with the live caret), then confirm the final text streamed in
+// and carries zero em-dashes.
+let streamMid = null;
+let streamFinal = null;
 await step("repurpose-open", async () => {
   await page.click('button:has-text("repurpose")', { timeout: 10000 });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(500);
 });
 await step("shot-repurpose", () => shot("editor-repurpose"));
+await step("repurpose-stream", async () => {
+  // wait for streamed text to appear in the active tab's <pre>
+  await page.waitForFunction(
+    () => {
+      const pre = document.querySelector(".np-repurpose-sheet pre");
+      return !!pre && (pre.textContent || "").trim().length > 40;
+    },
+    { timeout: 40000 },
+  );
+  streamMid = await page.evaluate(() => {
+    const pre = document.querySelector(".np-repurpose-sheet pre");
+    return {
+      len: (pre?.textContent || "").length,
+      hasCaret: !!document.querySelector(".np-caret"),
+      sample: (pre?.textContent || "").slice(0, 100),
+    };
+  });
+  console.log("stream mid:", JSON.stringify(streamMid));
+  await page.screenshot({ path: `${OUT}/editor-repurpose-stream.png` });
+  done.push("editor-repurpose-stream");
+  // wait for completion (caret disappears), then read the final text
+  await page
+    .waitForFunction(() => !document.querySelector(".np-caret"), { timeout: 40000 })
+    .catch(() => {});
+  await page.waitForTimeout(300);
+  streamFinal = await page.evaluate(() => {
+    const t = document.querySelector(".np-repurpose-sheet pre")?.textContent || "";
+    return { len: t.length, emdashes: (t.match(/[—–]/g) || []).length, sample: t.slice(0, 160) };
+  });
+  console.log("stream final:", JSON.stringify(streamFinal));
+});
 
 await browser.close();
 
@@ -128,4 +163,12 @@ console.log("\n=== report ===");
 console.log("shots:", done.join(", ") || "(none)");
 console.log("runtime errors:", errors.length);
 for (const e of errors.slice(0, 12)) console.log("  -", e);
+console.log("stream mid:", JSON.stringify(streamMid));
+console.log("stream final:", JSON.stringify(streamFinal));
+console.log(
+  "STREAM VERDICT:",
+  streamFinal && streamFinal.len > 40 && streamFinal.emdashes === 0
+    ? "PASS (streamed + no em-dashes)"
+    : "CHECK",
+);
 console.log("done", OUT);

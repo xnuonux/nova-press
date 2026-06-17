@@ -369,6 +369,24 @@
     }
   }
 
+  /* the live caret trailing streamed text in the repurpose panel ... a thin
+     golden bar that blinks while nova is still writing. */
+  .np-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1.05em;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    background: var(--nova-accent);
+    animation: np-caret-blink 1s steps(2, start) infinite;
+  }
+
+  @keyframes np-caret-blink {
+    to {
+      opacity: 0;
+    }
+  }
+
   /* reading-view share links: muted, warming to golden on hover. */
   .np-share-link {
     color: var(--lunari-fg-muted);

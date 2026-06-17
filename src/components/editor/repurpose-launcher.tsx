@@ -13,6 +13,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { RepurposeFormat } from "@/lib/ai/prompts/repurpose-prompt";
+// pure module (regex only, no server deps), safe to run client-side. it gives
+// the streamed text its final voice pass once the stream lands.
+import { voiceKeeperAudit } from "@/lib/ai/voice-keeper";
 
 interface Tab {
   key: RepurposeFormat;
@@ -30,6 +33,7 @@ const TABS: Tab[] = [
 
 type VariantState =
   | { status: "loading" }
+  | { status: "streaming"; text: string }
   | { status: "done"; text: string; drift: boolean }
   | { status: "error"; error: string };
 
@@ -69,33 +73,79 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
   });
   const [copied, setCopied] = useState(false);
   const sourceRef = useRef<Source>(getSource());
+  // one in-flight stream per format. regenerate aborts the previous; closing
+  // the panel aborts them all ... no setState after unmount, no old stream
+  // clobbering a new one.
+  const controllersRef = useRef<Partial<Record<RepurposeFormat, AbortController>>>({});
 
   const runFormat = useCallback((format: RepurposeFormat, src: Source) => {
+    controllersRef.current[format]?.abort();
+    const controller = new AbortController();
+    controllersRef.current[format] = controller;
     setVariants((prev) => ({ ...prev, [format]: { status: "loading" } }));
-    fetch("/api/ai/repurpose", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: src.title, source: src.source, formats: [format] }),
-    })
-      .then(async (res) => {
-        const data = (await res.json().catch(() => ({}))) as {
-          variants?: { text: string; drift: boolean }[];
-          error?: string;
-        };
-        if (!res.ok) {
+    void (async () => {
+      try {
+        const res = await fetch("/api/ai/repurpose", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            title: src.title,
+            source: src.source,
+            formats: [format],
+            stream: true,
+          }),
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(data.error ?? "nova couldn't repurpose this one");
         }
-        const variant = data.variants?.[0];
-        if (!variant) throw new Error("no variant came back");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let acc = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          acc += decoder.decode(value, { stream: true });
+          // only flip to streaming once there's something to show, so the
+          // shimmer doesn't blink to an empty pane.
+          if (acc.length > 0) {
+            const text = acc;
+            setVariants((prev) => ({ ...prev, [format]: { status: "streaming", text } }));
+          }
+        }
+        acc += decoder.decode();
+
+        // the stream can finish right as the panel closes or regenerate
+        // fires; bail before the final setState so we never write to an
+        // unmounted panel or clobber a newer run.
+        if (controller.signal.aborted) return;
+
+        // the dashes were stripped at the source; the keeper does the rest
+        // (lowercase paragraph openings, any preamble) + reports drift.
+        const audited = voiceKeeperAudit(acc);
         setVariants((prev) => ({
           ...prev,
-          [format]: { status: "done", text: variant.text, drift: variant.drift },
+          [format]: { status: "done", text: audited.text, drift: audited.violated },
         }));
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
+        // an intentional abort (regenerate / close) is not an error.
+        if (controller.signal.aborted) return;
         const message = err instanceof Error ? err.message : "something broke";
         setVariants((prev) => ({ ...prev, [format]: { status: "error", error: message } }));
-      });
+      }
+    })();
+  }, []);
+
+  // abort every in-flight stream when the panel unmounts. the ref object is
+  // stable (we only ever mutate its entries, never reassign .current), so this
+  // captured reference still sees the latest controllers at cleanup time.
+  useEffect(() => {
+    const controllers = controllersRef.current;
+    return () => {
+      for (const controller of Object.values(controllers)) controller?.abort();
+    };
   }, []);
 
   // fire all three on open, in parallel. each tab fills as it lands.
@@ -211,7 +261,7 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
           <button
             type="button"
             onClick={() => runFormat(active, sourceRef.current)}
-            disabled={current.status === "loading"}
+            disabled={current.status === "loading" || current.status === "streaming"}
             className="font-mono text-[11px] uppercase tracking-[0.18em] transition-opacity hover:opacity-70 disabled:opacity-40"
             style={{ color: "var(--lunari-fg-subtle)" }}
           >
@@ -233,6 +283,15 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
 }
 
 function VariantView({ state, onRetry }: { state: VariantState; onRetry: () => void }) {
+  const preRef = useRef<HTMLPreElement>(null);
+  const liveText = state.status === "streaming" || state.status === "done" ? state.text : "";
+  // keep the live caret in view as text streams past the bottom of the box.
+  useEffect(() => {
+    if (state.status === "streaming" && preRef.current) {
+      preRef.current.scrollTop = preRef.current.scrollHeight;
+    }
+  }, [state.status, liveText]);
+
   if (state.status === "loading") {
     return (
       <div className="space-y-3 py-4" aria-label="generating">
@@ -271,9 +330,12 @@ function VariantView({ state, onRetry }: { state: VariantState; onRetry: () => v
     );
   }
 
+  // streaming: the text so far, with a live caret. done: the final audited
+  // text + the drift note if the keeper had to step in.
+  const streaming = state.status === "streaming";
   return (
     <div>
-      {state.drift ? (
+      {state.status === "done" && state.drift ? (
         <p
           className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em]"
           style={{ color: "var(--lunari-fg-subtle)" }}
@@ -282,10 +344,13 @@ function VariantView({ state, onRetry }: { state: VariantState; onRetry: () => v
         </p>
       ) : null}
       <pre
+        ref={preRef}
         className="max-h-[46vh] overflow-y-auto whitespace-pre-wrap font-serif text-[15px] leading-relaxed"
         style={{ color: "var(--lunari-fg-primary)" }}
+        aria-busy={streaming}
       >
         {state.text}
+        {streaming ? <span className="np-caret" aria-hidden /> : null}
       </pre>
     </div>
   );

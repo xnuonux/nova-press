@@ -5,7 +5,7 @@ import {
   REPURPOSE_FORMATS,
   type RepurposeFormat,
 } from "@/lib/ai/prompts/repurpose-prompt";
-import { runRepurposeSet } from "@/lib/ai/repurpose";
+import { runRepurposeSet, streamRepurpose } from "@/lib/ai/repurpose";
 import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -33,10 +33,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
   }
 
-  const { title, source, formats } = (body ?? {}) as {
+  const { title, source, formats, stream } = (body ?? {}) as {
     title?: unknown;
     source?: unknown;
     formats?: unknown;
+    stream?: unknown;
   };
 
   const cleanTitle = typeof title === "string" ? title : "";
@@ -60,6 +61,29 @@ export async function POST(request: NextRequest) {
     : [];
   const targets =
     requested.length > 0 ? requested : (Object.keys(REPURPOSE_FORMATS) as RepurposeFormat[]);
+
+  // streaming path: one format at a time, text streamed as it generates. the
+  // text is dash-safe at the source (streamRepurpose); the client runs the
+  // full voice-keeper at stream end.
+  if (stream === true) {
+    const [only] = targets;
+    if (!only || targets.length !== 1) {
+      return NextResponse.json({ error: "streaming takes one format at a time" }, { status: 400 });
+    }
+    try {
+      const responseStream = streamRepurpose(only, { title: cleanTitle, source: cleanSource });
+      return new Response(responseStream, {
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    } catch (err) {
+      reportError(err, { tag: "ai-repurpose-stream-failed", userId: user.id });
+      return NextResponse.json({ error: "nova couldn't repurpose this one" }, { status: 502 });
+    }
+  }
 
   try {
     const variants = await runRepurposeSet(targets, {

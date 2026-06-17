@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateText } from "ai";
+import { generateText, streamText } from "ai";
 
 import {
   buildRepurposePrompt,
@@ -59,4 +59,52 @@ export async function runRepurposeSet(
   input: RepurposeInput,
 ): Promise<RepurposeVariant[]> {
   return Promise.all(formats.map((format) => runRepurpose(format, input)));
+}
+
+// streaming variant of one format. returns a utf-8 byte stream of the text as
+// it generates. the HARD invariant (no em-dashes EVER) is enforced per chunk
+// right here, so a dash never reaches the wire even mid-stream; the client
+// runs the full voice-keeper at stream end for the lowercase-first + preamble
+// pass + the final drift flag. streamText stays inside src/lib/ai per the
+// skill boundary. getPartnerModel() throws synchronously on a missing key, so
+// the route can still answer with a clean 502 before any bytes go out.
+export function streamRepurpose(
+  format: RepurposeFormat,
+  input: RepurposeInput,
+): ReadableStream<Uint8Array> {
+  const spec = REPURPOSE_FORMATS[format];
+  const model = getPartnerModel();
+  const { system, prompt } = buildRepurposePrompt({
+    format,
+    title: input.title,
+    source: input.source,
+  });
+
+  const result = streamText({
+    model,
+    system,
+    prompt,
+    temperature: spec.temperature,
+    maxTokens: spec.maxTokens,
+  });
+
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        for await (const chunk of result.textStream) {
+          // em/en-dash -> " ... " per chunk, matching voiceKeeperAudit exactly
+          // so the streaming output reads the same as the non-streaming path.
+          // a dash is a single code point so it never splits across a chunk
+          // boundary; the surrounding-space match is per-chunk, which at worst
+          // leaves a stray space at a boundary in the rare case the model
+          // disobeys and emits a dash at all.
+          controller.enqueue(encoder.encode(chunk.replace(/\s*[—–]\s*/g, " ... ")));
+        }
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
 }
