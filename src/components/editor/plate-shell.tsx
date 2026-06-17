@@ -58,8 +58,11 @@ interface PlateShellProps {
   // it as a prop keeps the shell decoupled from the action module ... it
   // just persists whatever it's handed.
   onSave: (input: { title: string; body: Value }) => Promise<void>;
-  // publishes the piece and hands back its public path.
-  onPublish: () => Promise<{ slug: string; url: string }>;
+  // publishes the piece and hands back the outcome (the public path, or a
+  // reason it couldn't ship).
+  onPublish: () => Promise<
+    { ok: true; slug: string; url: string } | { ok: false; error: string }
+  >;
 }
 
 // week 1 plugin set ... basic blocks + basic marks, and nothing else.
