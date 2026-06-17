@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createDraftPiece, getPieceById, listPiecesForUser, savePieceContent } from "./pieces";
+import {
+  createDraftPiece,
+  getPieceById,
+  listPiecesForUser,
+  publishPiece,
+  savePieceContent,
+} from "./pieces";
 
 type ServerClient = Parameters<typeof listPiecesForUser>[0];
 
@@ -203,5 +209,85 @@ describe("savePieceContent", () => {
   it("throws when the client returns an error", async () => {
     const { client } = makeUpdateMock({ message: "denied" });
     await expect(savePieceContent(client, "piece-uuid", sampleUpdate)).rejects.toThrow(/denied/);
+  });
+});
+
+// publishPiece does a read (getPieceById: from().select().eq().maybeSingle())
+// then an update (from().update().eq().select().maybeSingle()). one fake from()
+// serves both chains; updateResults are returned in sequence so we can stage a
+// 23505 collision followed by a success.
+function makePublishMock(piece: unknown, updateResults: Array<{ data: unknown; error: unknown }>) {
+  let updateCalls = 0;
+  const getMaybeSingle = vi.fn().mockResolvedValue({ data: piece, error: null });
+  const getEq = vi.fn(() => ({ maybeSingle: getMaybeSingle }));
+  const select = vi.fn(() => ({ eq: getEq }));
+  const updMaybeSingle = vi.fn(() => {
+    const r = updateResults[Math.min(updateCalls, updateResults.length - 1)];
+    updateCalls += 1;
+    return Promise.resolve(r);
+  });
+  const updSelect = vi.fn(() => ({ maybeSingle: updMaybeSingle }));
+  const updEq = vi.fn(() => ({ select: updSelect }));
+  const update = vi.fn(() => ({ eq: updEq }));
+  const from = vi.fn(() => ({ select, update }));
+  return {
+    client: { from } as unknown as ServerClient,
+    update,
+    updateCalls: () => updateCalls,
+  };
+}
+
+const draft = {
+  id: "p1",
+  title: "The Title",
+  body: [{ type: "p", children: [{ text: "hello world" }] }],
+  status: "draft",
+  slug: null,
+  published_at: null,
+};
+
+describe("publishPiece", () => {
+  it("publishes a draft and returns the slug postgres confirmed", async () => {
+    const { client, update } = makePublishMock(draft, [
+      { data: { slug: "the-title" }, error: null },
+    ]);
+    await expect(publishPiece(client, "p1")).resolves.toEqual({ slug: "the-title" });
+    const payload = (update.mock.calls[0] as unknown as [Record<string, unknown>])[0];
+    expect(payload.status).toBe("published");
+    expect(payload.visibility).toBe("public");
+    expect(typeof payload.published_at).toBe("string");
+  });
+
+  it("retries with a suffix on a 23505 slug collision, then succeeds", async () => {
+    const { client, updateCalls } = makePublishMock(draft, [
+      { data: null, error: { code: "23505" } },
+      { data: { slug: "the-title-ab12cd" }, error: null },
+    ]);
+    await expect(publishPiece(client, "p1")).resolves.toEqual({ slug: "the-title-ab12cd" });
+    expect(updateCalls()).toBe(2);
+  });
+
+  it("does not retry when an already-published piece collides on its own slug", async () => {
+    const live = { ...draft, status: "published", slug: "the-title" };
+    const { client, updateCalls } = makePublishMock(live, [{ data: null, error: { code: "23505" } }]);
+    await expect(publishPiece(client, "p1")).rejects.toThrow(/already in use/);
+    expect(updateCalls()).toBe(1);
+  });
+
+  it("throws on a zero-row update (rls filtered or row vanished), not a false success", async () => {
+    const { client } = makePublishMock(draft, [{ data: null, error: null }]);
+    await expect(publishPiece(client, "p1")).rejects.toThrow(/not found or not owned/);
+  });
+
+  it("refuses to publish an empty piece, before touching the db", async () => {
+    const empty = { ...draft, body: [] };
+    const { client, updateCalls } = makePublishMock(empty, [{ data: { slug: "x" }, error: null }]);
+    await expect(publishPiece(client, "p1")).rejects.toThrow(/empty piece/);
+    expect(updateCalls()).toBe(0);
+  });
+
+  it("throws when the piece does not exist", async () => {
+    const { client } = makePublishMock(null, [{ data: { slug: "x" }, error: null }]);
+    await expect(publishPiece(client, "missing")).rejects.toThrow(/piece not found/);
   });
 });

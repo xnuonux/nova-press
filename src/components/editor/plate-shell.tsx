@@ -43,6 +43,7 @@ import { CommandPalette } from "./command-palette";
 import { EmojiPicker } from "./emoji-picker";
 import { GhostText } from "./ghost-text";
 import { plateText } from "./plate-text";
+import { PublishButton } from "./publish-button";
 import { RepurposeLauncher } from "./repurpose-launcher";
 import { SlashMenu } from "./slash-menu";
 import { useAutosave } from "./use-autosave";
@@ -51,10 +52,13 @@ interface PlateShellProps {
   initialTitle: string;
   initialValue: Value;
   initialStatus: string;
+  initialSlug: string | null;
   // a server action bound to this piece's id (page does the bind). taking
   // it as a prop keeps the shell decoupled from the action module ... it
   // just persists whatever it's handed.
   onSave: (input: { title: string; body: Value }) => Promise<void>;
+  // publishes the piece and hands back its public path.
+  onPublish: () => Promise<{ slug: string; url: string }>;
 }
 
 // week 1 plugin set ... basic blocks + basic marks, and nothing else.
@@ -72,7 +76,14 @@ const editorPlugins = [
   CodePlugin,
 ];
 
-export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }: PlateShellProps) {
+export function PlateShell({
+  initialTitle,
+  initialValue,
+  initialStatus,
+  initialSlug,
+  onSave,
+  onPublish,
+}: PlateShellProps) {
   const [title, setTitle] = useState(initialTitle);
   const [wordCount, setWordCount] = useState(() => countWords(plateText(initialValue)));
   const [revision, setRevision] = useState(0);
@@ -331,22 +342,11 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
         <span className="tabular-nums">
           {wordCount} {wordCount === 1 ? "word" : "words"}
         </span>
-        <span
-          className="rounded-full px-2.5 py-1"
-          style={
-            initialStatus === "published" || initialStatus === "scheduled"
-              ? {
-                  background: "var(--nova-accent-soft)",
-                  color: "var(--nova-accent)",
-                }
-              : {
-                  border: "1px solid var(--lunari-border)",
-                  color: "var(--lunari-fg-subtle)",
-                }
-          }
-        >
-          {initialStatus}
-        </span>
+        <PublishButton
+          initialStatus={initialStatus}
+          initialSlug={initialSlug}
+          onPublish={onPublish}
+        />
       </footer>
 
       {focusMode || typewriterMode ? (

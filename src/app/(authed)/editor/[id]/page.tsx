@@ -7,6 +7,7 @@ import { coercePlateValue } from "@/components/editor/plate-text";
 import { getPieceById } from "@/lib/db/pieces";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+import { publishPieceAction } from "./publish-action";
 import { savePieceContentAction } from "./save-action";
 
 export default async function EditorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +29,9 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
           initialTitle={piece.title}
           initialValue={coercePlateValue(piece.body)}
           initialStatus={piece.status}
+          initialSlug={piece.slug}
           onSave={savePieceContentAction.bind(null, piece.id)}
+          onPublish={publishPieceAction.bind(null, piece.id)}
         />
         <PartnerRail />
       </div>

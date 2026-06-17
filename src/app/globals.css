@@ -59,7 +59,7 @@
 
     .prose-nova,
     .prose-nova p,
-    .prose-nova p:first-of-type,
+    .prose-nova p[data-lead],
     article h1 {
       color: #000 !important;
     }
@@ -70,7 +70,7 @@
       line-height: 1.65;
     }
 
-    .np-dropcap > p:first-of-type::first-letter {
+    .np-dropcap > p[data-lead]::first-letter {
       color: #000 !important;
     }
 
@@ -102,10 +102,69 @@
     margin-bottom: 1.25em;
   }
 
-  .prose-nova p:first-of-type {
+  .prose-nova p[data-lead] {
     font-size: 22px;
     line-height: 1.6;
     color: var(--lunari-fg-muted);
+  }
+
+  /* structure inside a published piece ... headings, quotes, rules, marks. kept
+     quiet so the column still reads like print, not like a doc. */
+  .prose-nova h2 {
+    margin: 1.8em 0 0.5em;
+    font-size: 1.55em;
+    font-weight: 500;
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+    color: var(--lunari-fg-primary);
+  }
+
+  .prose-nova h3 {
+    margin: 1.6em 0 0.45em;
+    font-size: 1.28em;
+    font-weight: 500;
+    line-height: 1.22;
+    color: var(--lunari-fg-primary);
+  }
+
+  .prose-nova h4 {
+    margin: 1.4em 0 0.4em;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--lunari-fg-primary);
+  }
+
+  .prose-nova blockquote {
+    margin: 1.5em 0;
+    padding-left: 1.1em;
+    border-left: 2px solid var(--nova-accent);
+    color: var(--lunari-fg-muted);
+    font-style: italic;
+  }
+
+  .prose-nova hr {
+    width: 3.5em;
+    margin: 2.2em auto;
+    border: 0;
+    border-top: 1px solid var(--nova-accent);
+    opacity: 0.6;
+  }
+
+  .prose-nova strong {
+    font-weight: 600;
+    color: var(--lunari-fg-primary);
+  }
+
+  .prose-nova em {
+    font-style: italic;
+  }
+
+  .prose-nova code {
+    padding: 0.08em 0.36em;
+    border-radius: 4px;
+    background: rgba(201, 168, 76, 0.1);
+    font-family: var(--font-mono);
+    font-size: 0.86em;
   }
 
   /* reading view drops to 16px on phones, per the design system */
@@ -745,7 +804,7 @@
   }
 
   /* drop cap for the reading view's first body paragraph. */
-  .np-dropcap > p:first-of-type::first-letter {
+  .np-dropcap > p[data-lead]::first-letter {
     float: left;
     margin: 0.02em 0.09em 0 0;
     font-family: var(--font-serif);
@@ -757,7 +816,7 @@
 
   /* smaller cap on phones so the first words don't crowd against it. */
   @media (max-width: 640px) {
-    .np-dropcap > p:first-of-type::first-letter {
+    .np-dropcap > p[data-lead]::first-letter {
       font-size: 2.9em;
     }
   }

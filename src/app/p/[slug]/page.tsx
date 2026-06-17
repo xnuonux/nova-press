@@ -1,42 +1,85 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { Atmosphere } from "@/components/chrome/atmosphere";
+import { coercePlateValue } from "@/components/editor/plate-text";
+import { PieceBody } from "@/components/reading/piece-body";
 import { ReadingProgress } from "@/components/reading/reading-progress";
 import { ShareRow } from "@/components/reading/share-row";
+import { getPublishedPieceBySlug } from "@/lib/db/pieces";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 interface ReadingPageProps {
   params: Promise<{ slug: string }>;
 }
 
-const PLACEHOLDER = {
-  title: "the thing nobody says about AI writing tools",
-  byline: "dom · founder, lunari",
-  publishedAt: "may 21, 2026",
-  readingTime: "3 min",
-  paragraphs: [
-    "every AI writing tool sells the same promise. write faster. and every one of them keeps it the same way ... by writing for you instead of with you. you press tab, the screen fills, and somewhere in the fill your voice goes quiet. you ship the draft anyway. it reads fine. that's the problem. fine is how a sentence sounds when nobody was home when it got written.",
-    "your voice was never your vocabulary. it's the small wrong choices. the comma you keep that the rule says to cut. the sentence that runs long because the thought ran long. the word you reach for at 2am that you'd never reach for at noon. a model trained on everyone reads all of that as error and sands it off. what's left is smooth, and smooth is nobody.",
-    "nova works from the other end. before it writes a word, it reads you ... your last essays, your last paragraphs, the rhythm of how you actually move down a page. it builds a fingerprint and stays inside it. when it hands you a line, the line sounds like you on a good day, not like the internet on an average one.",
-    "and it knows when to shut up. one sentence at a time, never the whole paragraph. it offers, you decide, it never closes the deal for you. catch a real flow and it goes dark, because the worst thing a writing tool can do is talk while you're talking.",
-    "then there's the part the other tools forget. the published piece. the thing a stranger actually opens. that's the artifact. that's what gets screenshotted at midnight and sent to one friend with no caption. if the editor is the kitchen, this page is the plate. most tools hand you the food on a napkin.",
-    "so the page is the product too. wide margins. type that was chosen, not defaulted. a column you can sit inside for an hour without your eyes giving out. it should feel like print, because print spent four hundred years earning that feeling ... a screen can have it too, if anyone bothers to try.",
-    "that's the whole thing. write in your voice. keep your voice. publish something that looks like you meant it. everything nova does underneath that is plumbing, and plumbing works best when you can't see it.",
-    "the tools that write for you will keep getting faster. let them. speed was never the hard part. sounding like yourself on the page, every time ... that's the part worth building.",
-  ],
-};
+// generateMetadata + the page both need the piece; react cache collapses the
+// two service-role reads in one request into a single query (the 200ms reading
+// budget doesn't have room for a redundant cross-network hit).
+const loadPiece = cache((slug: string) => getPublishedPieceBySlug(createSupabaseAdminClient(), slug));
+
+// ~200 wpm, never under a minute.
+function readingTime(words: number): string {
+  return `${Math.max(1, Math.round(words / 200))} min`;
+}
+
+// "may 21, 2026", lowercased to match nova's voice. pinned to utc so the
+// rendered day is deterministic across deploy regions (the server runs in utc),
+// not silently off by one.
+function formatPublished(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso)
+    .toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+    .toLowerCase();
+}
+
+export async function generateMetadata({ params }: ReadingPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const piece = await loadPiece(slug);
+  if (!piece) {
+    return { title: "not found ... nova press" };
+  }
+  // the share preview IS the product's wedge, so the og/twitter card has to be
+  // the piece, not the generic site card the layout would otherwise inherit.
+  return {
+    title: `${piece.title} ... nova press`,
+    description: piece.excerpt ?? undefined,
+    alternates: { canonical: `/p/${slug}` },
+    openGraph: {
+      title: piece.title,
+      description: piece.excerpt ?? undefined,
+      type: "article",
+      url: `/p/${slug}`,
+      publishedTime: piece.published_at ?? undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: piece.title,
+      description: piece.excerpt ?? undefined,
+    },
+  };
+}
 
 export default async function ReadingPage({ params }: ReadingPageProps) {
   const { slug } = await params;
-
-  // placeholder routing: only "example" resolves in week 1.
-  // week 3 (T-033) hooks this to supabase pieces table.
-  if (slug !== "example") {
+  // service-role read: the reader is anonymous and np_pieces is RLS owner-only,
+  // so the fetch bypasses RLS but the WHERE filter (published + shareable) is
+  // the real gate. drafts and private pieces can never surface here.
+  const piece = await loadPiece(slug);
+  if (!piece) {
     notFound();
   }
 
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const canonical = `${base}/p/${slug}`;
+  const body = coercePlateValue(piece.body);
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden">
@@ -68,21 +111,17 @@ export default async function ReadingPage({ params }: ReadingPageProps) {
               className="font-serif text-4xl font-medium leading-[1.05] tracking-tight md:text-[3.25rem]"
               style={{ color: "var(--lunari-fg-primary)" }}
             >
-              {PLACEHOLDER.title}
+              {piece.title}
             </h1>
             <div
               className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tabular-nums tracking-[0.22em]"
               style={{ color: "var(--lunari-fg-muted)" }}
             >
-              <span>{PLACEHOLDER.byline}</span>
+              <span>{formatPublished(piece.published_at)}</span>
               <span aria-hidden style={{ color: "var(--lunari-fg-subtle)" }}>
                 ·
               </span>
-              <span>{PLACEHOLDER.publishedAt}</span>
-              <span aria-hidden style={{ color: "var(--lunari-fg-subtle)" }}>
-                ·
-              </span>
-              <span>{PLACEHOLDER.readingTime}</span>
+              <span>{readingTime(piece.word_count)}</span>
             </div>
             <div
               className="mt-8 h-px w-14"
@@ -92,9 +131,7 @@ export default async function ReadingPage({ params }: ReadingPageProps) {
           </header>
 
           <div className="prose-nova np-dropcap mx-auto">
-            {PLACEHOLDER.paragraphs.map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
-            ))}
+            <PieceBody value={body} />
           </div>
 
           <div className="np-print-hide mx-auto mt-16 max-w-[65ch]">
@@ -103,7 +140,7 @@ export default async function ReadingPage({ params }: ReadingPageProps) {
               style={{ background: "var(--lunari-border)" }}
               aria-hidden
             />
-            <ShareRow url={canonical} title={PLACEHOLDER.title} />
+            <ShareRow url={canonical} title={piece.title} />
           </div>
 
           <footer
