@@ -1,7 +1,10 @@
 import "server-only";
 
-import { generateText } from "ai";
+import { generateText, streamText } from "ai";
 
+import { reportError } from "@/lib/observability/report-error";
+
+import { sentenceCut } from "./ghost-format";
 import { buildPartnerPrompt } from "./prompts/system-prompt";
 import { COMMAND_CONFIG, getPartnerModel, type Command } from "./provider";
 import { voiceKeeperAudit } from "./voice-keeper";
@@ -72,4 +75,61 @@ async function generateOnce(
 
 function stricter(context: string): string {
   return `${context}\n\n(reminder: lowercase, no preamble, no praise${""}, one sentence if continuing.)`;
+}
+
+// streaming variant of a partner command ... powers the conversation rail. it
+// returns a utf-8 byte stream of the reply as it generates, the way the ghost
+// whisper feels. dashes are swapped to "..." per chunk; a one-sentence command
+// (respond / continue) self-terminates at the first real sentence boundary so
+// the reply is exactly one finished sentence, terminal mark and all, and the
+// "..."-aware cut never trips on a pause. the client runs the full voice-keeper
+// at stream end for the lowercase / preamble pass + the drift flag.
+// getPartnerModel() throws synchronously on a missing key, so the route still
+// answers a clean 502 before any bytes go out.
+export function streamPartnerCommand(input: PartnerInput): ReadableStream<Uint8Array> {
+  const cfg = COMMAND_CONFIG[input.command];
+  const model = getPartnerModel();
+  const { system, prompt } = buildPartnerPrompt(input);
+
+  const result = streamText({
+    model,
+    system,
+    prompt,
+    temperature: cfg.temperature,
+    maxTokens: cfg.maxTokens,
+    // the body streams after a 200 is already on the wire, so a mid-stream
+    // provider failure can't reach the route's try/catch ... log it here.
+    onError: ({ error }) => reportError(error, { tag: "ai-partner-stream", command: input.command }),
+  });
+
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let acc = ""; // all cleaned text seen so far
+      let sent = 0; // chars already enqueued from acc
+      try {
+        for await (const chunk of result.textStream) {
+          acc += chunk.replace(/\s*[—–]\s*/g, " ... ");
+          if (cfg.oneSentence) {
+            const cut = sentenceCut(acc);
+            if (cut >= 0) {
+              const tail = acc.slice(sent, cut);
+              if (tail) controller.enqueue(encoder.encode(tail));
+              controller.close();
+              return;
+            }
+          }
+          if (acc.length > sent) {
+            controller.enqueue(encoder.encode(acc.slice(sent)));
+            sent = acc.length;
+          }
+        }
+        // ran to the token cap with no boundary ... flush whatever's left.
+        if (acc.length > sent) controller.enqueue(encoder.encode(acc.slice(sent)));
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
 }

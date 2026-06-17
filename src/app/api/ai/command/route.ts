@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { runPartnerCommand } from "@/lib/ai/partner";
+import { runPartnerCommand, streamPartnerCommand } from "@/lib/ai/partner";
 import { isCommand } from "@/lib/ai/provider";
 import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -25,9 +25,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
   }
 
-  const { command, context } = (body ?? {}) as {
+  const { command, context, stream } = (body ?? {}) as {
     command?: unknown;
     context?: unknown;
+    stream?: unknown;
   };
   if (!isCommand(command)) {
     return NextResponse.json({ error: "unknown command" }, { status: 400 });
@@ -37,6 +38,26 @@ export async function POST(request: NextRequest) {
   }
   if (context.length > 8000) {
     return NextResponse.json({ error: "context too long" }, { status: 413 });
+  }
+
+  // streaming path: powers the conversation rail. the reply streams token by
+  // token, dash-safe at the source; the client runs the full voice-keeper at
+  // stream end. getPartnerModel throws synchronously on a missing key, so a
+  // config failure still lands as a clean 502 before any bytes go out.
+  if (stream === true) {
+    try {
+      const responseStream = streamPartnerCommand({ command, context });
+      return new Response(responseStream, {
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    } catch (err) {
+      reportError(err, { tag: "ai-command-stream-failed", command, userId: user.id });
+      return NextResponse.json({ error: "nova couldn't reach the model" }, { status: 502 });
+    }
   }
 
   try {
