@@ -300,30 +300,29 @@
   /* ghost text ... nova's inline whisper. a greyed one-sentence continuation
      that fades in at the caret on a pause; tab takes it. fixed + portaled,
      measured off the selection rect, so it rides over the text without ever
-     touching the editor value. clamped to a single line (it's a preview ... tab
-     still inserts the full sentence) so a long suggestion can never wrap down
-     over the paragraph below. the "tab" chip stays pinned at the end. */
+     touching the editor value. it wraps within the column (so what you see is
+     what tab inserts) but clamps to two lines, so even a long whisper can't run
+     down over the paragraph below. the "tab" chip trails the text. */
   .np-ghost {
     position: fixed;
     z-index: 40;
-    display: inline-flex;
-    align-items: baseline;
     overflow: hidden;
     pointer-events: none;
     color: var(--lunari-fg-primary);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     animation: np-ghost-in var(--t-base) var(--ease-out-soft);
   }
 
   .np-ghost-text {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
     opacity: 0.32;
   }
 
   .np-ghost-key {
-    flex: none;
     margin-left: 0.55em;
     padding: 0.05em 0.4em;
     border: 1px solid var(--lunari-border);

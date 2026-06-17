@@ -21,6 +21,8 @@ import { createPortal } from "react-dom";
 
 import { useEditorRef } from "platejs/react";
 
+import { joinGhost } from "@/lib/ai/ghost-format";
+
 const DEBOUNCE_MS = 1200;
 const MIN_CONTEXT = 15;
 const MAX_CONTEXT = 1500;
@@ -36,24 +38,6 @@ interface GhostState {
   fontSize: string;
   lineHeight: string;
   fontFamily: string;
-}
-
-// turn the raw continuation into what we show and insert: one leading space
-// when the caret sits right after a word, none when the line already ends in
-// space or the suggestion opens with punctuation. what you see is exactly what
-// tab inserts.
-function joinGhost(ctx: string, raw: string): string {
-  // strip a leading space (we decide that ourselves) and collapse any interior
-  // double space the per-chunk dash swap can leave at a stream boundary.
-  const trimmed = raw.replace(/^\s+/, "").replace(/ {2,}/g, " ");
-  if (!trimmed) return "";
-  const endsSpace = /\s$/.test(ctx);
-  // a leading space is wanted when the suggestion opens with a word, a quote
-  // (straight or curly), or an opening bracket ... not when it opens with
-  // closing punctuation like , ; : . ! ?
-  const opensWord = /[\p{L}\p{N}"'“‘([{]/u.test(trimmed.charAt(0));
-  const needsLead = ctx.length > 0 && !endsSpace && opensWord;
-  return (needsLead ? " " : "") + trimmed;
 }
 
 export function GhostText() {
