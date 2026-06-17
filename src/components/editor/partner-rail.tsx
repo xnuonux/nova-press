@@ -13,11 +13,21 @@
  * and the drift flag, same as the repurpose panel. the flow detector ducks this
  * whole rail while you're typing in the canvas (see globals.css .np-flow).
  *
- * not yet: multi-turn memory ... each riposte answers the latest line on its
- * own. threading the recent transcript into the prompt is a clean follow-up.
+ * on desktop it's a fixed sidebar; below lg it collapses to a tap-to-open
+ * drawer with a floating nova button, so the flagship partner exists on mobile
+ * too. it carries the conversation history + the live draft into every ask, so
+ * nova spars over the actual piece in your own voice.
  */
 
-import { useCallback, useEffect, useReducer, useRef, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 
 import { threadBusy, threadReducer, type PartnerMessage } from "@/lib/ai/partner-thread";
 // pure module (regex only, no server deps), safe client-side ... it gives the
@@ -30,6 +40,9 @@ export function PartnerRail() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const busy = threadBusy(messages);
+  // below lg the rail is a tap-to-open drawer; lg+ it's always the sidebar.
+  const [open, setOpen] = useState(false);
+  const drawerSlide = open ? "translate-x-0" : "translate-x-full lg:translate-x-0";
 
   // abort an in-flight stream if the editor unmounts mid-reply.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -127,82 +140,122 @@ export function PartnerRail() {
   );
 
   return (
-    <aside
-      className="np-partner-rail hidden h-screen w-80 shrink-0 flex-col border-l lg:flex"
-      style={{ background: "var(--lunari-bg-surface)", borderColor: "var(--lunari-border)" }}
-    >
-      <header
-        className="flex items-center gap-3 border-b px-6 py-5"
-        style={{ borderColor: "var(--lunari-border)" }}
+    <>
+      {/* mobile: a floating nova button opens the drawer; hidden at lg+ where
+          the rail is always the sidebar. */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="open nova"
+        className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full font-serif text-lg font-medium shadow-xl transition-transform active:scale-95 lg:hidden"
+        style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
       >
+        N
+      </button>
+
+      {/* mobile backdrop ... tap to dismiss. */}
+      {open ? (
         <div
-          className="flex h-7 w-7 items-center justify-center rounded-full font-serif text-sm font-medium"
-          style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
-        >
-          N
-        </div>
-        <span className="font-serif text-base" style={{ color: "var(--lunari-fg-primary)" }}>
-          nova
-        </span>
-        <span
-          className="ml-auto h-1.5 w-1.5 rounded-full transition-colors"
-          style={{ background: busy ? "var(--nova-accent)" : "var(--lunari-fg-subtle)" }}
+          className="fixed inset-0 z-40 lg:hidden"
+          style={{ background: "rgba(5, 5, 9, 0.55)", backdropFilter: "blur(2px)" }}
+          onClick={() => setOpen(false)}
           aria-hidden
         />
-      </header>
+      ) : null}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-7">
-        {messages.length === 0 ? (
-          <p
-            className="font-serif text-base leading-relaxed"
-            style={{ color: "var(--lunari-fg-muted)" }}
-          >
-            nova is listening.
-          </p>
-        ) : (
-          <ol className="space-y-6">
-            {messages.map((m) => (
-              <Turn key={m.id} message={m} />
-            ))}
-          </ol>
-        )}
-      </div>
-
-      <form
-        onSubmit={onSubmit}
-        className="space-y-2 border-t px-6 py-5"
-        style={{ borderColor: "var(--lunari-border)" }}
+      <aside
+        className={`np-partner-rail fixed inset-y-0 right-0 z-50 flex h-screen w-80 max-w-[86vw] shrink-0 flex-col border-l lg:static lg:z-auto lg:max-w-none lg:translate-x-0 ${drawerSlide}`}
+        style={{
+          background: "var(--lunari-bg-surface)",
+          borderColor: "var(--lunari-border)",
+          // both transitions inline so the desktop flow-detector opacity duck
+          // (.np-flow .np-partner-rail) survives alongside the mobile slide.
+          transition:
+            "transform 0.3s var(--ease-out-soft), opacity var(--t-emphasis) var(--ease-out-soft)",
+        }}
       >
-        <textarea
-          ref={inputRef}
-          onKeyDown={onKeyDown}
-          placeholder="hand nova a line ..."
-          rows={3}
-          aria-label="ask nova"
-          className="w-full resize-none rounded-md border px-3 py-2 font-serif text-sm leading-relaxed outline-none"
-          style={{
-            background: "var(--lunari-bg-deep)",
-            borderColor: "var(--lunari-border)",
-            color: "var(--lunari-fg-primary)",
-          }}
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className="np-btn w-full rounded-md px-3 py-2 font-sans text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
+        <header
+          className="flex items-center gap-3 border-b px-6 py-5"
+          style={{ borderColor: "var(--lunari-border)" }}
         >
-          {busy ? "..." : "ask nova"}
-        </button>
-      </form>
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-full font-serif text-sm font-medium"
+            style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
+          >
+            N
+          </div>
+          <span className="font-serif text-base" style={{ color: "var(--lunari-fg-primary)" }}>
+            nova
+          </span>
+          <span
+            className="ml-auto h-1.5 w-1.5 rounded-full transition-colors"
+            style={{ background: busy ? "var(--nova-accent)" : "var(--lunari-fg-subtle)" }}
+            aria-hidden
+          />
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="close nova"
+            className="-mr-1 rounded-md px-1.5 py-0.5 font-mono text-lg leading-none transition-opacity hover:opacity-70 lg:hidden"
+            style={{ color: "var(--lunari-fg-subtle)" }}
+          >
+            ×
+          </button>
+        </header>
 
-      <footer
-        className="border-t px-6 py-4 font-mono text-[11px] uppercase tracking-[0.18em]"
-        style={{ borderColor: "var(--lunari-border)", color: "var(--lunari-fg-subtle)" }}
-      >
-        one sentence, in your voice
-      </footer>
-    </aside>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-7">
+          {messages.length === 0 ? (
+            <p
+              className="font-serif text-base leading-relaxed"
+              style={{ color: "var(--lunari-fg-muted)" }}
+            >
+              nova is listening.
+            </p>
+          ) : (
+            <ol className="space-y-6">
+              {messages.map((m) => (
+                <Turn key={m.id} message={m} />
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <form
+          onSubmit={onSubmit}
+          className="space-y-2 border-t px-6 py-5"
+          style={{ borderColor: "var(--lunari-border)" }}
+        >
+          <textarea
+            ref={inputRef}
+            onKeyDown={onKeyDown}
+            placeholder="hand nova a line ..."
+            rows={3}
+            aria-label="ask nova"
+            className="w-full resize-none rounded-md border px-3 py-2 font-serif text-sm leading-relaxed outline-none"
+            style={{
+              background: "var(--lunari-bg-deep)",
+              borderColor: "var(--lunari-border)",
+              color: "var(--lunari-fg-primary)",
+            }}
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="np-btn w-full rounded-md px-3 py-2 font-sans text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
+          >
+            {busy ? "..." : "ask nova"}
+          </button>
+        </form>
+
+        <footer
+          className="border-t px-6 py-4 font-mono text-[11px] uppercase tracking-[0.18em]"
+          style={{ borderColor: "var(--lunari-border)", color: "var(--lunari-fg-subtle)" }}
+        >
+          one sentence, in your voice
+        </footer>
+      </aside>
+    </>
   );
 }
 

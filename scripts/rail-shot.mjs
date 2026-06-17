@@ -25,9 +25,15 @@ mkdirSync(OUT, { recursive: true });
 const errors = [];
 const done = [];
 
+// SHOT_W under 1024 exercises the mobile drawer (the rail collapses to a
+// tap-to-open sheet below lg); default is the desktop sidebar.
+const VW = Number(process.env.SHOT_W ?? 1440);
+const VH = Number(process.env.SHOT_H ?? 1000);
+const MOBILE = VW < 1024;
+
 const browser = await chromium.launch();
 const page = await browser.newPage({
-  viewport: { width: 1440, height: 1000 },
+  viewport: { width: VW, height: VH },
   deviceScaleFactor: 2,
 });
 page.on("pageerror", (e) =>
@@ -78,7 +84,24 @@ await step("new-piece", async () => {
   await page.waitForSelector(".np-partner-rail", { timeout: 30000 });
   await page.waitForTimeout(700);
 });
-await step("shot-rail-idle", () => shot("rail-idle"));
+// mobile: the rail is a drawer ... tap the floating nova button to open it
+// before we can hand it a line. on desktop the FAB is hidden, so skip.
+let drawerOpened = null;
+if (MOBILE) {
+  await step("open-drawer", async () => {
+    await page.screenshot({ path: `${OUT}/rail-mobile-closed.png` });
+    done.push("rail-mobile-closed");
+    await page.click('[aria-label="open nova"]', { timeout: 8000 });
+    await page.waitForTimeout(450);
+    // the textarea should now be reachable (drawer slid in).
+    drawerOpened = await page
+      .locator('[aria-label="ask nova"]')
+      .isVisible()
+      .catch(() => false);
+    console.log("drawer opened, input visible:", drawerOpened);
+  });
+}
+await step("shot-rail-idle", () => shot(MOBILE ? "rail-mobile-open" : "rail-idle"));
 
 let asked = null;
 let streaming = null;
@@ -143,7 +166,12 @@ await browser.close();
 
 const emdashes = settled ? (settled.novaText.match(/[—–]/g) || []).length : -1;
 const pass =
-  settled && settled.turns >= 2 && settled.novaText.length > 0 && !settled.caret && emdashes === 0;
+  settled &&
+  settled.turns >= 2 &&
+  settled.novaText.length > 0 &&
+  !settled.caret &&
+  emdashes === 0 &&
+  (!MOBILE || drawerOpened === true);
 
 console.log("\n=== report ===");
 console.log("shots:", done.join(", ") || "(none)");
