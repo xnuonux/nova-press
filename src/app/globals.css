@@ -39,6 +39,53 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* print ... the published piece, as a page. black ink on white, every bit
+     of chrome gone, the column opened to the full width of the paper. */
+  @media print {
+    .np-atmosphere,
+    .np-skyline,
+    nav,
+    footer,
+    .np-print-hide {
+      display: none !important;
+    }
+
+    html,
+    body {
+      background: #fff !important;
+      color: #000 !important;
+    }
+
+    .prose-nova,
+    .prose-nova p,
+    .prose-nova p:first-of-type,
+    article h1 {
+      color: #000 !important;
+    }
+
+    .prose-nova {
+      max-width: 100% !important;
+      font-size: 12pt;
+      line-height: 1.65;
+    }
+
+    .np-dropcap > p:first-of-type::first-letter {
+      color: #000 !important;
+    }
+
+    h1,
+    h2,
+    h3 {
+      break-after: avoid;
+    }
+
+    blockquote,
+    figure,
+    pre {
+      break-inside: avoid;
+    }
+  }
 }
 
 @layer components {
@@ -357,6 +404,60 @@
     font-size: 11px;
     letter-spacing: 0.04em;
     text-transform: lowercase;
+  }
+
+  /* slash menu ... block commands under the caret, same family as the emoji
+     picker. a serif label + a quiet mono hint, golden active row. */
+  .np-slash {
+    position: fixed;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 220px;
+    max-width: 280px;
+    padding: 5px;
+    background: var(--lunari-bg-elevated);
+    border: 1px solid var(--lunari-border);
+    border-radius: 11px;
+    box-shadow:
+      0 12px 30px -10px rgba(0, 0, 0, 0.6),
+      0 2px 6px rgba(0, 0, 0, 0.3);
+    animation: np-emoji-in var(--t-micro) var(--ease-planetarium);
+  }
+
+  .np-slash button {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 7px;
+    text-align: left;
+    transition: background 110ms var(--ease-standard);
+  }
+
+  .np-slash button[data-active="true"] {
+    background: var(--nova-accent-soft);
+  }
+
+  .np-slash-label {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    color: var(--lunari-fg-primary);
+  }
+
+  .np-slash button[data-active="true"] .np-slash-label {
+    color: var(--nova-accent);
+  }
+
+  .np-slash-hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    color: var(--lunari-fg-subtle);
   }
 
   /* skeleton shimmer ... the repurpose panel while nova recompiles. a band of

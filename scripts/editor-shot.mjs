@@ -83,6 +83,25 @@ await step("type-body", async () => {
 });
 await step("shot-typed", () => shot("editor-typed"));
 
+// slash menu: type "/" on a fresh line, confirm the menu, pick heading 1
+await step("slash-menu", async () => {
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("/head");
+  await page.waitForTimeout(400);
+  const visible = await page.evaluate(() => !!document.querySelector(".np-slash"));
+  console.log("slash menu visible:", visible);
+  await page.screenshot({ path: `${OUT}/editor-slash.png` });
+  done.push("editor-slash");
+  if (visible) {
+    await page.keyboard.press("Enter"); // pick the highlighted command (heading 1)
+    await page.waitForTimeout(300);
+    const hasH1 = await page.evaluate(
+      () => !!document.querySelector('[data-slate-editor="true"] h1'),
+    );
+    console.log("slash -> h1 block created:", hasH1);
+  }
+});
+
 // 4. emoji picker
 await step("emoji", async () => {
   await page.keyboard.press("Enter");

@@ -95,7 +95,7 @@ export default async function ReadingPage({ params }: ReadingPageProps) {
             ))}
           </div>
 
-          <div className="mx-auto mt-16 max-w-[65ch]">
+          <div className="np-print-hide mx-auto mt-16 max-w-[65ch]">
             <div
               className="mb-6 h-px w-full"
               style={{ background: "var(--lunari-border)" }}

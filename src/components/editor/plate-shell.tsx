@@ -42,6 +42,7 @@ import { BubbleToolbar } from "./bubble-toolbar";
 import { EmojiPicker } from "./emoji-picker";
 import { plateText } from "./plate-text";
 import { RepurposeLauncher } from "./repurpose-launcher";
+import { SlashMenu } from "./slash-menu";
 import { useAutosave } from "./use-autosave";
 
 interface PlateShellProps {
@@ -74,6 +75,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
   const [wordCount, setWordCount] = useState(() => countWords(plateText(initialValue)));
   const [revision, setRevision] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
+  const [typewriterMode, setTypewriterMode] = useState(false);
 
   const editor = usePlateEditor({
     plugins: editorPlugins,
@@ -160,20 +162,47 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
     [editor, charBeforeCaret],
   );
 
-  // focus mode ... cmd+. / ctrl+. drops the chrome and dims everything but
-  // the line you're on. esc leaves. a calm room to write in.
+  // focus mode (cmd+. / ctrl+.) drops the chrome and dims everything but the
+  // line you're on; typewriter mode (cmd+; / ctrl+;) keeps that line near the
+  // middle of the screen. esc leaves either. a calm room to write in.
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === ".") {
+      const mod = event.metaKey || event.ctrlKey;
+      if (mod && event.key === ".") {
         event.preventDefault();
         setFocusMode((on) => !on);
+      } else if (mod && event.key === ";") {
+        event.preventDefault();
+        setTypewriterMode((on) => !on);
       } else if (event.key === "Escape") {
         setFocusMode((on) => (on ? false : on));
+        setTypewriterMode((on) => (on ? false : on));
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
+
+  // typewriter mode ... hold the caret line near the vertical middle of the
+  // scroll surface so your eyes never chase the text down the page. scrolls
+  // the editor's own scroller, only when the line actually moves.
+  useEffect(() => {
+    if (!typewriterMode) return;
+    const center = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      const scroller = document.querySelector(".np-scroll");
+      if (!scroller) return;
+      const caret = selection.getRangeAt(0).getBoundingClientRect();
+      if (caret.top === 0 && caret.height === 0) return;
+      const box = scroller.getBoundingClientRect();
+      const delta = caret.top - (box.top + box.height * 0.42);
+      if (Math.abs(delta) > 4) scroller.scrollBy({ top: delta, behavior: "smooth" });
+    };
+    center();
+    document.addEventListener("selectionchange", center);
+    return () => document.removeEventListener("selectionchange", center);
+  }, [typewriterMode]);
 
   // focus mode also reaches outside this component ... a body class lets the
   // partner rail (a sibling in the editor page) fade away too.
@@ -231,7 +260,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
         </span>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="np-scroll flex-1 overflow-y-auto">
         <div className="editor-canvas">
           <div className="editor-sheet">
             <input
@@ -245,6 +274,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
             <Plate editor={editor} onValueChange={handleValueChange}>
               <BubbleToolbar />
               <EmojiPicker />
+              <SlashMenu />
               <PlateContent
                 className="editor-body min-h-[55vh] outline-none"
                 onKeyDown={handleEditorKeyDown}
@@ -285,9 +315,12 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
         </span>
       </footer>
 
-      {focusMode ? (
+      {focusMode || typewriterMode ? (
         <div className="np-focus-hint" aria-hidden>
-          focus ... esc to leave
+          {[focusMode ? "focus" : null, typewriterMode ? "typewriter" : null]
+            .filter(Boolean)
+            .join(" + ")}{" "}
+          ... esc to leave
         </div>
       ) : null}
     </div>
