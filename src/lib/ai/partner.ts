@@ -25,6 +25,9 @@ export interface PartnerInput {
   // recent turns of the conversation (rail only) ... flows straight into
   // buildPartnerPrompt so a streamed "respond" remembers the last few lines.
   history?: { role: "writer" | "nova"; text: string }[];
+  // the draft the writer is working on (rail only) ... so nova spars over the
+  // actual piece, not a line in a vacuum.
+  document?: string;
 }
 
 export interface PartnerResult {

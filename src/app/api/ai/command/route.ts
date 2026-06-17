@@ -26,11 +26,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
   }
 
-  const { command, context, stream, history: rawHistory } = (body ?? {}) as {
+  const {
+    command,
+    context,
+    stream,
+    history: rawHistory,
+    document: rawDocument,
+  } = (body ?? {}) as {
     command?: unknown;
     context?: unknown;
     stream?: unknown;
     history?: unknown;
+    document?: unknown;
   };
   if (!isCommand(command)) {
     return NextResponse.json({ error: "unknown command" }, { status: 400 });
@@ -59,6 +66,13 @@ export async function POST(request: NextRequest) {
         .slice(-6)
     : [];
 
+  // the draft the rail is sparring over, bounded so a long piece can't run up
+  // the bill ... undefined when the rail sends nothing (e.g. a blank canvas).
+  const pieceDocument =
+    typeof rawDocument === "string" && rawDocument.trim().length > 0
+      ? rawDocument.slice(0, 6000)
+      : undefined;
+
   // the writer's distilled voice, read once and threaded into whichever path
   // runs. undefined when the corpus isn't trained yet (the prompt keeps its
   // honest fallback), and the read never throws.
@@ -70,7 +84,13 @@ export async function POST(request: NextRequest) {
   // config failure still lands as a clean 502 before any bytes go out.
   if (stream === true) {
     try {
-      const responseStream = streamPartnerCommand({ command, context, history, voiceCompactView });
+      const responseStream = streamPartnerCommand({
+        command,
+        context,
+        history,
+        voiceCompactView,
+        document: pieceDocument,
+      });
       return new Response(responseStream, {
         headers: {
           "content-type": "text/plain; charset=utf-8",
@@ -85,7 +105,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await runPartnerCommand({ command, context, voiceCompactView });
+    const result = await runPartnerCommand({
+      command,
+      context,
+      voiceCompactView,
+      document: pieceDocument,
+    });
     return NextResponse.json(result);
   } catch (err) {
     reportError(err, { tag: "ai-command-failed", command, userId: user.id });

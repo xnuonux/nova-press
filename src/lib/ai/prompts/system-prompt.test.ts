@@ -103,4 +103,27 @@ describe("buildPartnerPrompt", () => {
     });
     expect(prompt).toBe("just this line");
   });
+
+  it("folds the working draft into the user prompt, before the current line", () => {
+    const { prompt } = buildPartnerPrompt({
+      command: "respond",
+      context: "is the opening too slow",
+      document: "the room at golden hour. she said the light was different.",
+    });
+    expect(prompt).toContain("the piece the writer is working on:");
+    expect(prompt).toContain("she said the light was different");
+    expect(prompt).toContain("the writer: is the opening too slow");
+    expect(prompt.indexOf("golden hour")).toBeLessThan(prompt.indexOf("is the opening too slow"));
+  });
+
+  it("orders draft, then history, then the current line", () => {
+    const { prompt } = buildPartnerPrompt({
+      command: "respond",
+      context: "now what",
+      document: "a short draft.",
+      history: [{ role: "writer", text: "earlier line" }],
+    });
+    expect(prompt.indexOf("a short draft")).toBeLessThan(prompt.indexOf("earlier line"));
+    expect(prompt.indexOf("earlier line")).toBeLessThan(prompt.indexOf("the writer: now what"));
+  });
 });

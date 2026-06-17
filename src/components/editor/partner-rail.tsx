@@ -52,6 +52,12 @@ export function PartnerRail() {
       .filter((m) => !m.streaming && !m.failed && m.text.trim().length > 0)
       .map((m) => ({ role: m.role, text: m.text }));
 
+    // the draft, read straight off the editor dom (read-only, never touches
+    // plate state, so no render-storm risk) so nova spars over the actual piece
+    // rather than a line in a vacuum. the route bounds it.
+    const pieceText =
+      document.querySelector('[data-slate-editor="true"]')?.textContent?.trim() ?? "";
+
     const writerId = crypto.randomUUID();
     const novaId = crypto.randomUUID();
     if (el) el.value = "";
@@ -66,7 +72,13 @@ export function PartnerRail() {
         const res = await fetch("/api/ai/command", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ command: "respond", context, history, stream: true }),
+          body: JSON.stringify({
+            command: "respond",
+            context,
+            history,
+            document: pieceText || undefined,
+            stream: true,
+          }),
           signal: controller.signal,
         });
         if (!res.ok || !res.body) throw new Error("unreachable");
