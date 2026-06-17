@@ -39,6 +39,7 @@ import { ParagraphPlugin, Plate, PlateContent, usePlateEditor } from "platejs/re
 import { countWords } from "@/lib/utils";
 
 import { BubbleToolbar } from "./bubble-toolbar";
+import { CommandPalette } from "./command-palette";
 import { EmojiPicker } from "./emoji-picker";
 import { plateText } from "./plate-text";
 import { RepurposeLauncher } from "./repurpose-launcher";
@@ -275,6 +276,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
               <BubbleToolbar />
               <EmojiPicker />
               <SlashMenu />
+              <CommandPalette />
               <PlateContent
                 className="editor-body min-h-[55vh] outline-none"
                 onKeyDown={handleEditorKeyDown}

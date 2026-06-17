@@ -102,6 +102,26 @@ await step("slash-menu", async () => {
   }
 });
 
+// command palette: cmd+k opens, filter to "quote", run it
+await step("command-palette", async () => {
+  await page.keyboard.press("Control+k");
+  await page.waitForTimeout(300);
+  const visible = await page.evaluate(() => !!document.querySelector(".np-cmdk"));
+  console.log("command palette visible:", visible);
+  await page.screenshot({ path: `${OUT}/editor-cmdk.png` });
+  done.push("editor-cmdk");
+  if (visible) {
+    await page.keyboard.type("quote");
+    await page.waitForTimeout(200);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(300);
+    const hasQuote = await page.evaluate(
+      () => !!document.querySelector('[data-slate-editor="true"] blockquote'),
+    );
+    console.log("cmdk -> blockquote created:", hasQuote);
+  }
+});
+
 // 4. emoji picker
 await step("emoji", async () => {
   await page.keyboard.press("Enter");

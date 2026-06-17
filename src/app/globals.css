@@ -460,6 +460,48 @@
     color: var(--lunari-fg-subtle);
   }
 
+  /* command palette (cmd+k) ... a searchable command space, grows into focus. */
+  .np-cmdk {
+    animation: np-cmdk-in var(--t-base) var(--ease-planetarium);
+  }
+
+  @keyframes np-cmdk-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .np-cmdk-row {
+    transition: background 110ms var(--ease-standard);
+  }
+
+  .np-cmdk-row[data-active="true"] {
+    background: var(--nova-accent-soft);
+  }
+
+  .np-cmdk-label {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    color: var(--lunari-fg-primary);
+  }
+
+  .np-cmdk-row[data-active="true"] .np-cmdk-label {
+    color: var(--nova-accent);
+  }
+
+  .np-cmdk-hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--lunari-fg-subtle);
+  }
+
   /* skeleton shimmer ... the repurpose panel while nova recompiles. a band of
      light sweeping a muted bar. */
   .np-shimmer {
