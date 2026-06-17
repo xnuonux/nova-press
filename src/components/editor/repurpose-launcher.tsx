@@ -50,7 +50,7 @@ export function RepurposeLauncher({ getSource }: { getSource: () => Source }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-8 items-center rounded-full px-3.5 font-mono text-[11px] uppercase tracking-[0.18em] transition-all duration-200 hover:brightness-110"
+        className="np-btn inline-flex h-8 items-center rounded-full px-3.5 font-mono text-[11px] uppercase tracking-[0.18em]"
         style={{
           background: "var(--nova-accent-soft)",
           color: "var(--nova-accent)",
@@ -271,7 +271,7 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
             type="button"
             onClick={copy}
             disabled={current.status !== "done"}
-            className="inline-flex h-9 items-center rounded-md px-4 font-sans text-sm font-medium transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            className="np-btn inline-flex h-9 items-center rounded-md px-4 font-sans text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
             style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
           >
             {copied ? "copied" : "copy"}

@@ -42,7 +42,7 @@ export default function LandingPage() {
           <div className="np-rise np-rise-4 mt-11 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <Link
               href="/library"
-              className="inline-flex h-12 items-center justify-center rounded-md px-7 font-sans text-sm font-medium transition-all duration-200 hover:brightness-110"
+              className="np-btn inline-flex h-12 items-center justify-center rounded-md px-7 font-sans text-sm font-medium"
               style={{
                 background: "var(--nova-accent)",
                 color: "var(--lunari-bg-deep)",

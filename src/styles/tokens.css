@@ -20,7 +20,19 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "Iosevka", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
-  /* motion */
+  /* motion ... the planetarium discipline (borrowed from lunari): everything
+     eased, nothing sprung. t-micro for instant feedback, t-base the default
+     entrance, t-emphasis for staged reveals. one curve language across every
+     surface is what reads as "crafted". */
+  --ease-planetarium: cubic-bezier(0.22, 0.68, 0.12, 1); /* signature: panels, reveals, emphasis */
+  --ease-out-soft: cubic-bezier(0.33, 1, 0.68, 1); /* gentle decel: entrances, stagger */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* interactions, hovers, micro */
+  --t-micro: 140ms;
+  --t-base: 300ms;
+  --t-emphasis: 420ms;
+
+  /* legacy curves ... retained so untouched rules keep working; new + swept
+     rules use the planetarium tokens above. */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }

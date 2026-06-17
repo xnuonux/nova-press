@@ -63,7 +63,7 @@ export default async function LibraryPage() {
             <form action={newPieceAction}>
               <button
                 type="submit"
-                className="inline-flex h-11 items-center rounded-md px-5 font-sans text-sm font-medium transition-all duration-200 hover:brightness-110"
+                className="np-btn inline-flex h-11 items-center rounded-md px-5 font-sans text-sm font-medium"
                 style={{
                   background: "var(--nova-accent)",
                   color: "var(--lunari-bg-deep)",
@@ -106,11 +106,11 @@ function EmptyState() {
 function PieceList({ pieces }: { pieces: PieceListItem[] }) {
   return (
     <ul className="flex flex-col gap-2">
-      {pieces.map((piece) => (
-        <li key={piece.id}>
+      {pieces.map((piece, i) => (
+        <li key={piece.id} className="np-rise" style={{ animationDelay: `${i * 60}ms` }}>
           <Link
             href={`/editor/${piece.id}`}
-            className="block rounded-lg border border-transparent px-5 py-5 transition-all duration-200 hover:-translate-y-0.5"
+            className="np-library-card block rounded-lg px-5 py-5"
             style={{ background: "var(--lunari-bg-surface)" }}
           >
             <div className="flex items-baseline justify-between gap-4">

@@ -140,21 +140,33 @@
   }
 
   .np-focus .editor-title {
-    opacity: 0.3;
-    transition: opacity 0.24s var(--ease-out-quart);
+    opacity: 0.28;
+    filter: blur(0.6px);
+    transition:
+      opacity var(--t-base) var(--ease-planetarium),
+      filter var(--t-base) var(--ease-planetarium);
   }
 
   .np-focus .editor-title:focus {
     opacity: 1;
+    filter: blur(0);
   }
 
+  /* dimmed blocks blur softly back ... a quiet room. the blur is static (the
+     dimmed blocks don't re-render), so it costs nothing per frame while you
+     type; only the active line carries will-change. */
   .np-focus .editor-body > * {
-    opacity: 0.3;
-    transition: opacity 0.24s var(--ease-out-quart);
+    opacity: 0.28;
+    filter: blur(0.6px);
+    transition:
+      opacity var(--t-base) var(--ease-planetarium),
+      filter var(--t-base) var(--ease-planetarium);
   }
 
   .np-focus .editor-body > [data-active-line="true"] {
     opacity: 1;
+    filter: blur(0);
+    will-change: filter, opacity;
   }
 
   /* the partner rail lives outside the editor shell; a body class set in focus
@@ -242,7 +254,7 @@
     box-shadow:
       0 10px 28px -10px rgba(0, 0, 0, 0.62),
       0 2px 6px rgba(0, 0, 0, 0.32);
-    animation: np-bubble-in 140ms var(--ease-out-quart);
+    animation: np-bubble-in var(--t-micro) var(--ease-planetarium);
   }
 
   @keyframes np-bubble-in {
@@ -300,7 +312,7 @@
     box-shadow:
       0 12px 30px -10px rgba(0, 0, 0, 0.6),
       0 2px 6px rgba(0, 0, 0, 0.3);
-    animation: np-emoji-in 120ms var(--ease-out-quart);
+    animation: np-emoji-in var(--t-micro) var(--ease-planetarium);
   }
 
   @keyframes np-emoji-in {
@@ -357,7 +369,7 @@
       var(--lunari-bg-elevated) 75%
     );
     background-size: 220% 100%;
-    animation: np-shimmer 1.4s var(--ease-out-quart) infinite;
+    animation: np-shimmer 1.8s linear infinite;
   }
 
   @keyframes np-shimmer {
@@ -397,6 +409,92 @@
   .np-share-link[data-active="true"] {
     color: var(--nova-accent);
   }
+
+  /* ───────────────────────── interaction polish ─────────────────────────
+     one motion language across every interactive surface: golden warmth on
+     hover, a 2% press, planetarium easing, no springs. */
+
+  /* primary action buttons (repurpose, new piece, copy, ask nova ...). */
+  .np-btn {
+    transition:
+      background var(--t-micro) var(--ease-standard),
+      box-shadow var(--t-micro) var(--ease-standard),
+      color var(--t-micro) var(--ease-standard),
+      filter var(--t-micro) var(--ease-standard),
+      transform var(--t-micro) var(--ease-standard);
+  }
+
+  .np-btn:hover {
+    box-shadow: 0 10px 28px -10px rgba(201, 168, 76, 0.45);
+    filter: brightness(1.08);
+  }
+
+  .np-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* ghost / secondary bits warm to gold on hover. */
+  .np-warm {
+    transition: color var(--t-micro) var(--ease-standard);
+  }
+  .np-warm:hover {
+    color: var(--nova-accent);
+  }
+
+  /* library cards cascade in (np-rise) and lift into the light on hover. */
+  .np-library-card {
+    transition:
+      transform var(--t-base) var(--ease-planetarium),
+      box-shadow var(--t-base) var(--ease-planetarium),
+      background var(--t-micro) var(--ease-standard);
+  }
+
+  .np-library-card:hover {
+    transform: translateY(-4px);
+    background: var(--lunari-bg-elevated);
+    box-shadow:
+      0 16px 38px -14px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(201, 168, 76, 0.12);
+  }
+
+  /* the editor title warms with a soft golden glow when it holds focus. */
+  .editor-title:focus {
+    text-shadow: 0 0 24px rgba(201, 168, 76, 0.22);
+    transition: text-shadow var(--t-base) var(--ease-planetarium);
+  }
+
+  /* the repurpose overlay grows into focus instead of snapping in. */
+  .np-repurpose-sheet {
+    animation: np-panel-in var(--t-base) var(--ease-planetarium) forwards;
+    transform-origin: center top;
+  }
+
+  @keyframes np-panel-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* partner-rail content settles in when nova's state changes. */
+  .np-partner-content {
+    animation: np-settle var(--t-base) var(--ease-out-soft);
+  }
+
+  @keyframes np-settle {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @layer utilities {
@@ -416,26 +514,27 @@
 
   .np-rise {
     opacity: 0;
-    animation: np-rise 0.62s var(--ease-out-expo) forwards;
+    animation: np-rise 0.6s var(--ease-out-soft) forwards;
   }
 
+  /* a clean 80ms cascade ... composed, not scattered. */
   .np-rise-1 {
-    animation-delay: 0.04s;
+    animation-delay: 0ms;
   }
   .np-rise-2 {
-    animation-delay: 0.12s;
+    animation-delay: 80ms;
   }
   .np-rise-3 {
-    animation-delay: 0.22s;
+    animation-delay: 160ms;
   }
   .np-rise-4 {
-    animation-delay: 0.34s;
+    animation-delay: 240ms;
   }
   .np-rise-5 {
-    animation-delay: 0.48s;
+    animation-delay: 320ms;
   }
   .np-rise-6 {
-    animation-delay: 0.62s;
+    animation-delay: 400ms;
   }
 
   /* drop cap for the reading view's first body paragraph. */

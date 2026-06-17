@@ -82,48 +82,50 @@ export function PartnerRail() {
 
       <div className="flex flex-1 flex-col px-6 py-8">
         <div className="min-h-[5rem] flex-1">
-          {state === "idle" ? (
-            <p
-              className="font-serif text-base leading-relaxed"
-              style={{ color: "var(--lunari-fg-muted)" }}
-            >
-              nova is listening.
-            </p>
-          ) : null}
-          {state === "thinking" ? (
-            <p
-              className="font-mono text-[11px] uppercase tracking-[0.22em]"
-              style={{ color: "var(--lunari-fg-subtle)" }}
-            >
-              thinking ...
-            </p>
-          ) : null}
-          {state === "error" ? (
-            <p
-              className="font-serif text-base leading-relaxed"
-              style={{ color: "var(--lunari-fg-muted)" }}
-            >
-              nova couldn&apos;t reach the model ... try again in a sec.
-            </p>
-          ) : null}
-          {state === "done" && reply ? (
-            <div className="space-y-3">
+          <div key={state} className="np-partner-content">
+            {state === "idle" ? (
               <p
                 className="font-serif text-base leading-relaxed"
-                style={{ color: "var(--lunari-fg-primary)" }}
+                style={{ color: "var(--lunari-fg-muted)" }}
               >
-                {reply}
+                nova is listening.
               </p>
-              {drift ? (
+            ) : null}
+            {state === "thinking" ? (
+              <p
+                className="font-mono text-[11px] uppercase tracking-[0.22em]"
+                style={{ color: "var(--lunari-fg-subtle)" }}
+              >
+                thinking ...
+              </p>
+            ) : null}
+            {state === "error" ? (
+              <p
+                className="font-serif text-base leading-relaxed"
+                style={{ color: "var(--lunari-fg-muted)" }}
+              >
+                nova couldn&apos;t reach the model ... try again in a sec.
+              </p>
+            ) : null}
+            {state === "done" && reply ? (
+              <div className="space-y-3">
                 <p
-                  className="font-mono text-[10px] uppercase tracking-[0.2em]"
-                  style={{ color: "var(--lunari-fg-subtle)" }}
+                  className="font-serif text-base leading-relaxed"
+                  style={{ color: "var(--lunari-fg-primary)" }}
                 >
-                  voice drift ... nudge it again
+                  {reply}
                 </p>
-              ) : null}
-            </div>
-          ) : null}
+                {drift ? (
+                  <p
+                    className="font-mono text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: "var(--lunari-fg-subtle)" }}
+                  >
+                    voice drift ... nudge it again
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <form onSubmit={ask} className="mt-4 space-y-2">
@@ -143,7 +145,7 @@ export function PartnerRail() {
           <button
             type="submit"
             disabled={state === "thinking" || !input.trim()}
-            className="w-full rounded-md px-3 py-2 font-sans text-sm font-medium transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            className="np-btn w-full rounded-md px-3 py-2 font-sans text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               background: "var(--nova-accent)",
               color: "var(--lunari-bg-deep)",
