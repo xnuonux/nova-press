@@ -283,6 +283,20 @@
     background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.55) 50%, transparent);
   }
 
+  /* reading progress ... a golden line at the top edge that fills as you read
+     down the published piece. scaled on the gpu, no layout cost. */
+  .np-read-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    height: 2px;
+    width: 100%;
+    transform-origin: left;
+    background: var(--nova-accent);
+    will-change: transform;
+  }
+
   /* the bubble toolbar ... floats above a selection, portaled to body and
      positioned off the dom selection rect (fixed coords). the translate puts
      it centered + lifted above the text; the keyframe eases it the last few

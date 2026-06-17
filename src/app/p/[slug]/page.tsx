@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Atmosphere } from "@/components/chrome/atmosphere";
+import { ReadingProgress } from "@/components/reading/reading-progress";
 import { ShareRow } from "@/components/reading/share-row";
 
 interface ReadingPageProps {
@@ -40,6 +41,7 @@ export default async function ReadingPage({ params }: ReadingPageProps) {
   return (
     <main className="relative min-h-screen w-full overflow-hidden">
       <Atmosphere />
+      <ReadingProgress />
       <div className="np-skyline absolute inset-x-0 top-0 h-px" aria-hidden />
 
       <div className="relative z-10">
