@@ -73,7 +73,7 @@ describe("listPiecesForUser", () => {
         .split(",")
         .map((c) => c.trim())
         .sort(),
-    ).toEqual(["excerpt", "id", "last_edited_at", "status", "title", "word_count"]);
+    ).toEqual(["excerpt", "id", "last_edited_at", "slug", "status", "title", "word_count"]);
   });
 
   it("excludes archived pieces", async () => {

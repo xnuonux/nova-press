@@ -19,11 +19,14 @@ import { slugify, slugWithSuffix } from "./slug";
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type TypedClient = SupabaseClient<Database>;
 
-const LIST_COLUMNS = "id, title, excerpt, word_count, status, last_edited_at";
+// slug rides along so the library can link a published piece to its public
+// url (/p/[slug]) ... the only way to walk from "your pieces" to the live page.
+// it's null until first publish, so the view affordance is gated on status.
+const LIST_COLUMNS = "id, title, excerpt, word_count, status, last_edited_at, slug";
 
 export type PieceListItem = Pick<
   Database["public"]["Tables"]["np_pieces"]["Row"],
-  "id" | "title" | "excerpt" | "word_count" | "status" | "last_edited_at"
+  "id" | "title" | "excerpt" | "word_count" | "status" | "last_edited_at" | "slug"
 >;
 
 export type Piece = Database["public"]["Tables"]["np_pieces"]["Row"];

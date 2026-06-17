@@ -106,41 +106,61 @@ function EmptyState() {
 function PieceList({ pieces }: { pieces: PieceListItem[] }) {
   return (
     <ul className="flex flex-col gap-2">
-      {pieces.map((piece, i) => (
-        <li key={piece.id} className="np-rise" style={{ animationDelay: `${i * 60}ms` }}>
-          <Link
-            href={`/editor/${piece.id}`}
-            className="np-library-card block rounded-lg px-5 py-5"
-            style={{ background: "var(--lunari-bg-surface)" }}
-          >
-            <div className="flex items-baseline justify-between gap-4">
-              <h2
-                className="font-serif text-xl leading-snug"
-                style={{ color: "var(--lunari-fg-primary)" }}
-              >
-                {piece.title}
-              </h2>
-              <StatusPill status={piece.status} />
-            </div>
-            {piece.excerpt ? (
-              <p
-                className="mt-2 line-clamp-2 font-serif text-base leading-relaxed"
-                style={{ color: "var(--lunari-fg-muted)" }}
-              >
-                {piece.excerpt}
-              </p>
-            ) : null}
-            <p
-              className="mt-3 font-mono text-[11px] uppercase tabular-nums tracking-[0.2em]"
-              style={{ color: "var(--lunari-fg-subtle)" }}
+      {pieces.map((piece, i) => {
+        // a published piece can be walked to its public page. slug is null until
+        // first publish, so the affordance only shows once there's a live url.
+        const liveSlug = piece.status === "published" ? piece.slug : null;
+        return (
+          <li key={piece.id} className="np-rise relative" style={{ animationDelay: `${i * 60}ms` }}>
+            <Link
+              href={`/editor/${piece.id}`}
+              className="np-library-card block rounded-lg px-5 py-5"
+              style={{ background: "var(--lunari-bg-surface)" }}
             >
-              {piece.word_count} {piece.word_count === 1 ? "word" : "words"}
-              {" · "}
-              {formatRelativeTime(piece.last_edited_at)}
-            </p>
-          </Link>
-        </li>
-      ))}
+              <div className="flex items-baseline justify-between gap-4">
+                <h2
+                  className="font-serif text-xl leading-snug"
+                  style={{ color: "var(--lunari-fg-primary)" }}
+                >
+                  {piece.title}
+                </h2>
+                <StatusPill status={piece.status} />
+              </div>
+              {piece.excerpt ? (
+                <p
+                  className="mt-2 line-clamp-2 font-serif text-base leading-relaxed"
+                  style={{ color: "var(--lunari-fg-muted)" }}
+                >
+                  {piece.excerpt}
+                </p>
+              ) : null}
+              <p
+                className="mt-3 font-mono text-[11px] uppercase tabular-nums tracking-[0.2em]"
+                style={{ color: "var(--lunari-fg-subtle)" }}
+              >
+                {piece.word_count} {piece.word_count === 1 ? "word" : "words"}
+                {" · "}
+                {formatRelativeTime(piece.last_edited_at)}
+              </p>
+            </Link>
+            {liveSlug ? (
+              // sibling of the card link, never nested ... an anchor inside an
+              // anchor is invalid and the whole card already links to the editor.
+              // absolute corner, z-10 so the click lands here, not on the card.
+              <Link
+                href={`/p/${liveSlug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="absolute bottom-4 right-4 z-10 inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] transition-opacity hover:opacity-80"
+                style={{ background: "var(--nova-accent-soft)", color: "var(--nova-accent)" }}
+              >
+                view
+                <span aria-hidden>↗</span>
+              </Link>
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }
