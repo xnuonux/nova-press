@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { streamGhost } from "@/lib/ai/ghost";
+import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -34,7 +35,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const stream = streamGhost(context);
+    // mirror the writer's own voice into the whisper ... undefined when their
+    // profile isn't trained yet, which the prompt handles with its honest
+    // fallback. the read never throws, so a degraded voice read can't break
+    // the ghost.
+    const voiceCompactView = await getWriterVoice(supabase, user.id);
+    const stream = streamGhost(context, voiceCompactView);
     return new Response(stream, {
       headers: {
         "content-type": "text/plain; charset=utf-8",

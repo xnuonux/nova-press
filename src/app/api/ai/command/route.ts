@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { runPartnerCommand, streamPartnerCommand } from "@/lib/ai/partner";
 import { isCommand } from "@/lib/ai/provider";
+import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -58,13 +59,18 @@ export async function POST(request: NextRequest) {
         .slice(-6)
     : [];
 
+  // the writer's distilled voice, read once and threaded into whichever path
+  // runs. undefined when the corpus isn't trained yet (the prompt keeps its
+  // honest fallback), and the read never throws.
+  const voiceCompactView = await getWriterVoice(supabase, user.id);
+
   // streaming path: powers the conversation rail. the reply streams token by
   // token, dash-safe at the source; the client runs the full voice-keeper at
   // stream end. getPartnerModel throws synchronously on a missing key, so a
   // config failure still lands as a clean 502 before any bytes go out.
   if (stream === true) {
     try {
-      const responseStream = streamPartnerCommand({ command, context, history });
+      const responseStream = streamPartnerCommand({ command, context, history, voiceCompactView });
       return new Response(responseStream, {
         headers: {
           "content-type": "text/plain; charset=utf-8",
@@ -79,7 +85,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await runPartnerCommand({ command, context });
+    const result = await runPartnerCommand({ command, context, voiceCompactView });
     return NextResponse.json(result);
   } catch (err) {
     reportError(err, { tag: "ai-command-failed", command, userId: user.id });

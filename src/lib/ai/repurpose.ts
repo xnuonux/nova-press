@@ -15,6 +15,9 @@ import { voiceKeeperAudit } from "./voice-keeper";
 export interface RepurposeInput {
   title: string;
   source: string;
+  // the writer's distilled voice, read by the route off voice_profiles ...
+  // undefined falls back to mirroring the source piece's in-context tone.
+  voiceCompactView?: string;
 }
 
 export interface RepurposeVariant {
@@ -38,6 +41,7 @@ export async function runRepurpose(
     format,
     title: input.title,
     source: input.source,
+    voiceCompactView: input.voiceCompactView,
   });
 
   const { text } = await generateText({
@@ -80,6 +84,7 @@ export function streamRepurpose(
     format,
     title: input.title,
     source: input.source,
+    voiceCompactView: input.voiceCompactView,
   });
 
   const result = streamText({

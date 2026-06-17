@@ -64,6 +64,9 @@ export interface RepurposeParts {
   format: RepurposeFormat;
   title: string;
   source: string;
+  // the writer's distilled voice ... when present, the recompile mirrors their
+  // actual signature, not just the source piece's in-context tone.
+  voiceCompactView?: string;
 }
 
 export function buildRepurposePrompt(parts: RepurposeParts): {
@@ -71,8 +74,9 @@ export function buildRepurposePrompt(parts: RepurposeParts): {
   prompt: string;
 } {
   const spec = REPURPOSE_FORMATS[parts.format];
-  const compact =
-    "the writer's voice: not yet trained ... mirror the tone and rhythm of the source piece below.";
+  const compact = parts.voiceCompactView?.trim()
+    ? `the writer's voice: ${parts.voiceCompactView.trim()}`
+    : "the writer's voice: not yet trained ... mirror the tone and rhythm of the source piece below.";
 
   const system = [
     IDENTITY_REPURPOSE,

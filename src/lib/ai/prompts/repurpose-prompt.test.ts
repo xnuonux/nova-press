@@ -29,6 +29,18 @@ describe("buildRepurposePrompt", () => {
     expect(blocks[4]).toContain("recompile"); // format instruction
   });
 
+  it("injects the writer's distilled voice into the compact slot when provided", () => {
+    const { system } = buildRepurposePrompt({
+      format: "newsletter",
+      title: "t",
+      source: "s",
+      voiceCompactView: "register: wry. sentences run about 9 words",
+    });
+    const blocks = system.split("\n\n").map((b) => b.toLowerCase());
+    expect(blocks[2]).toContain("the writer's voice: register: wry");
+    expect(blocks[2]).not.toContain("not yet trained");
+  });
+
   it.each(FORMATS)("carries the non-negotiable voice rules for %s", (format) => {
     const { system } = buildRepurposePrompt({ format, title: "t", source: "s" });
     const s = system.toLowerCase();
