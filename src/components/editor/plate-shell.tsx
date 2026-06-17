@@ -4,9 +4,9 @@
  * plate shell ... the editor canvas.
  *
  * plate v49, booted with basic blocks (headings, paragraph, blockquote,
- * divider) and basic marks (bold, italic, underline, strike, code). nothing
- * else yet ... AIKit, SlashKit, CopilotKit, the bubble toolbar and ghost text
- * are week 2.
+ * divider) and basic marks (bold, italic, underline, strike, code). on top of
+ * that spine: the bubble toolbar, emoji + slash menus, the cmd+k palette, and
+ * nova's inline ghost text. rich blocks (image, code, table) are next.
  *
  * autosave persists to np_pieces via the savePieceContentAction server action,
  * debounced 1500ms. word count + excerpt are derived server-side.
@@ -41,6 +41,7 @@ import { countWords } from "@/lib/utils";
 import { BubbleToolbar } from "./bubble-toolbar";
 import { CommandPalette } from "./command-palette";
 import { EmojiPicker } from "./emoji-picker";
+import { GhostText } from "./ghost-text";
 import { plateText } from "./plate-text";
 import { RepurposeLauncher } from "./repurpose-launcher";
 import { SlashMenu } from "./slash-menu";
@@ -95,7 +96,23 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
     onSave: handleSave,
   });
 
+  // plate fires onValueChange on selection changes too, not just content edits.
+  // since each re-render re-applies the dom selection (which slate reports as
+  // another change), reacting to every fire would loop: revision bumps ->
+  // re-render -> selection re-applied -> onValueChange -> revision bumps ...
+  // (react caps it as "maximum update depth"). slate only swaps the children
+  // reference on real content ops, never on a caret move, so we gate on that.
+  // bonus: autosave now ignores pure caret moves, which is what we wanted.
+  // plate fires onValueChange on caret moves too, not just edits. since every
+  // re-render re-applies the dom selection (which plate then reports as another
+  // change), reacting to a caret move would loop: bump revision -> re-render ->
+  // selection re-applied -> onValueChange -> bump ... until react trips its
+  // "maximum update depth" guard. the canonical slate test gates it: a caret
+  // move carries only set_selection ops, a real edit carries at least one more.
+  // bonus, autosave now ignores pure caret moves, which is what we always
+  // wanted.
   const handleValueChange = useCallback(() => {
+    if (!editor.operations.some((op) => op.type !== "set_selection")) return;
     setRevision((current) => current + 1);
     setWordCount(countWords(plateText(editor.children as Value)));
   }, [editor]);
@@ -245,6 +262,32 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
     transition: "opacity 0.24s var(--ease-out-quart)",
   };
 
+  // the editor subtree is memoized so the chrome's state (word count, saved
+  // label, focus mode) never forces a re-render of <PlateContent>. plate's own
+  // store drives the content; re-rendering the editable from the parent makes
+  // slate reconcile the dom on every keystroke, and in react 19 that can
+  // ping-pong onChange -> setState -> reconcile -> onChange into "maximum update
+  // depth". all three deps are stable, so this builds once and stays put. it's
+  // also just faster ... typing no longer re-renders the whole shell.
+  const editorTree = useMemo(
+    () => (
+      <Plate editor={editor} onValueChange={handleValueChange}>
+        <BubbleToolbar />
+        <EmojiPicker />
+        <SlashMenu />
+        <CommandPalette />
+        <GhostText />
+        <PlateContent
+          className="editor-body min-h-[55vh] outline-none"
+          onKeyDown={handleEditorKeyDown}
+          placeholder="start anywhere. nova is reading along."
+          aria-label="piece body"
+        />
+      </Plate>
+    ),
+    [editor, handleValueChange, handleEditorKeyDown],
+  );
+
   return (
     <div
       className={focusMode ? "np-focus flex h-full flex-1 flex-col" : "flex h-full flex-1 flex-col"}
@@ -272,18 +315,7 @@ export function PlateShell({ initialTitle, initialValue, initialStatus, onSave }
               placeholder="untitled"
               className="editor-title"
             />
-            <Plate editor={editor} onValueChange={handleValueChange}>
-              <BubbleToolbar />
-              <EmojiPicker />
-              <SlashMenu />
-              <CommandPalette />
-              <PlateContent
-                className="editor-body min-h-[55vh] outline-none"
-                onKeyDown={handleEditorKeyDown}
-                placeholder="start anywhere. nova is reading along."
-                aria-label="piece body"
-              />
-            </Plate>
+            {editorTree}
           </div>
         </div>
       </div>

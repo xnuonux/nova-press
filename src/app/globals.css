@@ -297,6 +297,57 @@
     will-change: transform;
   }
 
+  /* ghost text ... nova's inline whisper. a greyed one-sentence continuation
+     that fades in at the caret on a pause; tab takes it. fixed + portaled,
+     measured off the selection rect, so it rides over the text without ever
+     touching the editor value. clamped to a single line (it's a preview ... tab
+     still inserts the full sentence) so a long suggestion can never wrap down
+     over the paragraph below. the "tab" chip stays pinned at the end. */
+  .np-ghost {
+    position: fixed;
+    z-index: 40;
+    display: inline-flex;
+    align-items: baseline;
+    overflow: hidden;
+    pointer-events: none;
+    color: var(--lunari-fg-primary);
+    animation: np-ghost-in var(--t-base) var(--ease-out-soft);
+  }
+
+  .np-ghost-text {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    opacity: 0.32;
+  }
+
+  .np-ghost-key {
+    flex: none;
+    margin-left: 0.55em;
+    padding: 0.05em 0.4em;
+    border: 1px solid var(--lunari-border);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.58em;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    opacity: 0.5;
+    color: var(--nova-accent);
+  }
+
+  @keyframes np-ghost-in {
+    from {
+      opacity: 0;
+      transform: translateY(1px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* the bubble toolbar ... floats above a selection, portaled to body and
      positioned off the dom selection rect (fixed coords). the translate puts
      it centered + lifted above the text; the keyframe eases it the last few

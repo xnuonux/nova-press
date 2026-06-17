@@ -31,9 +31,12 @@ const page = await browser.newPage({
   viewport: { width: 1440, height: 1000 },
   deviceScaleFactor: 2,
 });
-page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+page.on("pageerror", (e) =>
+  errors.push(`pageerror: ${e.message}\n  STACK: ${(e.stack || "").split("\n").slice(0, 14).join(" | ")}`),
+);
 page.on("console", (m) => {
-  if (m.type() === "error") errors.push(`console.error: ${m.text()}`);
+  if (m.type() === "error")
+    errors.push(`console.error: ${m.text().split("\n").slice(0, 18).join(" | ")}`);
 });
 
 async function shot(name) {
@@ -75,13 +78,59 @@ await step("type-body", async () => {
   await page.keyboard.press("Tab");
   await page.keyboard.type(
     'she said "the light here is different" and i believed her. it doesn\'t lie.',
+    { delay: 25 },
   );
   await page.keyboard.press("Enter");
   await page.keyboard.press("Tab");
-  await page.keyboard.type("a second paragraph, indented like the good old days.");
+  await page.keyboard.type("a second paragraph, indented like the good old days.", { delay: 25 });
   await page.waitForTimeout(600);
 });
 await step("shot-typed", () => shot("editor-typed"));
+
+// ghost text: the caret is already resting at the end of the second paragraph,
+// so we just wait out the debounce + model round-trip, confirm the whisper
+// appeared, then tab to accept it and check the text landed in the document.
+// hits the live model, so it gets a generous wait, and stays resilient.
+let ghostResult = null;
+await step("ghost-text", async () => {
+  const appeared = await page
+    .waitForFunction(
+      () => {
+        const t = document.querySelector(".np-ghost .np-ghost-text");
+        return !!t && (t.textContent || "").trim().length > 0;
+      },
+      { timeout: 18000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  const ghostText = await page.evaluate(
+    () => (document.querySelector(".np-ghost .np-ghost-text")?.textContent || "").trim(),
+  );
+  console.log("ghost appeared:", appeared, "text:", JSON.stringify(ghostText.slice(0, 80)));
+  await page.screenshot({ path: `${OUT}/editor-ghost.png` });
+  done.push("editor-ghost");
+  let accepted = false;
+  if (appeared && ghostText) {
+    const before = await page.evaluate(
+      () => document.querySelector('[data-slate-editor="true"]')?.textContent || "",
+    );
+    await page.keyboard.press("Tab");
+    await page.waitForTimeout(450);
+    const after = await page.evaluate(
+      () => document.querySelector('[data-slate-editor="true"]')?.textContent || "",
+    );
+    accepted = after.length > before.length && after.includes(ghostText.slice(0, 12));
+    console.log("ghost accepted (text inserted):", accepted);
+    await page.keyboard.press("Escape"); // wave off any follow-on whisper
+    await page.waitForTimeout(150);
+  }
+  ghostResult = {
+    appeared,
+    hasText: !!ghostText,
+    accepted,
+    emdashes: (ghostText.match(/[—–]/g) || []).length,
+  };
+});
 
 // slash menu: type "/" on a fresh line, confirm the menu, pick heading 1
 await step("slash-menu", async () => {
@@ -208,6 +257,13 @@ console.log(
   "STREAM VERDICT:",
   streamFinal && streamFinal.len > 40 && streamFinal.emdashes === 0
     ? "PASS (streamed + no em-dashes)"
+    : "CHECK",
+);
+console.log("ghost:", JSON.stringify(ghostResult));
+console.log(
+  "GHOST VERDICT:",
+  ghostResult && ghostResult.appeared && ghostResult.accepted && ghostResult.emdashes === 0
+    ? "PASS (whisper + tab-accept + no em-dashes)"
     : "CHECK",
 );
 console.log("done", OUT);
