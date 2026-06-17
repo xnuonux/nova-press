@@ -2,6 +2,8 @@ import "server-only";
 
 import { generateText, streamText } from "ai";
 
+import { reportError } from "@/lib/observability/report-error";
+
 import {
   buildRepurposePrompt,
   REPURPOSE_FORMATS,
@@ -86,6 +88,11 @@ export function streamRepurpose(
     prompt,
     temperature: spec.temperature,
     maxTokens: spec.maxTokens,
+    // the body streams after a 200 is already on the wire, so a mid-stream
+    // provider failure can't reach the route's try/catch. log it here, same as
+    // the ghost path ... before this, a repurpose stream that died mid-flight
+    // left no telemetry at all.
+    onError: ({ error }) => reportError(error, { tag: "ai-repurpose-stream" }),
   });
 
   const encoder = new TextEncoder();

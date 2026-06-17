@@ -6,9 +6,13 @@ import { buildPartnerPrompt } from "./prompts/system-prompt";
 import { COMMAND_CONFIG, getPartnerModel, type Command } from "./provider";
 import { voiceKeeperAudit } from "./voice-keeper";
 
-// one-sentence commands stop at the first sentence boundary on the server,
-// belt to the maxTokens cap.
-const STOP_SEQUENCES = ["\n", ". ", "! ", "? "];
+// one-sentence commands get a cheap early-out at the first hard newline; the
+// voice-keeper's inclusive, "..."-aware cut is what actually guarantees a
+// single finished sentence (terminal mark and all). the old ". "/"! "/"? "
+// stops were wrong twice over ... a stop sequence is dropped from the output,
+// so the sentence lost its period, and ". " also fired inside nova's "..."
+// pause, clipping mid-thought. maxTokens stays the hard backstop.
+const STOP_SEQUENCES = ["\n"];
 
 export interface PartnerInput {
   command: Command;

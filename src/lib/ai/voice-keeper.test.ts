@@ -59,6 +59,23 @@ describe("voiceKeeperAudit", () => {
     expect(r.violated).toBe(true);
   });
 
+  it("cuts a multi-sentence reply to the first sentence, keeping its mark", () => {
+    const r = voiceKeeperAudit("first thought. second thought.", {
+      oneSentence: true,
+    });
+    // the terminal period survives ... the old count-only path left the stop
+    // sequence to strip it, so the sentence flushed unfinished.
+    expect(r.text).toBe("first thought.");
+  });
+
+  it("does not cut at a '...' pause under oneSentence", () => {
+    const r = voiceKeeperAudit("the room glows ... then it fades.", {
+      oneSentence: true,
+    });
+    expect(r.text).toBe("the room glows ... then it fades.");
+    expect(r.violated).toBe(false);
+  });
+
   it("lowercases the first char of every paragraph", () => {
     const r = voiceKeeperAudit("First line.\n\nSecond line.");
     expect(r.text).toBe("first line.\n\nsecond line.");

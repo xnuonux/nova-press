@@ -7,6 +7,8 @@
  * asked for). pure, so it's fully unit-tested.
  */
 
+import { sentenceCut } from "./ghost-format";
+
 // conversational openers nova must never lead with. if the text starts with
 // one, the whole leading clause (up to its first sentence break) is cut.
 const OPENER =
@@ -43,10 +45,18 @@ export function voiceKeeperAudit(input: string, options: AuditOptions = {}): Aud
     .map((part) => (part.startsWith("\n") ? part : lowercaseFirstChar(part)))
     .join("");
 
-  // 4. one-sentence commands: more than one sentence is a real violation.
+  // 4. one-sentence commands: cut to the first finished sentence, keeping its
+  //    terminal mark and respecting "..." pauses (the shared, tested cutter).
+  //    this is what actually enforces "one sentence" ... the provider stop
+  //    sequence is only a cheap early-out, and the old count-only check left a
+  //    multi-sentence reply truncated by the stop without its period. real text
+  //    after the cut means the model overran, which is a retry-worthy drift.
   if (options.oneSentence) {
-    const sentences = (text.replace(/\.\.\./g, "").match(/[.!?](\s|$)/g) ?? []).length;
-    if (sentences > 1) violated = true;
+    const cut = sentenceCut(text);
+    if (cut >= 0) {
+      if (text.slice(cut).trim().length > 0) violated = true;
+      text = text.slice(0, cut);
+    }
   }
 
   return { text: text.trim(), violated };
