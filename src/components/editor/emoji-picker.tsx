@@ -123,21 +123,26 @@ export function EmojiPicker() {
   const editor = useEditorRef();
   const [pop, setPop] = useState<PopState | null>(null);
   const triggerRef = useRef<Trigger | null>(null);
+  // detect runs on every selectionchange + scroll. slate re-applies the dom
+  // selection on each editor re-render, firing selectionchange again, so a
+  // fresh-object setPop here would feed a render loop. we only setPop when the
+  // computed menu (position + results) actually changed.
+  const lastSig = useRef("null");
 
   // detect ":query" right behind a collapsed caret, off the leaf text.
   const detect = useCallback(() => {
+    const close = () => {
+      triggerRef.current = null;
+      if (lastSig.current !== "null") {
+        lastSig.current = "null";
+        setPop(null);
+      }
+    };
+
     const domSel = window.getSelection();
-    if (!domSel || !domSel.isCollapsed || domSel.rangeCount === 0) {
-      triggerRef.current = null;
-      setPop(null);
-      return;
-    }
+    if (!domSel || !domSel.isCollapsed || domSel.rangeCount === 0) return close();
     const selection = editor.selection;
-    if (!selection) {
-      triggerRef.current = null;
-      setPop(null);
-      return;
-    }
+    if (!selection) return close();
 
     const path = selection.anchor.path;
     const caretOffset = selection.anchor.offset;
@@ -148,38 +153,33 @@ export function EmojiPicker() {
         focus: selection.anchor,
       });
     } catch {
-      triggerRef.current = null;
-      setPop(null);
-      return;
+      return close();
     }
 
     const match = before.match(/(?:^|\s)(:)([a-zA-Z0-9_+-]*)$/);
-    if (!match) {
-      triggerRef.current = null;
-      setPop(null);
-      return;
-    }
+    if (!match) return close();
 
     const query = match[2] ?? "";
     const results = filterEmoji(query);
-    if (results.length === 0) {
-      triggerRef.current = null;
-      setPop(null);
-      return;
-    }
+    if (results.length === 0) return close();
 
     const rect = domSel.getRangeAt(0).getBoundingClientRect();
+    const top = Math.round(rect.bottom + 6);
+    const left = Math.round(rect.left);
+    const sig = `${top}|${left}|${results.map((r) => r.glyph).join("")}`;
     triggerRef.current = {
       path,
       colonOffset: caretOffset - query.length - 1,
       caretOffset,
     };
+    if (sig === lastSig.current) return;
+    lastSig.current = sig;
     setPop((prev) => ({
       results,
       // keep the highlight if it's still in range, else reset to top.
       index: prev && prev.index < results.length ? prev.index : 0,
-      top: rect.bottom + 6,
-      left: rect.left,
+      top,
+      left,
     }));
   }, [editor]);
 

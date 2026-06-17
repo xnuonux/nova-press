@@ -12,7 +12,7 @@
  * onto the right of this same bar.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useEditorRef } from "platejs/react";
@@ -34,31 +34,40 @@ export function BubbleToolbar() {
   const editor = useEditorRef();
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [active, setActive] = useState<Record<string, boolean>>({});
+  // last value we pushed to state. sync runs on every selectionchange + scroll,
+  // and slate re-applies the dom selection on each editor re-render, which
+  // fires selectionchange again ... so a fresh-object setState here would feed
+  // a render loop. we only setState when the computed value actually changed.
+  const lastSig = useRef("null");
 
   const sync = useCallback(() => {
+    const clear = () => {
+      if (lastSig.current !== "null") {
+        lastSig.current = "null";
+        setAnchor(null);
+      }
+    };
+
     const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-      setAnchor(null);
-      return;
-    }
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return clear();
 
     // only fire inside the editor body, never on chrome / title / rail.
     const editable = document.querySelector('[data-slate-editor="true"]');
     const range = selection.getRangeAt(0);
-    if (!editable || !editable.contains(range.commonAncestorContainer)) {
-      setAnchor(null);
-      return;
-    }
+    if (!editable || !editable.contains(range.commonAncestorContainer)) return clear();
 
     const rect = range.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      setAnchor(null);
-      return;
-    }
+    if (rect.width === 0 && rect.height === 0) return clear();
 
-    setAnchor({ top: rect.top, left: rect.left + rect.width / 2 });
+    const top = Math.round(rect.top);
+    const left = Math.round(rect.left + rect.width / 2);
     const marks = editor.api.marks() as Record<string, unknown> | null;
-    setActive(Object.fromEntries(MARKS.map((m) => [m.key, !!marks?.[m.key]])));
+    const activeMap = Object.fromEntries(MARKS.map((m) => [m.key, !!marks?.[m.key]]));
+    const sig = `${top}|${left}|${MARKS.map((m) => (activeMap[m.key] ? "1" : "0")).join("")}`;
+    if (sig === lastSig.current) return;
+    lastSig.current = sig;
+    setAnchor({ top, left });
+    setActive(activeMap);
   }, [editor]);
 
   useEffect(() => {
