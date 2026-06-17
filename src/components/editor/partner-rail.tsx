@@ -45,6 +45,13 @@ export function PartnerRail() {
     const context = el?.value.trim() ?? "";
     if (!context || threadBusy(messages)) return;
 
+    // the conversation so far ... settled turns only, so nova answers in the
+    // flow of the exchange instead of forgetting the line you just gave it. the
+    // route caps this again server-side; here we just send what's on screen.
+    const history = messages
+      .filter((m) => !m.streaming && !m.failed && m.text.trim().length > 0)
+      .map((m) => ({ role: m.role, text: m.text }));
+
     const writerId = crypto.randomUUID();
     const novaId = crypto.randomUUID();
     if (el) el.value = "";
@@ -59,7 +66,7 @@ export function PartnerRail() {
         const res = await fetch("/api/ai/command", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ command: "respond", context, stream: true }),
+          body: JSON.stringify({ command: "respond", context, history, stream: true }),
           signal: controller.signal,
         });
         if (!res.ok || !res.body) throw new Error("unreachable");

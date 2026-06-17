@@ -78,4 +78,29 @@ describe("buildPartnerPrompt", () => {
     });
     expect(prompt).toContain("the page waited, patiently");
   });
+
+  it("folds recent history into the user prompt, labeling nova's own lines", () => {
+    const { prompt } = buildPartnerPrompt({
+      command: "respond",
+      context: "now what",
+      history: [
+        { role: "writer", text: "the page is blank" },
+        { role: "nova", text: "stare until it stares back." },
+      ],
+    });
+    expect(prompt).toContain("the writer: the page is blank");
+    expect(prompt).toContain("you (nova): stare until it stares back.");
+    // the current line is the last thing nova sees, labeled as the writer's.
+    expect(prompt).toContain("the writer: now what");
+    expect(prompt.indexOf("now what")).toBeGreaterThan(prompt.indexOf("the page is blank"));
+  });
+
+  it("ignores empty history, leaving the raw context (one-shot behavior)", () => {
+    const { prompt } = buildPartnerPrompt({
+      command: "respond",
+      context: "just this line",
+      history: [],
+    });
+    expect(prompt).toBe("just this line");
+  });
 });

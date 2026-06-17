@@ -22,6 +22,9 @@ export interface PartnerInput {
   context: string;
   voiceCompactView?: string;
   exemplars?: string[];
+  // recent turns of the conversation (rail only) ... flows straight into
+  // buildPartnerPrompt so a streamed "respond" remembers the last few lines.
+  history?: { role: "writer" | "nova"; text: string }[];
 }
 
 export interface PartnerResult {

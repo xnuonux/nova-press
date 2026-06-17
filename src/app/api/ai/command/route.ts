@@ -25,10 +25,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
   }
 
-  const { command, context, stream } = (body ?? {}) as {
+  const { command, context, stream, history: rawHistory } = (body ?? {}) as {
     command?: unknown;
     context?: unknown;
     stream?: unknown;
+    history?: unknown;
   };
   if (!isCommand(command)) {
     return NextResponse.json({ error: "unknown command" }, { status: 400 });
@@ -40,13 +41,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "context too long" }, { status: 413 });
   }
 
+  // recent exchange (the rail's conversation memory). bounded hard since it's
+  // untrusted client input: known roles only, each turn capped, last 6 turns ...
+  // it can't run up the token bill or smuggle in a different shape.
+  const history = Array.isArray(rawHistory)
+    ? rawHistory
+        .filter(
+          (h): h is { role: "writer" | "nova"; text: string } =>
+            typeof h === "object" &&
+            h !== null &&
+            ((h as { role?: unknown }).role === "writer" ||
+              (h as { role?: unknown }).role === "nova") &&
+            typeof (h as { text?: unknown }).text === "string",
+        )
+        .map((h) => ({ role: h.role, text: h.text.slice(0, 2000) }))
+        .slice(-6)
+    : [];
+
   // streaming path: powers the conversation rail. the reply streams token by
   // token, dash-safe at the source; the client runs the full voice-keeper at
   // stream end. getPartnerModel throws synchronously on a missing key, so a
   // config failure still lands as a clean 502 before any bytes go out.
   if (stream === true) {
     try {
-      const responseStream = streamPartnerCommand({ command, context });
+      const responseStream = streamPartnerCommand({ command, context, history });
       return new Response(responseStream, {
         headers: {
           "content-type": "text/plain; charset=utf-8",

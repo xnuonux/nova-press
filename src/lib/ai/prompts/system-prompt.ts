@@ -9,6 +9,10 @@ export interface PromptParts {
   voiceCompactView?: string;
   // top-k retrieved passages in the writer's voice. empty for now.
   exemplars?: string[];
+  // recent turns of the live exchange, oldest first ... lets a "respond"
+  // riposte remember the last few lines instead of answering each in
+  // isolation. empty for the one-shot commands (continue / improve / ...).
+  history?: { role: "writer" | "nova"; text: string }[];
 }
 
 const IDENTITY =
@@ -63,5 +67,16 @@ export function buildPartnerPrompt(parts: PromptParts): {
     COMMAND_INSTRUCTION[parts.command],
   ].join("\n\n");
 
-  return { system, prompt: parts.context };
+  // fold the recent exchange into the user message when it's there, so a
+  // "respond" riposte answers in the flow of the conversation, not just the
+  // latest line. no history (the one-shot commands) keeps the raw context,
+  // exactly as before ... the labels tell nova which lines are its own.
+  const recent = (parts.history ?? []).filter((h) => h.text.trim().length > 0);
+  const prompt = recent.length
+    ? "the exchange so far ... respond to the writer's last line:\n" +
+      recent.map((h) => `${h.role === "writer" ? "the writer" : "you (nova)"}: ${h.text}`).join("\n") +
+      `\n\nthe writer: ${parts.context}`
+    : parts.context;
+
+  return { system, prompt };
 }
