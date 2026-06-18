@@ -390,6 +390,26 @@
     cursor: text;
   }
 
+  /* blur-rise ... the just-typed character sharpens into place. it's a slate
+     decoration (render-only, never saved), so this class lands on exactly one
+     leaf at a time, the char behind the caret. the animation runs once on mount
+     and fill-forwards to the resting state; the next keystroke moves the class
+     forward to the new char. reduced-motion zeroes the duration globally. */
+  .editor-body .np-fresh {
+    animation: np-blur-rise 240ms var(--ease-out-quart) both;
+  }
+
+  @keyframes np-blur-rise {
+    from {
+      filter: blur(2.5px);
+      opacity: 0.25;
+    }
+    to {
+      filter: blur(0);
+      opacity: 1;
+    }
+  }
+
   @media (max-width: 640px) {
     .editor-sheet {
       margin: 28px auto 80px;

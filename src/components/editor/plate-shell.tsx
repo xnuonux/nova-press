@@ -39,6 +39,7 @@ import { ParagraphPlugin, Plate, PlateContent, usePlateEditor } from "platejs/re
 
 import { countWords } from "@/lib/utils";
 
+import { BlurRisePlugin } from "./blur-rise";
 import { BubbleToolbar } from "./bubble-toolbar";
 import { CommandPalette } from "./command-palette";
 import { EmojiPicker } from "./emoji-picker";
@@ -83,6 +84,7 @@ const editorPlugins = [
   UnderlinePlugin,
   StrikethroughPlugin,
   CodePlugin,
+  BlurRisePlugin,
 ];
 
 export function PlateShell({
