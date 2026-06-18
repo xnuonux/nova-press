@@ -39,6 +39,7 @@ export function PartnerRail() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const fabRef = useRef<HTMLButtonElement>(null);
   const busy = threadBusy(messages);
   // below lg the rail is a tap-to-open drawer; lg+ it's always the sidebar.
   const [open, setOpen] = useState(false);
@@ -52,6 +53,30 @@ export function PartnerRail() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // mobile drawer hygiene: while it's open it's a modal-class surface, so lock
+  // the body scroll behind it, close on escape, focus the input on open, and
+  // hand focus back to the floating button on close. inert at lg+ where the
+  // rail is a static sidebar and never "open".
+  useEffect(() => {
+    if (!open) return;
+    const body = document.body;
+    // capture the fab now (it's stable) so the cleanup restores focus to the
+    // same node, no stale-ref lint warning.
+    const fab = fabRef.current;
+    const prevOverflow = body.style.overflow;
+    body.style.overflow = "hidden";
+    inputRef.current?.focus();
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+      fab?.focus();
+    };
+  }, [open]);
 
   const send = useCallback(() => {
     const el = inputRef.current;
@@ -144,6 +169,7 @@ export function PartnerRail() {
       {/* mobile: a floating nova button opens the drawer; hidden at lg+ where
           the rail is always the sidebar. */}
       <button
+        ref={fabRef}
         type="button"
         onClick={() => setOpen(true)}
         aria-label="open nova"
