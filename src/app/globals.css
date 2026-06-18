@@ -210,6 +210,22 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* links read as golden-hour underlines ... accent ink, a quiet rule beneath
+     that deepens on hover. the words stay the body serif, only the color and
+     the underline mark them. */
+  .prose-nova a {
+    color: var(--nova-accent);
+    text-decoration: underline;
+    text-decoration-color: var(--nova-accent-soft);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    transition: text-decoration-color 160ms var(--ease-out-quart);
+  }
+
+  .prose-nova a:hover {
+    text-decoration-color: var(--nova-accent);
+  }
+
   /* reading view drops to 16px on phones, per the design system */
   @media (max-width: 640px) {
     .prose-nova {
@@ -305,6 +321,17 @@
     min-width: 1.3em;
     color: var(--nova-accent);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* a link in the writing surface ... accent ink + a soft underline. cursor
+     stays text: in the editable you click to place the caret, not to navigate
+     (the live link lives on the published page). */
+  .editor-body .np-link {
+    color: var(--nova-accent);
+    text-decoration: underline;
+    text-decoration-color: var(--nova-accent-soft);
+    text-underline-offset: 2px;
+    cursor: text;
   }
 
   @media (max-width: 640px) {
@@ -557,6 +584,14 @@
   .np-bubble button[data-active="true"] {
     color: var(--nova-accent);
     background: var(--nova-accent-soft);
+  }
+
+  /* hairline between the marks and the link button on the bubble bar. */
+  .np-bubble-divider {
+    width: 1px;
+    height: 18px;
+    margin: 0 3px;
+    background: var(--lunari-border);
   }
 
   /* emoji picker ... floats just under the caret, same lunari surface as the

@@ -3,12 +3,19 @@ import { Fragment, type ReactNode } from "react";
 import type { Value } from "platejs";
 
 import { groupBodyBlocks } from "./piece-blocks";
+import { isSafeHref } from "./sanitize-href";
 
 /**
  * renders a stored plate v49 body as magazine reading prose. server component,
  * so the text is react-escaped ... no html injection from the body json. total
  * over garbage (an unknown block or a malformed leaf degrades to a paragraph /
  * empty string) so a corrupt body can never 500 the public reading view.
+ *
+ * inline links are real elements nested in a block's children, so the children
+ * walk recurses: an anchor renders as <a> only if its url clears isSafeHref
+ * (http/https/mailto/tel), otherwise the words survive and the hostile href is
+ * dropped. that gate is the stored-xss boundary for this public, server-rendered
+ * page.
  */
 
 interface Leaf {
@@ -31,16 +38,38 @@ function renderLeaf(leaf: Leaf, key: number): ReactNode {
   return <Fragment key={key}>{node}</Fragment>;
 }
 
+function renderInline(child: unknown, key: number): ReactNode {
+  const node = (child ?? {}) as { type?: unknown; url?: unknown; children?: unknown };
+  // an inline element carries a string "type" (e.g. "a"); a leaf has none.
+  if (typeof node.type === "string") {
+    const inner = renderChildren(node.children);
+    if (node.type === "a" && isSafeHref(node.url)) {
+      return (
+        <a key={key} href={node.url as string} target="_blank" rel="nofollow noopener noreferrer">
+          {inner}
+        </a>
+      );
+    }
+    // unknown inline element, or a link with an unsafe url ... keep the words,
+    // drop the wrapper. a hostile href never reaches the rendered dom.
+    return <Fragment key={key}>{inner}</Fragment>;
+  }
+  return renderLeaf(node as Leaf, key);
+}
+
 function renderChildren(children: unknown): ReactNode {
   if (!Array.isArray(children)) return null;
-  return children.map((child, i) => renderLeaf((child ?? {}) as Leaf, i));
+  return children.map((child, i) => renderInline(child, i));
 }
 
 function blockHasText(children: unknown): boolean {
   if (!Array.isArray(children)) return false;
   return children.some((child) => {
-    const t = (child as { text?: unknown })?.text;
-    return typeof t === "string" && t.trim() !== "";
+    const node = (child ?? {}) as { text?: unknown; children?: unknown };
+    if (typeof node.text === "string" && node.text.trim() !== "") return true;
+    // text inside an inline element (e.g. a link) lives in its children, so a
+    // paragraph that opens with a link still counts as a lead paragraph.
+    return blockHasText(node.children);
   });
 }
 

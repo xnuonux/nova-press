@@ -15,6 +15,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { upsertLink } from "@platejs/link";
+import { Link2 } from "lucide-react";
 import { useEditorRef } from "platejs/react";
 
 const MARKS = [
@@ -70,6 +72,31 @@ export function BubbleToolbar() {
     setActive(activeMap);
   }, [editor]);
 
+  // the link button reuses the mark buttons' selection trick: mousedown +
+  // preventDefault keeps the editable from blurring on the click, and we grab
+  // the slate range before window.prompt steals focus, then restore it so
+  // upsertLink wraps the exact text the writer selected. @platejs/link's own
+  // validateUrl drops a hostile scheme on the way in; the reading view
+  // sanitizes again on the way out.
+  const onLink = useCallback(() => {
+    const saved = editor.selection;
+    if (!saved) return;
+    const input = window.prompt("link url");
+    const url = input === null ? "" : input.trim();
+    // restore focus + the captured range no matter what, then upsert if a url
+    // was given. wrapped fail-closed (same as the slash menu): if the range
+    // went stale while the prompt was open, leave the body untouched rather
+    // than throw out of the click handler.
+    try {
+      editor.tf.focus();
+      editor.tf.select(saved);
+      if (url !== "") upsertLink(editor, { url });
+    } catch {
+      // selection/transform mismatch ... fail closed
+    }
+    sync();
+  }, [editor, sync]);
+
   useEffect(() => {
     document.addEventListener("selectionchange", sync);
     // capture-phase scroll so an inner scroll container still repositions us.
@@ -110,6 +137,19 @@ export function BubbleToolbar() {
           <span className={mark.glyphClass}>{mark.glyph}</span>
         </button>
       ))}
+      <span className="np-bubble-divider" aria-hidden />
+      <button
+        type="button"
+        title="link"
+        aria-label="link"
+        // same selection-preserving trick as the marks: never blur the editable.
+        onMouseDown={(event) => {
+          event.preventDefault();
+          onLink();
+        }}
+      >
+        <Link2 size={15} strokeWidth={2} aria-hidden />
+      </button>
     </div>,
     document.body,
   );

@@ -5,6 +5,9 @@ import { defineConfig } from "vitest/config";
 // vitest harness for nova. node environment ... week 1 coverage is pure logic
 // and route handlers. component and e2e tests come later.
 export default defineConfig({
+  // match next's automatic jsx runtime so component tests don't need React in
+  // scope (server components like piece-body render via react-dom/server here).
+  esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
     include: ["src/**/*.{test,spec}.{ts,tsx}"],

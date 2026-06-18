@@ -43,6 +43,7 @@ import { BubbleToolbar } from "./bubble-toolbar";
 import { CommandPalette } from "./command-palette";
 import { EmojiPicker } from "./emoji-picker";
 import { GhostText } from "./ghost-text";
+import { NovaLinkPlugin } from "./link-block";
 import { BulletItemPlugin, NumberItemPlugin } from "./list-blocks";
 import { plateText } from "./plate-text";
 import { PublishButton } from "./publish-button";
@@ -76,6 +77,7 @@ const editorPlugins = [
   HorizontalRulePlugin,
   BulletItemPlugin,
   NumberItemPlugin,
+  NovaLinkPlugin,
   BoldPlugin,
   ItalicPlugin,
   UnderlinePlugin,
