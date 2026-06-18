@@ -61,9 +61,7 @@ interface PlateShellProps {
   onSave: (input: { title: string; body: Value }) => Promise<void>;
   // publishes the piece and hands back the outcome (the public path, or a
   // reason it couldn't ship).
-  onPublish: () => Promise<
-    { ok: true; slug: string; url: string } | { ok: false; error: string }
-  >;
+  onPublish: () => Promise<{ ok: true; slug: string; url: string } | { ok: false; error: string }>;
 }
 
 // the editor block set ... basic blocks + basic marks, plus nova's flat list
@@ -175,6 +173,25 @@ export function PlateShell({
   const handleEditorKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (event.nativeEvent.isComposing) return;
+
+      // enter on an empty list item leaves the list (back to a paragraph)
+      // instead of spawning another empty bullet ... the one classic list
+      // reflex the flat ul_li / ol_li model would otherwise miss. a non-empty
+      // item still splits into a fresh item of the same kind (slate's default).
+      // the slash menu eats enter in capture phase while open, so this only ever
+      // fires for a real line break.
+      if (event.key === "Enter" && !event.shiftKey) {
+        const blockIndex = editor.selection?.anchor.path[0];
+        if (typeof blockIndex === "number") {
+          const node = editor.children[blockIndex] as { type?: string } | undefined;
+          const type = node?.type;
+          if ((type === "ul_li" || type === "ol_li") && editor.api.string([blockIndex]) === "") {
+            event.preventDefault();
+            editor.tf.setNodes({ type: "p" }, { at: [blockIndex] });
+            return;
+          }
+        }
+      }
 
       if (event.key === "Tab") {
         event.preventDefault();
