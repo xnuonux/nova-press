@@ -41,10 +41,30 @@
   }
 
   /* print ... the published piece, as a page. black ink on white, every bit
-     of chrome gone, the column opened to the full width of the paper. */
+     of chrome gone, the column opened to the full width of the paper.
+
+     the heavy lifting is the palette swap: redefining the gold/colored tokens
+     for print neutralizes every accent at once ... the header rule, links, list
+     bullets, the blockquote bar all resolve through a var(), inline styles
+     included, so there's no per-element chasing. it needs !important because
+     tokens.css is imported unlayered and would otherwise outrank an @layer
+     override. */
   @media print {
+    :root {
+      --nova-accent: #000 !important;
+      --nova-accent-soft: transparent !important;
+      --lunari-fg-primary: #000 !important;
+      --lunari-fg-muted: #1a1a1a !important;
+      --lunari-fg-subtle: #444 !important;
+      --lunari-border: #b0b0b0 !important;
+      --lunari-bg-deep: #fff !important;
+      --lunari-bg-surface: #fff !important;
+      --lunari-bg-elevated: #fff !important;
+    }
+
     .np-atmosphere,
     .np-skyline,
+    .np-read-progress,
     nav,
     footer,
     .np-print-hide {
@@ -55,6 +75,12 @@
     body {
       background: #fff !important;
       color: #000 !important;
+    }
+
+    /* the screen reserves a lot of vertical air; paper doesn't need it. */
+    article {
+      padding-top: 0.3in !important;
+      padding-bottom: 0.3in !important;
     }
 
     .prose-nova,
@@ -70,20 +96,50 @@
       line-height: 1.65;
     }
 
+    /* links stay legible as ink: black text + a black underline (the accent-soft
+       underline color went transparent in the swap above). urls aren't spelled
+       out ... this reads like a page, not a link dump. */
+    .prose-nova a {
+      color: #000 !important;
+      text-decoration-color: #000 !important;
+    }
+
     .np-dropcap > p[data-lead]::first-letter {
       color: #000 !important;
     }
 
+    /* inline code carries a hardcoded gold tint (not a token), so the palette
+       swap can't reach it ... drop it to a light gray on paper. */
+    .prose-nova code {
+      background: #f0f0f0 !important;
+      color: #000 !important;
+    }
+
+    /* widows/orphans, keep headings with their text, and don't split atomic
+       blocks across a page break. */
+    .prose-nova p {
+      orphans: 3;
+      widows: 3;
+    }
+
     h1,
     h2,
-    h3 {
+    h3,
+    h4 {
       break-after: avoid;
     }
 
     blockquote,
     figure,
-    pre {
+    pre,
+    ul,
+    ol,
+    img {
       break-inside: avoid;
+    }
+
+    img {
+      max-width: 100% !important;
     }
   }
 }
