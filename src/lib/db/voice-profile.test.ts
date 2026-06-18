@@ -16,10 +16,17 @@ function makeReadMock(data: unknown, error: unknown = null) {
   return { client, from, select, eq, maybeSingle };
 }
 
-// from().upsert() -> { error }
-function makeUpsertMock(error: unknown = null) {
+// saveWriterVoice reads extraction_history (from().select().eq().maybeSingle())
+// then writes (from().upsert()). one from() serves both.
+function makeUpsertMock(error: unknown = null, priorHistory: unknown[] | null = null) {
+  const maybeSingle = vi.fn().mockResolvedValue({
+    data: priorHistory === null ? null : { extraction_history: priorHistory },
+    error: null,
+  });
+  const eq = vi.fn().mockReturnValue({ maybeSingle });
+  const select = vi.fn().mockReturnValue({ eq });
   const upsert = vi.fn().mockResolvedValue({ error });
-  const from = vi.fn().mockReturnValue({ upsert });
+  const from = vi.fn().mockReturnValue({ select, upsert });
   const client = { from } as unknown as ServerClient;
   return { client, from, upsert };
 }
@@ -99,9 +106,24 @@ describe("saveWriterVoice", () => {
       exemplars: ["a line."],
     });
     expect(opts).toEqual({ onConflict: "user_id" });
+    // appends one extraction_history entry (no prior history)
+    expect(Array.isArray(payload.extraction_history)).toBe(true);
+    expect((payload.extraction_history as unknown[]).length).toBe(1);
     // never writes gen connect's columns
     expect(payload).not.toHaveProperty("outreach_overrides");
     expect(payload).not.toHaveProperty("active_for_outreach");
+  });
+
+  it("appends to extraction_history and trims to the last 5", async () => {
+    const prior = [1, 2, 3, 4, 5].map((n) => ({ at: `t${n}`, by: "nova_press" }));
+    const { client, upsert } = makeUpsertMock(null, prior);
+    await saveWriterVoice(client, "user-1", SAMPLE_EXTRACT);
+    const [payload] = upsert.mock.calls[0] as unknown as [Record<string, unknown>, unknown];
+    const history = payload.extraction_history as Array<{ at: string; by: string }>;
+    expect(history).toHaveLength(5);
+    // the oldest entry is dropped, the newest is nova's
+    expect(history[0]?.at).toBe("t2");
+    expect(history[4]?.by).toBe("nova_press");
   });
 
   it("throws on a db error", async () => {

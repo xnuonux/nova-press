@@ -15,6 +15,9 @@ type State = "idle" | "sending" | "done" | "error";
 
 export function SubscribeBlock({ slug }: { slug: string }) {
   const [email, setEmail] = useState("");
+  // honeypot: a human leaves this empty; a bot auto-fills it and gets quietly
+  // dropped server-side.
+  const [website, setWebsite] = useState("");
   const [state, setState] = useState<State>("idle");
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -26,7 +29,7 @@ export function SubscribeBlock({ slug }: { slug: string }) {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, email: value }),
+        body: JSON.stringify({ slug, email: value, website }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean };
       setState(res.ok && data.ok ? "done" : "error");
@@ -63,6 +66,19 @@ export function SubscribeBlock({ slug }: { slug: string }) {
         </p>
       ) : (
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* honeypot ... off-screen, untabbable, hidden from a11y tree. real
+              readers never touch it; bots fill it and get dropped. */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            className="absolute left-[-9999px] h-0 w-0 opacity-0"
+            style={{ position: "absolute" }}
+          />
           <input
             type="email"
             inputMode="email"

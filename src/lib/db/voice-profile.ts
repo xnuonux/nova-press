@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { composeVoiceCompactView, type VoiceProfileFields } from "@/lib/ai/voice-compact";
 import type { ExtractedVoice } from "@/lib/ai/voice-extract";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/supabase";
+import type { Database, Json } from "@/types/supabase";
 
 // same ssr-vs-supabase-js generic mismatch as lib/db/pieces ... cast once for
 // Database-typed inference without changing the factory signatures.
@@ -85,6 +85,22 @@ export async function saveWriterVoice(
 ): Promise<void> {
   const typed = client as unknown as TypedClient;
   const nowIso = new Date().toISOString();
+
+  // append to the shared extraction_history audit trail, trimmed to the last 5
+  // (CLAUDE.md: append-only by both products). read-then-write carries a minor
+  // clobber race, acceptable for a per-user, user-triggered extraction.
+  const { data: existing } = await typed
+    .from("voice_profiles")
+    .select("extraction_history")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const rawHistory = existing?.extraction_history;
+  const priorHistory: Json[] = Array.isArray(rawHistory) ? (rawHistory as Json[]) : [];
+  const extraction_history: Json[] = [
+    ...priorHistory,
+    { at: nowIso, by: "nova_press", model: v.model, confidence: v.confidence, samples: v.samples_count },
+  ].slice(-5);
+
   const { error } = await typed.from("voice_profiles").upsert(
     {
       user_id: userId,
@@ -110,6 +126,7 @@ export async function saveWriterVoice(
       last_extracted_by: "nova_press",
       extraction_model: v.model,
       extraction_confidence: v.confidence,
+      extraction_history,
     },
     { onConflict: "user_id" },
   );
