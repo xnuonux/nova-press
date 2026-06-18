@@ -204,3 +204,24 @@ export async function getPublishedPieceBySlug(
   }
   return (data as PublishedPiece | null) ?? null;
 }
+
+// who owns a published piece, by slug. service-role + the same published +
+// shareable gate as the reading view. server-only ... the owner id never
+// reaches the client; it's used to attribute a subscriber to the writer.
+// returns null for a draft / private / missing slug.
+export async function getPublishedPieceOwner(
+  admin: TypedClient,
+  slug: string,
+): Promise<{ userId: string; pieceId: string } | null> {
+  const { data, error } = await admin
+    .from("np_pieces")
+    .select("id, user_id")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .in("visibility", ["unlisted", "public"])
+    .maybeSingle();
+  if (error) {
+    throw new Error(`failed to resolve piece owner: ${error.message}`);
+  }
+  return data ? { userId: data.user_id, pieceId: data.id } : null;
+}

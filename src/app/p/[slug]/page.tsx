@@ -8,6 +8,7 @@ import { coercePlateValue } from "@/components/editor/plate-text";
 import { PieceBody } from "@/components/reading/piece-body";
 import { ReadingProgress } from "@/components/reading/reading-progress";
 import { ShareRow } from "@/components/reading/share-row";
+import { SubscribeBlock } from "@/components/reading/subscribe-block";
 import { getPublishedPieceBySlug } from "@/lib/db/pieces";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -133,6 +134,8 @@ export default async function ReadingPage({ params }: ReadingPageProps) {
           <div className="prose-nova np-dropcap mx-auto">
             <PieceBody value={body} />
           </div>
+
+          <SubscribeBlock slug={slug} />
 
           <div className="np-print-hide mx-auto mt-16 max-w-[65ch]">
             <div
