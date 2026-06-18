@@ -446,9 +446,8 @@
   }
 
   .np-xray-rail-label {
-    position: absolute;
+    position: fixed;
     top: 16px;
-    left: 0;
     transform: translateX(-100%) translateX(-8px);
     white-space: nowrap;
     font-family: var(--font-mono);
@@ -468,6 +467,15 @@
     font-size: 11px;
     letter-spacing: 0.12em;
     color: var(--lunari-fg-subtle);
+  }
+
+  /* on a viewport too narrow for a gutter, the spine hides and this notice
+     sits centered at the top instead of off-screen in a gutter that isn't
+     there. */
+  .np-xray-status-center {
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .np-xray-threads {
@@ -492,6 +500,12 @@
   .np-xray-thread[data-hot="true"] {
     opacity: 0.85;
     stroke-width: 1.75px;
+  }
+
+  .np-xray-nodes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
   .np-xray-node {
