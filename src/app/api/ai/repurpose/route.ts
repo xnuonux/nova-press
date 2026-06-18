@@ -63,10 +63,11 @@ export async function POST(request: NextRequest) {
   const targets =
     requested.length > 0 ? requested : (Object.keys(REPURPOSE_FORMATS) as RepurposeFormat[]);
 
-  // the writer's distilled voice, read once off voice_profiles ... this is what
-  // makes "voice-matched on every platform" real instead of the model just
-  // imitating the source piece. undefined keeps the honest fallback; never throws.
-  const voiceCompactView = await getWriterVoice(supabase, user.id);
+  // the writer's distilled voice (compact line + in-voice exemplars), read once
+  // off voice_profiles ... this is what makes "voice-matched on every platform"
+  // real instead of the model just imitating the source piece. {} keeps the
+  // honest fallback; never throws.
+  const voice = await getWriterVoice(supabase, user.id);
 
   // streaming path: one format at a time, text streamed as it generates. the
   // text is dash-safe at the source (streamRepurpose); the client runs the
@@ -80,7 +81,8 @@ export async function POST(request: NextRequest) {
       const responseStream = streamRepurpose(only, {
         title: cleanTitle,
         source: cleanSource,
-        voiceCompactView,
+        voiceCompactView: voice.voiceCompactView,
+        exemplars: voice.exemplars,
       });
       return new Response(responseStream, {
         headers: {
@@ -99,7 +101,8 @@ export async function POST(request: NextRequest) {
     const variants = await runRepurposeSet(targets, {
       title: cleanTitle,
       source: cleanSource,
-      voiceCompactView,
+      voiceCompactView: voice.voiceCompactView,
+      exemplars: voice.exemplars,
     });
     return NextResponse.json({ variants });
   } catch (err) {

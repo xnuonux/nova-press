@@ -18,6 +18,8 @@ export interface RepurposeInput {
   // the writer's distilled voice, read by the route off voice_profiles ...
   // undefined falls back to mirroring the source piece's in-context tone.
   voiceCompactView?: string;
+  // a few in-voice exemplar lines, the same slot the partner + ghost fill.
+  exemplars?: string[];
 }
 
 export interface RepurposeVariant {
@@ -42,6 +44,7 @@ export async function runRepurpose(
     title: input.title,
     source: input.source,
     voiceCompactView: input.voiceCompactView,
+    exemplars: input.exemplars,
   });
 
   const { text } = await generateText({
@@ -85,6 +88,7 @@ export function streamRepurpose(
     title: input.title,
     source: input.source,
     voiceCompactView: input.voiceCompactView,
+    exemplars: input.exemplars,
   });
 
   const result = streamText({

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Atmosphere } from "@/components/chrome/atmosphere";
+import { VoiceTrainer } from "@/components/editor/voice-trainer";
 import { listPiecesForUser, type PieceListItem } from "@/lib/db/pieces";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -74,6 +75,12 @@ export default async function LibraryPage() {
               </button>
             </form>
           </div>
+
+          {pieces.length > 0 ? (
+            <div className="np-rise np-rise-2 mb-10">
+              <VoiceTrainer />
+            </div>
+          ) : null}
 
           <div className="np-rise np-rise-2">
             {pieces.length === 0 ? <EmptyState /> : <PieceList pieces={pieces} />}

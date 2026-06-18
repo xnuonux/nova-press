@@ -35,12 +35,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // mirror the writer's own voice into the whisper ... undefined when their
-    // profile isn't trained yet, which the prompt handles with its honest
-    // fallback. the read never throws, so a degraded voice read can't break
-    // the ghost.
-    const voiceCompactView = await getWriterVoice(supabase, user.id);
-    const stream = streamGhost(context, voiceCompactView);
+    // mirror the writer's own voice into the whisper ... {} when their profile
+    // isn't trained yet, which the prompt handles with its honest fallback. the
+    // read never throws, so a degraded voice read can't break the ghost.
+    const voice = await getWriterVoice(supabase, user.id);
+    const stream = streamGhost(context, voice.voiceCompactView, voice.exemplars);
     return new Response(stream, {
       headers: {
         "content-type": "text/plain; charset=utf-8",

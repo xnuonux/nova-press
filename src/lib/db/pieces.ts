@@ -55,6 +55,28 @@ export async function listPiecesForUser(client: ServerClient): Promise<PieceList
   return (data ?? []) as PieceListItem[];
 }
 
+// the writer's own recent pieces as plain text, for voice extraction. rls
+// scopes to the caller's rows, so this is always their own writing. most
+// recent first, empty bodies dropped ... nova learns the voice from real words.
+export async function listPieceTextsForUser(
+  client: ServerClient,
+  limit = 8,
+): Promise<string[]> {
+  const typed = client as unknown as TypedClient;
+  const { data, error } = await typed
+    .from("np_pieces")
+    .select("body")
+    .neq("status", "archived")
+    .order("last_edited_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    throw new Error(`failed to list piece texts: ${error.message}`);
+  }
+  return (data ?? [])
+    .map((row) => plateText(coercePlateValue(row.body)).trim())
+    .filter((text) => text.length > 0);
+}
+
 // create a fresh draft. db defaults populate title ('untitled'),
 // body ('[]'::jsonb), status ('draft'), visibility ('private'), and the
 // timestamps. only user_id is required.

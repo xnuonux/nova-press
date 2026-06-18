@@ -67,6 +67,9 @@ export interface RepurposeParts {
   // the writer's distilled voice ... when present, the recompile mirrors their
   // actual signature, not just the source piece's in-context tone.
   voiceCompactView?: string;
+  // a few in-voice exemplar lines ... the same slot the partner + ghost fill,
+  // so all three surfaces echo the writer's real texture.
+  exemplars?: string[];
 }
 
 export function buildRepurposePrompt(parts: RepurposeParts): {
@@ -78,11 +81,18 @@ export function buildRepurposePrompt(parts: RepurposeParts): {
     ? `the writer's voice: ${parts.voiceCompactView.trim()}`
     : "the writer's voice: not yet trained ... mirror the tone and rhythm of the source piece below.";
 
+  const exemplars =
+    parts.exemplars && parts.exemplars.length > 0
+      ? "lines in the writer's voice (echo this texture, never copy):\n" +
+        parts.exemplars.map((e) => `- ${e}`).join("\n")
+      : "lines in the writer's voice: none yet.";
+
   const system = [
     IDENTITY_REPURPOSE,
     VOICE_RULES,
     compact,
     FORBIDDEN_PREAMBLE,
+    exemplars,
     spec.instruction,
   ].join("\n\n");
 

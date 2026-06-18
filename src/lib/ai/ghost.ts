@@ -23,9 +23,18 @@ const GHOST_TEMPERATURE = 0.7;
 // swapped to "..." per chunk, and the stream self-terminates at the first real
 // sentence boundary so the whisper is exactly one finished sentence, terminal
 // mark and all. all streamText lives in lib/ai, never in routes or components.
-export function streamGhost(context: string, voiceCompactView?: string): ReadableStream<Uint8Array> {
+export function streamGhost(
+  context: string,
+  voiceCompactView?: string,
+  exemplars?: string[],
+): ReadableStream<Uint8Array> {
   const model = getPartnerModel();
-  const { system, prompt } = buildPartnerPrompt({ command: "continue", context, voiceCompactView });
+  const { system, prompt } = buildPartnerPrompt({
+    command: "continue",
+    context,
+    voiceCompactView,
+    exemplars,
+  });
 
   const result = streamText({
     model,

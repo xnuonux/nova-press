@@ -21,12 +21,13 @@ describe("buildRepurposePrompt", () => {
     // index ... marker words like "recompile" / "the writer's voice" recur
     // across blocks and make index-hunting fragile.
     const blocks = system.split("\n\n").map((b) => b.toLowerCase());
-    expect(blocks).toHaveLength(5);
+    expect(blocks).toHaveLength(6);
     expect(blocks[0]).toContain("nova"); // identity
     expect(blocks[1]).toContain("lowercase"); // voice rules
     expect(blocks[2]).toContain("not yet trained"); // compact-view slot
     expect(blocks[3]).toContain("never start with"); // forbidden preamble
-    expect(blocks[4]).toContain("recompile"); // format instruction
+    expect(blocks[4]).toContain("lines in the writer's voice"); // exemplars slot
+    expect(blocks[5]).toContain("recompile"); // format instruction
   });
 
   it("injects the writer's distilled voice into the compact slot when provided", () => {

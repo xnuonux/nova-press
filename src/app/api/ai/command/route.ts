@@ -73,10 +73,10 @@ export async function POST(request: NextRequest) {
       ? rawDocument.slice(0, 6000)
       : undefined;
 
-  // the writer's distilled voice, read once and threaded into whichever path
-  // runs. undefined when the corpus isn't trained yet (the prompt keeps its
-  // honest fallback), and the read never throws.
-  const voiceCompactView = await getWriterVoice(supabase, user.id);
+  // the writer's distilled voice (compact line + in-voice exemplars), read once
+  // and threaded into whichever path runs. {} when the profile isn't trained
+  // yet (the prompt keeps its honest fallback), and the read never throws.
+  const voice = await getWriterVoice(supabase, user.id);
 
   // streaming path: powers the conversation rail. the reply streams token by
   // token, dash-safe at the source; the client runs the full voice-keeper at
@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
         command,
         context,
         history,
-        voiceCompactView,
+        voiceCompactView: voice.voiceCompactView,
+        exemplars: voice.exemplars,
         document: pieceDocument,
       });
       return new Response(responseStream, {
@@ -108,7 +109,8 @@ export async function POST(request: NextRequest) {
     const result = await runPartnerCommand({
       command,
       context,
-      voiceCompactView,
+      voiceCompactView: voice.voiceCompactView,
+      exemplars: voice.exemplars,
       document: pieceDocument,
     });
     return NextResponse.json(result);
