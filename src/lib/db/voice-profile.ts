@@ -25,6 +25,10 @@ export interface WriterVoice {
   exemplars?: string[];
 }
 
+function roundOrNull(n: number | null): number | null {
+  return n === null ? null : Math.round(n);
+}
+
 // pull exemplars out of writing_overrides (nova's jsonb column), defensively.
 function readExemplars(overrides: unknown): string[] {
   if (overrides && typeof overrides === "object" && !Array.isArray(overrides)) {
@@ -86,9 +90,11 @@ export async function saveWriterVoice(
       user_id: userId,
       register: v.register,
       vocabulary_signature: v.vocabulary_signature,
-      sentence_length_avg: v.stats.sentence_length_avg,
+      // sentence/paragraph _avg are integer columns in the shared schema (the
+      // _variance columns are numeric) ... round the averages, keep variance.
+      sentence_length_avg: roundOrNull(v.stats.sentence_length_avg),
       sentence_length_variance: v.stats.sentence_length_variance,
-      paragraph_length_avg: v.stats.paragraph_length_avg,
+      paragraph_length_avg: roundOrNull(v.stats.paragraph_length_avg),
       paragraph_length_variance: v.stats.paragraph_length_variance,
       formality_score: v.formality_score,
       opening_patterns: v.opening_patterns,
