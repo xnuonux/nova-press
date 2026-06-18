@@ -410,6 +410,152 @@
     }
   }
 
+  /* the x-ray spine ... the draft's argument drawn in the left margin. a pure
+     overlay; a faint rail with one role node per block, threads bowing through
+     the gutter between a promise and its payoff. descriptive only, golden and
+     quiet ... it shows the shape and never grades it. */
+  .np-xray {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    animation: np-xray-in 240ms var(--ease-out-quart);
+  }
+
+  @keyframes np-xray-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .np-xray-rail {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--nova-accent-soft) 7%,
+      var(--nova-accent-soft) 93%,
+      transparent
+    );
+  }
+
+  .np-xray-rail-label {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    transform: translateX(-100%) translateX(-8px);
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--nova-accent);
+    opacity: 0.65;
+  }
+
+  .np-xray-status {
+    position: fixed;
+    top: 46%;
+    transform: translateX(-100%) translateX(-12px);
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--lunari-fg-subtle);
+  }
+
+  .np-xray-threads {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .np-xray-thread {
+    fill: none;
+    stroke: var(--nova-accent);
+    stroke-width: 1.25px;
+    opacity: 0.26;
+    transition:
+      opacity 140ms var(--ease-out-quart),
+      stroke-width 140ms var(--ease-out-quart);
+  }
+
+  .np-xray-thread[data-hot="true"] {
+    opacity: 0.85;
+    stroke-width: 1.75px;
+  }
+
+  .np-xray-node {
+    position: fixed;
+    transform: translateX(-100%) translateX(3px);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    pointer-events: auto;
+    cursor: default;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--lunari-fg-subtle);
+    transition: color 140ms var(--ease-out-quart);
+  }
+
+  .np-xray-role {
+    white-space: nowrap;
+  }
+
+  .np-xray-dot {
+    width: 5px;
+    height: 5px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--nova-accent);
+    opacity: 0.55;
+    transition:
+      opacity 140ms var(--ease-out-quart),
+      transform 140ms var(--ease-out-quart);
+  }
+
+  .np-xray-node[data-hot="true"] {
+    color: var(--nova-accent);
+  }
+
+  .np-xray-node[data-hot="true"] .np-xray-dot {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+
+  /* the block the writer is hovering in the spine lifts ... inset shadow so
+     there's no layout shift, faint accent wash. */
+  .editor-body > [data-xray-focus] {
+    border-radius: 2px;
+    background: var(--nova-accent-soft);
+    box-shadow: inset 3px 0 0 var(--nova-accent);
+  }
+
+  .np-xray-toggle {
+    color: var(--lunari-fg-subtle);
+    transition: color 140ms var(--ease-out-quart);
+  }
+
+  .np-xray-toggle:hover {
+    color: var(--lunari-fg-muted);
+  }
+
+  .np-xray-on .np-xray-toggle {
+    color: var(--nova-accent);
+  }
+
   @media (max-width: 640px) {
     .editor-sheet {
       margin: 28px auto 80px;

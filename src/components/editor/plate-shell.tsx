@@ -51,6 +51,8 @@ import { PublishButton } from "./publish-button";
 import { RepurposeLauncher } from "./repurpose-launcher";
 import { SlashMenu } from "./slash-menu";
 import { useAutosave } from "./use-autosave";
+import { XraySpine } from "./xray-spine";
+import { XrayToggle } from "./xray-toggle";
 
 interface PlateShellProps {
   initialTitle: string;
@@ -329,6 +331,7 @@ export function PlateShell({
         <SlashMenu />
         <CommandPalette />
         <GhostText />
+        <XraySpine />
         <PlateContent
           className="editor-body min-h-[55vh] outline-none"
           onKeyDown={handleEditorKeyDown}
@@ -345,6 +348,7 @@ export function PlateShell({
       className={focusMode ? "np-focus flex h-full flex-1 flex-col" : "flex h-full flex-1 flex-col"}
     >
       <header className="flex items-center justify-end gap-4 px-8 py-3" style={chromeStyle}>
+        <XrayToggle />
         <RepurposeLauncher
           getSource={() => ({ title, source: plateText(editor.children as Value) })}
         />
