@@ -43,6 +43,7 @@ import { BubbleToolbar } from "./bubble-toolbar";
 import { CommandPalette } from "./command-palette";
 import { EmojiPicker } from "./emoji-picker";
 import { GhostText } from "./ghost-text";
+import { BulletItemPlugin, NumberItemPlugin } from "./list-blocks";
 import { plateText } from "./plate-text";
 import { PublishButton } from "./publish-button";
 import { RepurposeLauncher } from "./repurpose-launcher";
@@ -65,7 +66,9 @@ interface PlateShellProps {
   >;
 }
 
-// week 1 plugin set ... basic blocks + basic marks, and nothing else.
+// the editor block set ... basic blocks + basic marks, plus nova's flat list
+// items (ul_li / ol_li). lists carry their own render components so they paint
+// in the editable; the reading view restitches the runs into real ul/ol.
 const editorPlugins = [
   ParagraphPlugin,
   H1Plugin,
@@ -73,6 +76,8 @@ const editorPlugins = [
   H3Plugin,
   BlockquotePlugin,
   HorizontalRulePlugin,
+  BulletItemPlugin,
+  NumberItemPlugin,
   BoldPlugin,
   ItalicPlugin,
   UnderlinePlugin,

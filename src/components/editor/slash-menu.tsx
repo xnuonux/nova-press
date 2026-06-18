@@ -2,7 +2,8 @@
 
 /**
  * slash menu ... type "/" at a line start (or after a space) and a small
- * floating list of block commands appears: heading 1-3, quote, divider.
+ * floating list of block commands appears: heading 1-3, quote, bulleted list,
+ * numbered list, divider.
  *
  * same shape as the emoji picker (portal, caret-leaf trigger detection,
  * capture-phase keyboard nav) so the two feel like one family. selecting a
@@ -32,6 +33,18 @@ const COMMANDS: Command[] = [
     label: "quote",
     hint: "set it apart",
     words: ["quote", "blockquote", "cite"],
+  },
+  {
+    key: "ul_li",
+    label: "bulleted list",
+    hint: "points with dots",
+    words: ["bullet", "bulleted", "list", "ul", "unordered", "dot", "dash"],
+  },
+  {
+    key: "ol_li",
+    label: "numbered list",
+    hint: "points in order",
+    words: ["number", "numbered", "list", "ol", "ordered", "steps"],
   },
   {
     key: "divider",

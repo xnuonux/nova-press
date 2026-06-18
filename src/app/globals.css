@@ -167,6 +167,49 @@
     font-size: 0.86em;
   }
 
+  /* lists in the published column ... bulleted points carry a small golden dot
+     drawn by hand (so the bullet color is nova's, not the browser's), numbered
+     points keep native counting with an accent numeral. quiet, print-like. */
+  .prose-nova ul,
+  .prose-nova ol {
+    margin: 1.3em 0;
+    padding-left: 1.5em;
+  }
+
+  .prose-nova li {
+    margin: 0.4em 0;
+    padding-left: 0.2em;
+  }
+
+  .prose-nova ul {
+    list-style: none;
+    padding-left: 1.4em;
+  }
+
+  .prose-nova ul > li {
+    position: relative;
+  }
+
+  .prose-nova ul > li::before {
+    content: "";
+    position: absolute;
+    left: -1em;
+    top: 0.72em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--nova-accent);
+  }
+
+  .prose-nova ol {
+    list-style: decimal;
+  }
+
+  .prose-nova ol > li::marker {
+    color: var(--nova-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
   /* reading view drops to 16px on phones, per the design system */
   @media (max-width: 640px) {
     .prose-nova {
@@ -223,6 +266,45 @@
     /* the classic: a tab renders as a real 4-wide indent. slate's editable
        is white-space: pre-wrap, so tab chars survive and tab-size applies. */
     tab-size: 4;
+    counter-reset: np-ol;
+  }
+
+  /* lists in the writing surface ... flat ul_li / ol_li blocks with a hanging
+     marker drawn in css, so the editable dom stays plain divs and the caret
+     never catches on a bullet. a numbered run restarts at each non-numbered
+     block, so two separate lists each count from one. */
+  .editor-body .np-li {
+    position: relative;
+    padding-left: 1.6em;
+  }
+
+  .editor-body .np-li-bullet::before {
+    content: "";
+    position: absolute;
+    left: 0.55em;
+    top: 0.72em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--nova-accent);
+  }
+
+  .editor-body > :not(.np-li-number) {
+    counter-reset: np-ol;
+  }
+
+  .editor-body .np-li-number {
+    counter-increment: np-ol;
+  }
+
+  .editor-body .np-li-number::before {
+    content: counter(np-ol) ".";
+    position: absolute;
+    left: 0;
+    top: 0;
+    min-width: 1.3em;
+    color: var(--nova-accent);
+    font-variant-numeric: tabular-nums;
   }
 
   @media (max-width: 640px) {
