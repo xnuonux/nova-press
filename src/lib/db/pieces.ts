@@ -58,10 +58,7 @@ export async function listPiecesForUser(client: ServerClient): Promise<PieceList
 // the writer's own recent pieces as plain text, for voice extraction. rls
 // scopes to the caller's rows, so this is always their own writing. most
 // recent first, empty bodies dropped ... nova learns the voice from real words.
-export async function listPieceTextsForUser(
-  client: ServerClient,
-  limit = 8,
-): Promise<string[]> {
+export async function listPieceTextsForUser(client: ServerClient, limit = 8): Promise<string[]> {
   const typed = client as unknown as TypedClient;
   const { data, error } = await typed
     .from("np_pieces")
@@ -105,6 +102,22 @@ export async function getPieceById(client: ServerClient, id: string): Promise<Pi
     throw new Error(`failed to fetch np_pieces row: ${error.message}`);
   }
   return (data as Piece | null) ?? null;
+}
+
+// just the content watermark, RLS-scoped: the piece's last_edited_at, or null if
+// the caller doesn't own it / it doesn't exist. lets the repurpose endpoints
+// check ownership + read the staleness watermark without pulling the full body.
+export async function getPieceEditedAt(client: ServerClient, id: string): Promise<string | null> {
+  const typed = client as unknown as TypedClient;
+  const { data, error } = await typed
+    .from("np_pieces")
+    .select("last_edited_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`failed to fetch piece watermark: ${error.message}`);
+  }
+  return data?.last_edited_at ?? null;
 }
 
 // persist editor content back to a piece. RLS scopes the write to the

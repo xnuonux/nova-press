@@ -570,6 +570,16 @@
     color: var(--nova-accent);
   }
 
+  /* a repurpose channel whose source has drifted carries this small accent dot
+     on its tab ... the living edition's "out of date" tell. */
+  .np-stale-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--nova-accent);
+  }
+
   @media (max-width: 640px) {
     .editor-sheet {
       margin: 28px auto 80px;

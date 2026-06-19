@@ -1,13 +1,19 @@
 "use client";
 
 /**
- * repurpose launcher ... nova's flagship move.
+ * repurpose launcher ... nova's flagship move, now a living edition.
  *
- * one finished piece, recompiled into a newsletter, an x thread, and a
- * linkedin post, every variant in the writer's voice (voice-keeper enforced
- * server-side). a button in the editor chrome opens an overlay; each format
- * streams in independently (one fetch per tab) so the panel fills as the model
- * lands. ephemeral ... nothing is persisted, so there's no shared substrate.
+ * one finished piece, recompiled into a newsletter, an x thread, and a linkedin
+ * post, every variant in the writer's voice (voice-keeper enforced server-side).
+ * unlike before, the variants are PERSISTED and linked to the source: open the
+ * panel and your saved versions are right there (no regen, no token cost). edit
+ * the source and they quietly mark themselves "out of date" ... a one-tap refresh
+ * recompiles that channel from the latest draft. nova never refreshes behind your
+ * back; the writer commands every rewrite.
+ *
+ * a channel with no saved version yet generates on open (streamed, then saved).
+ * staleness is computed server-side on read; a fresh generate/refresh is never
+ * stale.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -34,15 +40,27 @@ const TABS: Tab[] = [
 type VariantState =
   | { status: "loading" }
   | { status: "streaming"; text: string }
-  | { status: "done"; text: string; drift: boolean }
+  | { status: "done"; text: string; drift: boolean; stale: boolean; saved: boolean }
   | { status: "error"; error: string };
+
+interface SavedOutput {
+  channel: RepurposeFormat;
+  body: string;
+  stale: boolean;
+}
 
 interface Source {
   title: string;
   source: string;
 }
 
-export function RepurposeLauncher({ getSource }: { getSource: () => Source }) {
+export function RepurposeLauncher({
+  pieceId,
+  getSource,
+}: {
+  pieceId: string;
+  getSource: () => Source;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -59,12 +77,22 @@ export function RepurposeLauncher({ getSource }: { getSource: () => Source }) {
       >
         repurpose
       </button>
-      {open ? <RepurposePanel getSource={getSource} onClose={() => setOpen(false)} /> : null}
+      {open ? (
+        <RepurposePanel pieceId={pieceId} getSource={getSource} onClose={() => setOpen(false)} />
+      ) : null}
     </>
   );
 }
 
-function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClose: () => void }) {
+function RepurposePanel({
+  pieceId,
+  getSource,
+  onClose,
+}: {
+  pieceId: string;
+  getSource: () => Source;
+  onClose: () => void;
+}) {
   const [active, setActive] = useState<RepurposeFormat>("newsletter");
   const [variants, setVariants] = useState<Record<RepurposeFormat, VariantState>>({
     newsletter: { status: "loading" },
@@ -72,75 +100,100 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
     linkedin: { status: "loading" },
   });
   const [copied, setCopied] = useState(false);
-  const sourceRef = useRef<Source>(getSource());
-  // one in-flight stream per format. regenerate aborts the previous; closing
-  // the panel aborts them all ... no setState after unmount, no old stream
-  // clobbering a new one.
+  // one in-flight stream per format. regenerate aborts the previous; closing the
+  // panel aborts them all ... no setState after unmount, no old stream clobbering
+  // a new one.
   const controllersRef = useRef<Partial<Record<RepurposeFormat, AbortController>>>({});
 
-  const runFormat = useCallback((format: RepurposeFormat, src: Source) => {
-    controllersRef.current[format]?.abort();
-    const controller = new AbortController();
-    controllersRef.current[format] = controller;
-    setVariants((prev) => ({ ...prev, [format]: { status: "loading" } }));
-    void (async () => {
-      try {
-        const res = await fetch("/api/ai/repurpose", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            title: src.title,
-            source: src.source,
-            formats: [format],
-            stream: true,
-          }),
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) {
-          const data = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(data.error ?? "nova couldn't repurpose this one");
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let acc = "";
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          acc += decoder.decode(value, { stream: true });
-          // only flip to streaming once there's something to show, so the
-          // shimmer doesn't blink to an empty pane.
-          if (acc.length > 0) {
-            const text = acc;
-            setVariants((prev) => ({ ...prev, [format]: { status: "streaming", text } }));
+  // generate (stream) a channel from the given source, then persist it. used on
+  // first-open for an un-saved channel and on every refresh. refresh re-reads the
+  // LIVE source, so it recompiles from the latest draft.
+  const runFormat = useCallback(
+    (format: RepurposeFormat, src: Source) => {
+      controllersRef.current[format]?.abort();
+      const controller = new AbortController();
+      controllersRef.current[format] = controller;
+      setVariants((prev) => ({ ...prev, [format]: { status: "loading" } }));
+      void (async () => {
+        try {
+          const res = await fetch("/api/ai/repurpose", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              title: src.title,
+              source: src.source,
+              formats: [format],
+              stream: true,
+            }),
+            signal: controller.signal,
+          });
+          if (!res.ok || !res.body) {
+            const data = (await res.json().catch(() => ({}))) as { error?: string };
+            throw new Error(data.error ?? "nova couldn't repurpose this one");
           }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let acc = "";
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            acc += decoder.decode(value, { stream: true });
+            if (acc.length > 0) {
+              const text = acc;
+              setVariants((prev) => ({ ...prev, [format]: { status: "streaming", text } }));
+            }
+          }
+          acc += decoder.decode();
+          if (controller.signal.aborted) return;
+
+          // the dashes were stripped at the source; the keeper does the rest
+          // (lowercase paragraph openings, any preamble) + reports drift.
+          const audited = voiceKeeperAudit(acc);
+          setVariants((prev) => ({
+            ...prev,
+            [format]: {
+              status: "done",
+              text: audited.text,
+              drift: audited.violated,
+              stale: false,
+              saved: false,
+            },
+          }));
+
+          // persist the FINAL audited text. a fresh save is never stale (its
+          // watermark is the piece's current last_edited_at). save failure is
+          // non-fatal ... the writer still sees + can copy the variant.
+          try {
+            const saveRes = await fetch("/api/ai/repurpose/save", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ pieceId, channel: format, body: audited.text }),
+              signal: controller.signal,
+            });
+            const saveData = (await saveRes.json().catch(() => ({}))) as { ok?: boolean };
+            if (controller.signal.aborted) return;
+            if (saveData?.ok) {
+              setVariants((prev) => {
+                const cur = prev[format];
+                if (cur.status !== "done") return prev;
+                return { ...prev, [format]: { ...cur, saved: true } };
+              });
+            }
+          } catch {
+            // aborted or offline ... leave it unsaved, no error surfaced
+          }
+        } catch (err: unknown) {
+          if (controller.signal.aborted) return;
+          const message = err instanceof Error ? err.message : "something broke";
+          setVariants((prev) => ({ ...prev, [format]: { status: "error", error: message } }));
         }
-        acc += decoder.decode();
+      })();
+    },
+    [pieceId],
+  );
 
-        // the stream can finish right as the panel closes or regenerate
-        // fires; bail before the final setState so we never write to an
-        // unmounted panel or clobber a newer run.
-        if (controller.signal.aborted) return;
-
-        // the dashes were stripped at the source; the keeper does the rest
-        // (lowercase paragraph openings, any preamble) + reports drift.
-        const audited = voiceKeeperAudit(acc);
-        setVariants((prev) => ({
-          ...prev,
-          [format]: { status: "done", text: audited.text, drift: audited.violated },
-        }));
-      } catch (err: unknown) {
-        // an intentional abort (regenerate / close) is not an error.
-        if (controller.signal.aborted) return;
-        const message = err instanceof Error ? err.message : "something broke";
-        setVariants((prev) => ({ ...prev, [format]: { status: "error", error: message } }));
-      }
-    })();
-  }, []);
-
-  // abort every in-flight stream when the panel unmounts. the ref object is
-  // stable (we only ever mutate its entries, never reassign .current), so this
-  // captured reference still sees the latest controllers at cleanup time.
+  // abort every in-flight stream when the panel unmounts.
   useEffect(() => {
     const controllers = controllersRef.current;
     return () => {
@@ -148,19 +201,46 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
     };
   }, []);
 
-  // fire all three on open, in parallel. each tab fills as it lands.
+  // on open: load saved versions, then for each channel show the saved one (with
+  // its drift state) or generate it if there isn't one yet.
   useEffect(() => {
-    const src = getSource();
-    sourceRef.current = src;
-    if (!src.source.trim()) {
-      setVariants({
-        newsletter: { status: "error", error: "write something first" },
-        thread: { status: "error", error: "write something first" },
-        linkedin: { status: "error", error: "write something first" },
-      });
-      return;
-    }
-    for (const tab of TABS) runFormat(tab.key, src);
+    void (async () => {
+      const src = getSource();
+      let saved: SavedOutput[] = [];
+      try {
+        const res = await fetch(`/api/ai/repurpose/outputs?pieceId=${encodeURIComponent(pieceId)}`);
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          outputs?: SavedOutput[];
+        };
+        if (data?.ok && Array.isArray(data.outputs)) saved = data.outputs;
+      } catch {
+        // couldn't load saved ... fall through, we'll just generate fresh
+      }
+      const hasSource = src.source.trim().length > 0;
+      for (const tab of TABS) {
+        const existing = saved.find((o) => o.channel === tab.key);
+        if (existing) {
+          setVariants((prev) => ({
+            ...prev,
+            [tab.key]: {
+              status: "done",
+              text: existing.body,
+              drift: false,
+              stale: !!existing.stale,
+              saved: true,
+            },
+          }));
+        } else if (hasSource) {
+          runFormat(tab.key, src);
+        } else {
+          setVariants((prev) => ({
+            ...prev,
+            [tab.key]: { status: "error", error: "write something first" },
+          }));
+        }
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -174,6 +254,7 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
   }, [onClose]);
 
   const current = variants[active];
+  const refresh = useCallback(() => runFormat(active, getSource()), [active, getSource, runFormat]);
 
   const copy = useCallback(() => {
     if (current.status !== "done") return;
@@ -182,6 +263,8 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
       window.setTimeout(() => setCopied(false), 1600);
     });
   }, [current]);
+
+  const busy = current.status === "loading" || current.status === "streaming";
 
   return (
     <div
@@ -212,7 +295,7 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
               repurpose
             </h2>
             <p className="mt-1 font-serif text-sm" style={{ color: "var(--lunari-fg-muted)" }}>
-              one piece, every platform ... still your voice.
+              one piece, every platform ... still your voice, saved with the source.
             </p>
           </div>
           <button
@@ -226,16 +309,18 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
           </button>
         </div>
 
-        {/* tabs */}
+        {/* tabs ... a stale channel carries a small dot */}
         <div className="flex gap-1 px-5 pt-4">
           {TABS.map((tab) => {
             const isActive = tab.key === active;
+            const v = variants[tab.key];
+            const stale = v.status === "done" && v.stale;
             return (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setActive(tab.key)}
-                className="rounded-lg px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.16em] transition-all duration-200"
+                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.16em] transition-all duration-200"
                 style={
                   isActive
                     ? { background: "var(--nova-accent-soft)", color: "var(--nova-accent)" }
@@ -243,6 +328,7 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
                 }
               >
                 {tab.label}
+                {stale ? <span className="np-stale-dot" aria-label="out of date" /> : null}
               </button>
             );
           })}
@@ -250,7 +336,7 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
 
         {/* body */}
         <div className="px-7 pb-7 pt-4">
-          <VariantView state={current} onRetry={() => runFormat(active, sourceRef.current)} />
+          <VariantView state={current} onRetry={refresh} onRefresh={refresh} />
         </div>
 
         {/* footer actions */}
@@ -258,15 +344,30 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
           className="flex items-center justify-between gap-3 border-t px-7 py-4"
           style={{ borderColor: "var(--lunari-border)" }}
         >
-          <button
-            type="button"
-            onClick={() => runFormat(active, sourceRef.current)}
-            disabled={current.status === "loading" || current.status === "streaming"}
-            className="font-mono text-[11px] uppercase tracking-[0.18em] transition-opacity hover:opacity-70 disabled:opacity-40"
-            style={{ color: "var(--lunari-fg-subtle)" }}
-          >
-            regenerate
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={busy}
+              className="font-mono text-[11px] uppercase tracking-[0.18em] transition-opacity hover:opacity-70 disabled:opacity-40"
+              style={{
+                color:
+                  current.status === "done" && current.stale
+                    ? "var(--nova-accent)"
+                    : "var(--lunari-fg-subtle)",
+              }}
+            >
+              {current.status === "done" && current.stale ? "refresh" : "regenerate"}
+            </button>
+            {current.status === "done" && current.saved && !current.stale ? (
+              <span
+                className="font-mono text-[10px] uppercase tracking-[0.2em]"
+                style={{ color: "var(--lunari-fg-subtle)" }}
+              >
+                saved with the piece
+              </span>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={copy}
@@ -282,10 +383,17 @@ function RepurposePanel({ getSource, onClose }: { getSource: () => Source; onClo
   );
 }
 
-function VariantView({ state, onRetry }: { state: VariantState; onRetry: () => void }) {
+function VariantView({
+  state,
+  onRetry,
+  onRefresh,
+}: {
+  state: VariantState;
+  onRetry: () => void;
+  onRefresh: () => void;
+}) {
   const preRef = useRef<HTMLPreElement>(null);
   const liveText = state.status === "streaming" || state.status === "done" ? state.text : "";
-  // keep the live caret in view as text streams past the bottom of the box.
   useEffect(() => {
     if (state.status === "streaming" && preRef.current) {
       preRef.current.scrollTop = preRef.current.scrollHeight;
@@ -330,11 +438,30 @@ function VariantView({ state, onRetry }: { state: VariantState; onRetry: () => v
     );
   }
 
-  // streaming: the text so far, with a live caret. done: the final audited
-  // text + the drift note if the keeper had to step in.
   const streaming = state.status === "streaming";
   return (
     <div>
+      {state.status === "done" && state.stale ? (
+        <div
+          className="mb-3 flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+          style={{ background: "var(--nova-accent-soft)" }}
+        >
+          <span
+            className="font-mono text-[10px] uppercase tracking-[0.18em]"
+            style={{ color: "var(--nova-accent)" }}
+          >
+            the piece changed since this was made
+          </span>
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="font-mono text-[10px] uppercase tracking-[0.18em] underline-offset-2 hover:underline"
+            style={{ color: "var(--nova-accent)" }}
+          >
+            refresh
+          </button>
+        </div>
+      ) : null}
       {state.status === "done" && state.drift ? (
         <p
           className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em]"

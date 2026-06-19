@@ -4588,6 +4588,42 @@ export type Database = {
         }
         Relationships: []
       }
+      np_repurpose_outputs: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          generated_at: string
+          id: string
+          piece_id: string
+          source_edited_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          channel: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          piece_id: string
+          source_edited_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          piece_id?: string
+          source_edited_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       np_subscriber: {
         Row: {
           created_at: string

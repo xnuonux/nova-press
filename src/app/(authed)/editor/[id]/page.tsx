@@ -26,6 +26,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
       <Atmosphere glow={false} />
       <div className="relative z-10 flex h-full w-full">
         <PlateShell
+          pieceId={piece.id}
           initialTitle={piece.title}
           initialValue={coercePlateValue(piece.body)}
           initialStatus={piece.status}

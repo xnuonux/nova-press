@@ -55,6 +55,7 @@ import { XraySpine } from "./xray-spine";
 import { XrayToggle } from "./xray-toggle";
 
 interface PlateShellProps {
+  pieceId: string;
   initialTitle: string;
   initialValue: Value;
   initialStatus: string;
@@ -90,6 +91,7 @@ const editorPlugins = [
 ];
 
 export function PlateShell({
+  pieceId,
   initialTitle,
   initialValue,
   initialStatus,
@@ -350,6 +352,7 @@ export function PlateShell({
       <header className="flex items-center justify-end gap-4 px-8 py-3" style={chromeStyle}>
         <XrayToggle />
         <RepurposeLauncher
+          pieceId={pieceId}
           getSource={() => ({ title, source: plateText(editor.children as Value) })}
         />
         <span
