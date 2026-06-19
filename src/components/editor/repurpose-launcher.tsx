@@ -5,15 +5,22 @@
  *
  * one finished piece, recompiled into a newsletter, an x thread, and a linkedin
  * post, every variant in the writer's voice (voice-keeper enforced server-side).
- * unlike before, the variants are PERSISTED and linked to the source: open the
- * panel and your saved versions are right there (no regen, no token cost). edit
- * the source and they quietly mark themselves "out of date" ... a one-tap refresh
- * recompiles that channel from the latest draft. nova never refreshes behind your
- * back; the writer commands every rewrite.
+ * the variants PERSIST and link to the source: open the panel and your saved
+ * versions are right there (no regen, no token cost). edit the piece and they
+ * quietly mark themselves "out of date" ... a one-tap refresh recompiles that
+ * channel from the latest draft. nova never refreshes behind your back; the
+ * writer commands every rewrite.
  *
- * a channel with no saved version yet generates on open (streamed, then saved).
- * staleness is computed server-side on read; a fresh generate/refresh is never
- * stale.
+ * generation is LAZY: opening the panel makes only the channel you're looking at,
+ * and the others generate when you actually open their tab ... so a writer who
+ * just wants the newsletter never burns tokens on the thread + linkedin. a
+ * channel with a saved version shows it instantly; only an un-made channel
+ * generates when first viewed.
+ *
+ * the panel is a blocking modal, so the source is frozen while it's open: we
+ * capture the piece's last_edited_at once (the GET) and use it as the gen-start
+ * watermark for every generation this session, so an output's staleness is keyed
+ * to the exact source it was made from.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -38,6 +45,7 @@ const TABS: Tab[] = [
 ];
 
 type VariantState =
+  | { status: "idle" } // not made yet, not viewed yet ... generates when its tab opens
   | { status: "loading" }
   | { status: "streaming"; text: string }
   | { status: "done"; text: string; drift: boolean; stale: boolean; saved: boolean }
@@ -101,13 +109,23 @@ function RepurposePanel({
   });
   const [copied, setCopied] = useState(false);
   // one in-flight stream per format. regenerate aborts the previous; closing the
-  // panel aborts them all ... no setState after unmount, no old stream clobbering
-  // a new one.
+  // panel aborts them all.
   const controllersRef = useRef<Partial<Record<RepurposeFormat, AbortController>>>({});
+  // the gen-start watermark (the piece's last_edited_at at panel open). the
+  // source is frozen while this modal is up, so it's valid for the whole session.
+  const watermarkRef = useRef<string | null>(null);
+  // latest variants, so the tab-click handler can read a channel's status
+  // without stale closure.
+  const variantsRef = useRef(variants);
+  variantsRef.current = variants;
+  // the on-open load runs exactly once per panel session. a guard (not a dep
+  // array) keeps the mount-only effect idempotent under react strict-mode's
+  // double-invoke and any remount, so the lazy generation never fires the
+  // active channel twice. nova makes one edition per command, never two.
+  const didInitRef = useRef(false);
 
-  // generate (stream) a channel from the given source, then persist it. used on
-  // first-open for an un-saved channel and on every refresh. refresh re-reads the
-  // LIVE source, so it recompiles from the latest draft.
+  // generate (stream) a channel from the given source, then persist it with the
+  // session watermark. used the first time a channel is viewed and on refresh.
   const runFormat = useCallback(
     (format: RepurposeFormat, src: Source) => {
       controllersRef.current[format]?.abort();
@@ -161,14 +179,18 @@ function RepurposePanel({
             },
           }));
 
-          // persist the FINAL audited text. a fresh save is never stale (its
-          // watermark is the piece's current last_edited_at). save failure is
-          // non-fatal ... the writer still sees + can copy the variant.
+          // persist the FINAL audited text with the gen-start watermark. save
+          // failure is non-fatal ... the writer still sees + can copy the variant.
           try {
             const saveRes = await fetch("/api/ai/repurpose/save", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ pieceId, channel: format, body: audited.text }),
+              body: JSON.stringify({
+                pieceId,
+                channel: format,
+                body: audited.text,
+                sourceEditedAt: watermarkRef.current ?? undefined,
+              }),
               signal: controller.signal,
             });
             const saveData = (await saveRes.json().catch(() => ({}))) as { ok?: boolean };
@@ -201,48 +223,71 @@ function RepurposePanel({
     };
   }, []);
 
-  // on open: load saved versions, then for each channel show the saved one (with
-  // its drift state) or generate it if there isn't one yet.
+  // on open: load saved versions, mark un-made channels idle, then generate ONLY
+  // the active channel (the one the writer is looking at). the rest generate
+  // lazily when their tab is opened.
   useEffect(() => {
+    if (didInitRef.current) return;
+    didInitRef.current = true;
     void (async () => {
       const src = getSource();
+      const hasSource = src.source.trim().length > 0;
       let saved: SavedOutput[] = [];
       try {
         const res = await fetch(`/api/ai/repurpose/outputs?pieceId=${encodeURIComponent(pieceId)}`);
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
+          pieceLastEditedAt?: string;
           outputs?: SavedOutput[];
         };
-        if (data?.ok && Array.isArray(data.outputs)) saved = data.outputs;
+        if (data?.ok) {
+          watermarkRef.current = data.pieceLastEditedAt ?? null;
+          if (Array.isArray(data.outputs)) saved = data.outputs;
+        }
       } catch {
-        // couldn't load saved ... fall through, we'll just generate fresh
+        // couldn't load saved ... fall through, channels start idle/generate
       }
-      const hasSource = src.source.trim().length > 0;
+
+      const next: Record<RepurposeFormat, VariantState> = {
+        newsletter: { status: "idle" },
+        thread: { status: "idle" },
+        linkedin: { status: "idle" },
+      };
       for (const tab of TABS) {
         const existing = saved.find((o) => o.channel === tab.key);
         if (existing) {
-          setVariants((prev) => ({
-            ...prev,
-            [tab.key]: {
-              status: "done",
-              text: existing.body,
-              drift: false,
-              stale: !!existing.stale,
-              saved: true,
-            },
-          }));
-        } else if (hasSource) {
-          runFormat(tab.key, src);
-        } else {
-          setVariants((prev) => ({
-            ...prev,
-            [tab.key]: { status: "error", error: "write something first" },
-          }));
+          next[tab.key] = {
+            status: "done",
+            text: existing.body,
+            drift: false,
+            stale: !!existing.stale,
+            saved: true,
+          };
+        } else if (!hasSource) {
+          next[tab.key] = { status: "error", error: "write something first" };
         }
       }
+      setVariants(next);
+
+      // generate the active channel now (clicking repurpose = make the one
+      // you're viewing); the others wait until their tab is opened.
+      if (next[active].status === "idle" && hasSource) runFormat(active, src);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // switching to an un-made channel generates it then (viewing a tab = the
+  // command to make that channel ... never all of them at once).
+  const switchTo = useCallback(
+    (key: RepurposeFormat) => {
+      setActive(key);
+      if (variantsRef.current[key].status === "idle") {
+        const src = getSource();
+        if (src.source.trim().length > 0) runFormat(key, src);
+      }
+    },
+    [getSource, runFormat],
+  );
 
   // esc closes.
   useEffect(() => {
@@ -295,7 +340,7 @@ function RepurposePanel({
               repurpose
             </h2>
             <p className="mt-1 font-serif text-sm" style={{ color: "var(--lunari-fg-muted)" }}>
-              one piece, every platform ... still your voice, saved with the source.
+              one piece, every platform ... still your voice, saved alongside the draft.
             </p>
           </div>
           <button
@@ -319,7 +364,7 @@ function RepurposePanel({
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActive(tab.key)}
+                onClick={() => switchTo(tab.key)}
                 className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.16em] transition-all duration-200"
                 style={
                   isActive
@@ -348,7 +393,7 @@ function RepurposePanel({
             <button
               type="button"
               onClick={refresh}
-              disabled={busy}
+              disabled={busy || current.status === "idle"}
               className="font-mono text-[11px] uppercase tracking-[0.18em] transition-opacity hover:opacity-70 disabled:opacity-40"
               style={{
                 color:
@@ -364,7 +409,7 @@ function RepurposePanel({
                 className="font-mono text-[10px] uppercase tracking-[0.2em]"
                 style={{ color: "var(--lunari-fg-subtle)" }}
               >
-                saved with the piece
+                saved
               </span>
             ) : null}
           </div>
@@ -400,7 +445,7 @@ function VariantView({
     }
   }, [state.status, liveText]);
 
-  if (state.status === "loading") {
+  if (state.status === "loading" || state.status === "idle") {
     return (
       <div className="space-y-3 py-4" aria-label="generating">
         {[92, 78, 85, 64, 88, 71].map((w, i) => (
