@@ -2,9 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { snapshotToProfileFields } from "@/lib/ai/voice-ask";
 import { composeVoiceCompactView, type VoiceProfileFields } from "@/lib/ai/voice-compact";
 import type { ExtractedVoice } from "@/lib/ai/voice-extract";
-import { insertVoiceSnapshot } from "@/lib/db/voice-snapshots";
+import { insertVoiceSnapshot, listVoiceSnapshots } from "@/lib/db/voice-snapshots";
 import { reportError } from "@/lib/observability/report-error";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/supabase";
@@ -51,8 +52,38 @@ function readExemplars(overrides: unknown): string[] {
  * empty / mirroring-off profile just returns {} and the prompt keeps its honest
  * "not yet trained" fallback. it NEVER throws ... a voice read must never be the
  * reason a generation fails.
+ *
+ * the OPTIONAL activeFork (the voice-switch) re-aims the SOURCE only: when a
+ * named strand is active for writing, the voice is composed from that strand's
+ * LATEST immutable snapshot instead of the live voice_profiles row. this NEVER
+ * writes voice_profiles. when activeFork is undefined/null/'' the function is the
+ * pre-change live read, byte-for-byte, so every existing 2-arg caller + test is
+ * unchanged. a deleted / un-named / sparse fork falls THROUGH to the live read,
+ * so writing silently degrades to your live voice rather than an empty slot.
  */
-export async function getWriterVoice(client: ServerClient, userId: string): Promise<WriterVoice> {
+export async function getWriterVoice(
+  client: ServerClient,
+  userId: string,
+  activeFork?: string | null,
+): Promise<WriterVoice> {
+  // 1. the active writing fork: source from the strand's latest snapshot.
+  if (activeFork) {
+    try {
+      const snaps = await listVoiceSnapshots(client, userId, 1, activeFork);
+      const latest = snaps[0];
+      if (latest) {
+        const forkVoice = composeVoiceCompactView(snapshotToProfileFields(latest));
+        // a thin snapshot composes to undefined ... treat that as "no real texture
+        // yet" and fall through to the live voice, not an empty prompt slot.
+        // snapshots carry no exemplars, so exemplars stays an honest undefined.
+        if (forkVoice) return { voiceCompactView: forkVoice };
+      }
+    } catch {
+      // a fork-source hiccup must never beat the live fallback or fail a generation.
+    }
+  }
+
+  // 2. the live path ... byte-for-byte the pre-change body.
   const typed = client as unknown as TypedClient;
   try {
     const { data, error } = await typed

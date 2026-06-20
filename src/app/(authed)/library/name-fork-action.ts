@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { setSnapshotForkLabel } from "@/lib/db/voice-snapshots";
+import { getActiveWritingFork, setActiveWritingFork } from "@/lib/db/user-settings";
+import { listVoiceSnapshots, setSnapshotForkLabel } from "@/lib/db/voice-snapshots";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { normalizeForkLabel } from "@/lib/voice/forks";
 
@@ -32,6 +33,17 @@ export async function nameForkAction(
 
   const label = normalizeForkLabel(typeof rawLabel === "string" ? rawLabel : "");
   const result = await setSnapshotForkLabel(supabase, user.id, ids, label);
-  if (result.ok) revalidatePath("/library");
+  if (result.ok) {
+    // keep the active writing fork honest: if this naming emptied the strand that
+    // was active FOR WRITING (a full rename or un-name moved its last dot), clear
+    // the stored pin so the footer + the write source never claim a strand that no
+    // longer exists. a PARTIAL re-label leaves the strand intact, so we only clear
+    // when listVoiceSnapshots can no longer find a single row carrying that label.
+    const active = await getActiveWritingFork(supabase, user.id);
+    if (active && (await listVoiceSnapshots(supabase, user.id, 1, active)).length === 0) {
+      await setActiveWritingFork(supabase, user.id, null);
+    }
+    revalidatePath("/library");
+  }
   return result;
 }

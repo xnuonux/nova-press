@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { nameForkAction } from "@/app/(authed)/library/name-fork-action";
+import { setWriteAsForkAction } from "@/app/(authed)/library/write-as-fork-action";
 import { voiceKeeperAudit } from "@/lib/ai/voice-keeper";
 import type { VoiceSnapshot } from "@/lib/db/voice-snapshots";
 import { computeVoiceDrift, type VoiceDriftReport } from "@/lib/voice/drift";
@@ -30,7 +31,13 @@ import {
   type MetricKey,
 } from "@/lib/voice/timeline-series";
 
-export function VoiceTimelineLauncher({ snapshots }: { snapshots: VoiceSnapshot[] }) {
+export function VoiceTimelineLauncher({
+  snapshots,
+  activeWritingFork = null,
+}: {
+  snapshots: VoiceSnapshot[];
+  activeWritingFork?: string | null;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -44,7 +51,13 @@ export function VoiceTimelineLauncher({ snapshots }: { snapshots: VoiceSnapshot[
         your voice over time
         <span aria-hidden>↗</span>
       </button>
-      {open ? <VoiceTimelinePanel snapshots={snapshots} onClose={() => setOpen(false)} /> : null}
+      {open ? (
+        <VoiceTimelinePanel
+          snapshots={snapshots}
+          activeWritingFork={activeWritingFork}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
     </>
   );
 }
@@ -53,9 +66,11 @@ type Mode = "scrub" | "compare";
 
 function VoiceTimelinePanel({
   snapshots,
+  activeWritingFork,
   onClose,
 }: {
   snapshots: VoiceSnapshot[];
+  activeWritingFork: string | null;
   onClose: () => void;
 }) {
   // forks are a pure read-time lens: the roster is DERIVED from the loaded rows
@@ -73,6 +88,19 @@ function VoiceTimelinePanel({
   const [naming, setNaming] = useState(false);
   const [labelDraft, setLabelDraft] = useState("");
   const [pending, startTransition] = useTransition();
+  // which strand nova WRITES in (the voice-switch), distinct from activeFork (the
+  // VIEW lens). server-seeded, optimistic on change. null = your live voice.
+  const [writingFork, setWritingFork] = useState<string | null>(activeWritingFork);
+  const writeAs = useCallback(
+    (label: string | null) => {
+      setWritingFork(label);
+      startTransition(async () => {
+        const res = await setWriteAsForkAction(label);
+        if (!res.ok) setWritingFork(activeWritingFork); // revert on failure
+      });
+    },
+    [activeWritingFork],
+  );
   // scrub playhead defaults to the newest dot ... "where you are now".
   const [selected, setSelected] = useState(() => Math.max(0, sorted.length - 1));
   // compare pins default to the most recent stretch (the question you most likely
@@ -298,6 +326,46 @@ function VoiceTimelinePanel({
                   isLatest={Math.min(selected, sorted.length - 1) === sorted.length - 1}
                 />
               )}
+
+              {/* write-as ... the voice-switch. distinct from the view lens in the
+                  header: this sets which strand nova actually WRITES in (the
+                  partner / ghost / repurpose). a read-source switch, never a change
+                  to your live voice. */}
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span
+                  className="font-mono text-[10px] uppercase tracking-[0.18em]"
+                  style={{ color: "var(--lunari-fg-subtle)" }}
+                >
+                  nova writes as
+                  <span className="ml-1.5" style={{ color: "var(--nova-accent)" }}>
+                    {writingFork ?? "your voice"}
+                  </span>
+                </span>
+                {activeFork !== writingFork ? (
+                  <button
+                    type="button"
+                    onClick={() => writeAs(activeFork)}
+                    disabled={pending}
+                    className="np-warm rounded-full px-2.5 py-1 font-mono text-[10px] lowercase tracking-[0.04em] disabled:opacity-40"
+                    style={{
+                      border: "1px solid var(--lunari-border)",
+                      color: "var(--lunari-fg-subtle)",
+                    }}
+                  >
+                    write as {activeFork ?? "your voice"}
+                  </button>
+                ) : writingFork ? (
+                  <button
+                    type="button"
+                    onClick={() => writeAs(null)}
+                    disabled={pending}
+                    className="np-warm font-mono text-[10px] uppercase tracking-[0.16em] disabled:opacity-40"
+                    style={{ color: "var(--lunari-fg-subtle)" }}
+                  >
+                    back to your voice
+                  </button>
+                ) : null}
+              </div>
 
               {/* name-this-moment ... a quiet, reversible move. naming a stretch
                   partitions it into its own strand; an empty label releases it

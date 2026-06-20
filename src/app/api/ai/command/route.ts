@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { runPartnerCommand, streamPartnerCommand } from "@/lib/ai/partner";
 import { isCommand } from "@/lib/ai/provider";
+import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -76,7 +77,10 @@ export async function POST(request: NextRequest) {
   // the writer's distilled voice (compact line + in-voice exemplars), read once
   // and threaded into whichever path runs. {} when the profile isn't trained
   // yet (the prompt keeps its honest fallback), and the read never throws.
-  const voice = await getWriterVoice(supabase, user.id);
+  // the active writing fork (if any) re-aims the SOURCE to a named strand's
+  // snapshot ... null = your live voice, byte-identical to before.
+  const activeFork = await getActiveWritingFork(supabase, user.id);
+  const voice = await getWriterVoice(supabase, user.id, activeFork);
 
   // streaming path: powers the conversation rail. the reply streams token by
   // token, dash-safe at the source; the client runs the full voice-keeper at

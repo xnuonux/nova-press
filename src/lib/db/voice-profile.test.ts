@@ -167,3 +167,78 @@ describe("saveWriterVoice", () => {
     await expect(saveWriterVoice(client, "user-1", SAMPLE_EXTRACT)).resolves.toBeUndefined();
   });
 });
+
+// the voice-switch: a 3rd arg re-aims the SOURCE. from() branches on table so we
+// can prove the fork path reads np_voice_snapshots (never voice_profiles) on a
+// hit, and falls through to voice_profiles on a miss/sparse.
+function makeForkVoiceMock(snapshotRows: unknown[], profileRow: unknown) {
+  // listVoiceSnapshots(.., forkLabel) chains eq('user_id') THEN eq('fork_label')
+  // before order/limit, so the user_id eq must expose a second eq.
+  const limit = vi.fn().mockResolvedValue({ data: snapshotRows, error: null });
+  const order = vi.fn().mockReturnValue({ limit });
+  const snapForkEq = vi.fn().mockReturnValue({ order });
+  const snapUserEq = vi.fn().mockReturnValue({ order, eq: snapForkEq });
+  const snapSelect = vi.fn().mockReturnValue({ eq: snapUserEq });
+  const maybeSingle = vi.fn().mockResolvedValue({ data: profileRow, error: null });
+  const profEq = vi.fn().mockReturnValue({ maybeSingle });
+  const profSelect = vi.fn().mockReturnValue({ eq: profEq });
+  const from = vi.fn((table: string) =>
+    table === "np_voice_snapshots" ? { select: snapSelect } : { select: profSelect },
+  );
+  const client = { from } as unknown as ServerClient;
+  return { client, from };
+}
+
+const FORK_SNAP_ROW = {
+  id: "s1",
+  captured_at: "2026-06-18T00:00:00Z",
+  source: "extraction",
+  fork_label: "morning",
+  register: "wry, the fork voice",
+  extraction_model: "m",
+  samples_count: 4,
+};
+
+describe("getWriterVoice with an active fork (the voice-switch)", () => {
+  it("a falsy fork arg (null/undefined/'') is byte-identical to the 2-arg live read", async () => {
+    for (const fork of [null, undefined, ""] as const) {
+      const { client, from } = makeReadMock({ register: "casual and direct" });
+      const out = await getWriterVoice(client, "user-1", fork);
+      expect(out.voiceCompactView).toBe("register: casual and direct");
+      // never reaches for a snapshot ... the fork branch short-circuits.
+      expect(from).not.toHaveBeenCalledWith("np_voice_snapshots");
+      expect(from).toHaveBeenCalledWith("voice_profiles");
+    }
+  });
+
+  it("an active fork composes the voice from the strand's latest snapshot, never voice_profiles", async () => {
+    const { client, from } = makeForkVoiceMock([FORK_SNAP_ROW], { register: "the live voice" });
+    const out = await getWriterVoice(client, "user-1", "morning");
+    expect(from).toHaveBeenCalledWith("np_voice_snapshots");
+    expect(from).not.toHaveBeenCalledWith("voice_profiles");
+    expect(out.voiceCompactView).toBe("register: wry, the fork voice");
+    // snapshots carry no exemplars ... an honest undefined.
+    expect(out.exemplars).toBeUndefined();
+  });
+
+  it("a deleted / empty strand falls through to the live voice", async () => {
+    const { client, from } = makeForkVoiceMock([], { register: "the live voice" });
+    const out = await getWriterVoice(client, "user-1", "gone");
+    expect(from).toHaveBeenCalledWith("np_voice_snapshots");
+    expect(from).toHaveBeenCalledWith("voice_profiles");
+    expect(out.voiceCompactView).toBe("register: the live voice");
+  });
+
+  it("a sparse snapshot (no composable texture) falls through to the live voice", async () => {
+    const thin = {
+      id: "s2",
+      captured_at: "2026-06-18T00:00:00Z",
+      source: "extraction",
+      fork_label: "thin",
+    };
+    const { client, from } = makeForkVoiceMock([thin], { register: "the live voice" });
+    const out = await getWriterVoice(client, "user-1", "thin");
+    expect(from).toHaveBeenCalledWith("voice_profiles");
+    expect(out.voiceCompactView).toBe("register: the live voice");
+  });
+});

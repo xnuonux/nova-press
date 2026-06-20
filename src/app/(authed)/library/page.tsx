@@ -4,6 +4,7 @@ import { Atmosphere } from "@/components/chrome/atmosphere";
 import { VoiceTimelineLauncher } from "@/components/editor/voice-timeline-launcher";
 import { VoiceTrainer } from "@/components/editor/voice-trainer";
 import { listPiecesForUser, type PieceListItem } from "@/lib/db/pieces";
+import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { listVoiceSnapshots } from "@/lib/db/voice-snapshots";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -19,6 +20,9 @@ export default async function LibraryPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const snapshots = user ? await listVoiceSnapshots(supabase, user.id) : [];
+  // which named strand (if any) nova currently writes in ... the "write as"
+  // control in the timeline reflects + sets this. null = your live voice.
+  const activeWritingFork = user ? await getActiveWritingFork(supabase, user.id) : null;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -88,7 +92,7 @@ export default async function LibraryPage() {
           {pieces.length > 0 ? (
             <div className="np-rise np-rise-2 mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <VoiceTrainer />
-              <VoiceTimelineLauncher snapshots={snapshots} />
+              <VoiceTimelineLauncher snapshots={snapshots} activeWritingFork={activeWritingFork} />
             </div>
           ) : null}
 

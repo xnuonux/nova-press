@@ -5,6 +5,7 @@ import { PartnerRail } from "@/components/editor/partner-rail";
 import { PlateShell } from "@/components/editor/plate-shell";
 import { coercePlateValue } from "@/components/editor/plate-text";
 import { getPieceById } from "@/lib/db/pieces";
+import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { publishPieceAction } from "./publish-action";
@@ -18,6 +19,13 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
   if (!piece) {
     notFound();
   }
+
+  // the named strand nova is writing in (or null = your live voice), read once
+  // server-side so the rail footer is correct on first paint with no client fetch.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const activeWritingFork = user ? await getActiveWritingFork(supabase, user.id) : null;
 
   return (
     <main className="relative flex h-screen w-screen overflow-hidden">
@@ -34,7 +42,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
           onSave={savePieceContentAction.bind(null, piece.id)}
           onPublish={publishPieceAction.bind(null, piece.id)}
         />
-        <PartnerRail />
+        <PartnerRail activeWritingFork={activeWritingFork} />
       </div>
     </main>
   );

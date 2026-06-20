@@ -34,7 +34,13 @@ import { threadBusy, threadReducer, type PartnerMessage } from "@/lib/ai/partner
 // streamed reply its final voice pass once the stream lands.
 import { voiceKeeperAudit } from "@/lib/ai/voice-keeper";
 
-export function PartnerRail() {
+export function PartnerRail({
+  activeWritingFork = null,
+}: {
+  // the named strand nova is writing in, or null for your live voice. drives the
+  // footer indicator so a writer always knows whose voice nova mirrors.
+  activeWritingFork?: string | null;
+} = {}) {
   const [messages, dispatch] = useReducer(threadReducer, []);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -276,9 +282,12 @@ export function PartnerRail() {
 
         <footer
           className="border-t px-6 py-4 font-mono text-[11px] uppercase tracking-[0.18em]"
-          style={{ borderColor: "var(--lunari-border)", color: "var(--lunari-fg-subtle)" }}
+          style={{
+            borderColor: "var(--lunari-border)",
+            color: activeWritingFork ? "var(--nova-accent)" : "var(--lunari-fg-subtle)",
+          }}
         >
-          one sentence, in your voice
+          {activeWritingFork ? `writing as ${activeWritingFork}` : "one sentence, in your voice"}
         </footer>
       </aside>
     </>

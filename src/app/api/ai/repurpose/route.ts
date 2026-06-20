@@ -6,6 +6,7 @@ import {
   type RepurposeFormat,
 } from "@/lib/ai/prompts/repurpose-prompt";
 import { runRepurposeSet, streamRepurpose } from "@/lib/ai/repurpose";
+import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -66,8 +67,10 @@ export async function POST(request: NextRequest) {
   // the writer's distilled voice (compact line + in-voice exemplars), read once
   // off voice_profiles ... this is what makes "voice-matched on every platform"
   // real instead of the model just imitating the source piece. {} keeps the
-  // honest fallback; never throws.
-  const voice = await getWriterVoice(supabase, user.id);
+  // honest fallback; never throws. an active writing fork re-aims the source to a
+  // named strand's snapshot; null = your live voice.
+  const activeFork = await getActiveWritingFork(supabase, user.id);
+  const voice = await getWriterVoice(supabase, user.id, activeFork);
 
   // streaming path: one format at a time, text streamed as it generates. the
   // text is dash-safe at the source (streamRepurpose); the client runs the
