@@ -4,6 +4,7 @@ import { confirmSubscriber, isUuid } from "@/lib/db/subscribers";
 import { terminalPage } from "@/lib/email/messages";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-utils";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 // anonymous + service-role. the reader clicks the link in their confirm email;
@@ -12,12 +13,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 // loop of junk tokens never reaches the database.
 const CONFIRM_LIMIT = 12;
 const CONFIRM_WINDOW_MS = 60_000;
-
-function clientIp(request: NextRequest): string {
-  const fwd = request.headers.get("x-forwarded-for");
-  const first = fwd ? fwd.split(",")[0]?.trim() : "";
-  return first || request.headers.get("x-real-ip") || "unknown";
-}
 
 // ONE page for every outcome (confirmed / already / unknown token), so the
 // landing can never be read as an oracle for token validity or list membership.

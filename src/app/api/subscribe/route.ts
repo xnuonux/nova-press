@@ -6,6 +6,7 @@ import { getMailer } from "@/lib/email/mailer";
 import { confirmEmail } from "@/lib/email/messages";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-utils";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 // public + anonymous: a reader on /p/[slug] leaves their email for the writer.
@@ -26,12 +27,6 @@ const SUBSCRIBE_WINDOW_MS = 60_000;
 // ceiling so a scripted subscribe loop can't mailbomb a victim's inbox even from
 // rotating ips (the per-ip limit above doesn't catch that).
 const CONFIRM_SEND_WINDOW_MS = 5 * 60_000;
-
-function clientIp(request: NextRequest): string {
-  const fwd = request.headers.get("x-forwarded-for");
-  const first = fwd ? fwd.split(",")[0]?.trim() : "";
-  return first || request.headers.get("x-real-ip") || "unknown";
-}
 
 export async function POST(request: NextRequest) {
   // basic per-ip throttle: kills a scripted list-poisoning loop from one source.

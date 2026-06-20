@@ -42,17 +42,27 @@ const SAVE_ERR = "couldn't save that ... try again in a sec";
 // (re)start the double opt-in for an existing row: mint a fresh confirm token,
 // drop the row back to 'pending', clear any prior confirmation. never flips a
 // row straight to 'subscribed' ... a confirm round-trip is always required.
+//
+// the update is GUARDED with `.neq("status","subscribed")`: in the narrow race
+// where the row got confirmed between our read and this write, we must NOT clobber
+// the live 'subscribed' state (and its consumed token) back to pending. when the
+// guard matches no row, the row is already confirmed ... return the opaque no-op,
+// exactly as an already-confirmed capture would.
 async function restartOptIn(
   admin: TypedClient,
   id: string,
   email: string,
 ): Promise<SubscribeResult> {
   const confirmToken = randomUUID();
-  const { error } = await admin
+  const { data, error } = await admin
     .from("np_subscriber")
     .update({ status: "pending", confirm_token: confirmToken, confirmed_at: null })
-    .eq("id", id);
+    .eq("id", id)
+    .neq("status", "subscribed")
+    .select("id")
+    .maybeSingle();
   if (error) return { ok: false, error: SAVE_ERR };
+  if (!data) return { ok: true, sendConfirm: false, confirmToken: null, email };
   return { ok: true, sendConfirm: true, confirmToken, email };
 }
 

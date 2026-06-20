@@ -189,7 +189,7 @@ export function PartnerRail({
       {open ? (
         <div
           className="fixed inset-0 z-40 lg:hidden"
-          style={{ background: "rgba(5, 5, 9, 0.55)", backdropFilter: "blur(2px)" }}
+          style={{ background: "var(--lunari-overlay-light)", backdropFilter: "blur(2px)" }}
           onClick={() => setOpen(false)}
           aria-hidden
         />

@@ -24,6 +24,7 @@ function chain(terminal: unknown) {
   b.select = vi.fn(() => b);
   b.update = vi.fn(() => b);
   b.eq = vi.fn(() => b);
+  b.neq = vi.fn(() => b);
   b.insert = vi.fn(() => Promise.resolve(terminal));
   b.maybeSingle = vi.fn(() => Promise.resolve(terminal));
   b.then = (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) =>
@@ -98,7 +99,8 @@ describe("addSubscriber", () => {
 
   it("RESTARTS the opt-in for an unsubscribed row (new token, back to pending)", async () => {
     const select = chain({ data: { id: "s1", status: "unsubscribed" }, error: null });
-    const update = chain({ error: null });
+    // the guarded restart update returns the affected row, so sendConfirm is true.
+    const update = chain({ data: { id: "s1" }, error: null });
     const { admin } = adminWith(select, update);
     const r = await addSubscriber(admin, { userId: "w1", email: "dom@nova.press" });
     expect(r.ok).toBe(true);
@@ -109,6 +111,22 @@ describe("addSubscriber", () => {
       {}) as Record<string, unknown>;
     expect(updateArg).toMatchObject({ status: "pending", confirmed_at: null });
     expect(updateArg.confirm_token).toMatch(UUID_RE);
+  });
+
+  it("does NOT clobber a row that got confirmed mid-race (restart guard -> opaque no-op)", async () => {
+    // select saw 'pending', but the guarded update (.neq status subscribed) matches
+    // 0 rows because the row was confirmed between read and write. never overwrite
+    // a good token; return the opaque no-op an already-confirmed capture would.
+    const select = chain({ data: { id: "s1", status: "pending" }, error: null });
+    const update = chain({ data: null, error: null });
+    const { admin } = adminWith(select, update);
+    const r = await addSubscriber(admin, { userId: "w1", email: "dom@nova.press" });
+    expect(r).toEqual({
+      ok: true,
+      sendConfirm: false,
+      confirmToken: null,
+      email: "dom@nova.press",
+    });
   });
 
   it("rejects a bad email before touching the db", async () => {

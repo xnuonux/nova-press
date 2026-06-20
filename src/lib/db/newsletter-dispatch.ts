@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { reportError } from "@/lib/observability/report-error";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
@@ -99,7 +100,14 @@ export async function claimDispatch(
   if (!row) return { status: "notfound" };
   if (row.status === "complete") return { status: "complete" };
 
-  await typed.from("np_newsletter_dispatch").update({ status: "in_progress" }).eq("id", row.id);
+  // only report 'claimed' when the preview -> in_progress transition actually
+  // committed. supabase returns {error} without throwing, so a bare await would
+  // let the send loop run on a transition that never landed.
+  const { error } = await typed
+    .from("np_newsletter_dispatch")
+    .update({ status: "in_progress" })
+    .eq("id", row.id);
+  if (error) return { status: "notfound" };
   return {
     status: "claimed",
     dispatch: { id: row.id, pieceId: row.piece_id, bodyHash: row.body_hash, subject: row.subject },
@@ -150,7 +158,10 @@ export async function settleRecipient(
   },
 ): Promise<void> {
   const typed = client as unknown as TypedClient;
-  await typed
+  // surface a failed settle: if this update is lost, the log row stays 'queued'
+  // while the email actually went out, which corrupts the audit + the resume
+  // skip. we can't undo the send, so report it for ops rather than swallow it.
+  const { error } = await typed
     .from("np_email_log")
     .update({
       status: input.status,
@@ -159,6 +170,12 @@ export async function settleRecipient(
     })
     .eq("dispatch_id", input.dispatchId)
     .eq("to_email", input.email);
+  if (error) {
+    reportError(new Error(error.message), {
+      tag: "settle-recipient-failed",
+      dispatchId: input.dispatchId,
+    });
+  }
 }
 
 /** close the dispatch with the SETTLED counts (sent = delivered, not attempted). */
@@ -167,7 +184,11 @@ export async function completeDispatch(
   input: { dispatchId: string; attemptedCount: number; sentCount: number; failedCount: number },
 ): Promise<void> {
   const typed = client as unknown as TypedClient;
-  await typed
+  // a failed close-out must NOT be swallowed: if it is, the row stays
+  // 'in_progress' forever while the action reports ok, and a later commit with
+  // the same token re-claims + re-runs the loop. throw so the action's outer
+  // try/catch returns { ok: false } and the writer knows to retry.
+  const { error } = await typed
     .from("np_newsletter_dispatch")
     .update({
       status: "complete",
@@ -177,4 +198,5 @@ export async function completeDispatch(
       completed_at: new Date().toISOString(),
     })
     .eq("id", input.dispatchId);
+  if (error) throw new Error(`failed to complete dispatch: ${error.message}`);
 }

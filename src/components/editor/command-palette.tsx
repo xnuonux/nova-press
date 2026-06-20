@@ -119,7 +119,7 @@ export function CommandPalette() {
   return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[18vh] sm:p-8 sm:pt-[18vh]"
-      style={{ background: "rgba(5, 5, 9, 0.5)", backdropFilter: "blur(5px)" }}
+      style={{ background: "var(--lunari-overlay-light)", backdropFilter: "blur(5px)" }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) setOpen(false);
       }}

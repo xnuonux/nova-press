@@ -72,7 +72,7 @@ export function NewsletterSendPanel({
       {open ? (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-          style={{ background: "rgba(5, 5, 9, 0.6)", backdropFilter: "blur(3px)" }}
+          style={{ background: "var(--lunari-overlay)", backdropFilter: "blur(3px)" }}
           onClick={() => !pending && setOpen(false)}
         >
           <div

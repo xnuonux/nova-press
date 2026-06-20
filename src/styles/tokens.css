@@ -15,6 +15,12 @@
   --nova-accent: #c9a84c;
   --nova-accent-soft: rgba(201, 168, 76, 0.12);
 
+  /* modal + drawer scrims ... two intentional weights so the dimming behind a
+     surface is a decision, not per-file drift. overlay for centered modals,
+     overlay-light for the command palette + the mobile drawer. */
+  --lunari-overlay: rgba(5, 5, 9, 0.6);
+  --lunari-overlay-light: rgba(5, 5, 9, 0.5);
+
   /* fonts (assigned by next/font in layout.tsx) */
   --font-serif: "IBM Plex Serif", Georgia, serif;
   --font-sans: "Inter", system-ui, sans-serif;

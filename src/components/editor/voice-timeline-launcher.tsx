@@ -180,7 +180,7 @@ function VoiceTimelinePanel({
   return (
     <div
       className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 sm:p-8"
-      style={{ background: "rgba(5, 5, 9, 0.62)", backdropFilter: "blur(6px)" }}
+      style={{ background: "var(--lunari-overlay)", backdropFilter: "blur(6px)" }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

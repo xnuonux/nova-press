@@ -4,6 +4,7 @@ import { isUuid, unsubscribeByToken } from "@/lib/db/subscribers";
 import { terminalPage } from "@/lib/email/messages";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-utils";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 // anonymous + service-role. the reader clicks the unsubscribe link printed in a
@@ -12,12 +13,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 // before any db round-trip.
 const UNSUB_LIMIT = 12;
 const UNSUB_WINDOW_MS = 60_000;
-
-function clientIp(request: NextRequest): string {
-  const fwd = request.headers.get("x-forwarded-for");
-  const first = fwd ? fwd.split(",")[0]?.trim() : "";
-  return first || request.headers.get("x-real-ip") || "unknown";
-}
 
 // ONE page for every outcome (unsubscribed / already / unknown token).
 const PAGE = terminalPage(
