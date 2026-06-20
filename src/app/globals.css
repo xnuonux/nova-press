@@ -596,6 +596,25 @@
     opacity: 0.45;
   }
 
+  /* the inactive pin in compare-mode ... a softer, cooler second playhead so the
+     writer always knows which date they're dragging (the active one is the gold
+     np-timeline-playhead above). */
+  .np-timeline-playhead-b {
+    stroke: var(--lunari-fg-muted);
+    stroke-width: 1;
+    opacity: 0.4;
+    stroke-dasharray: 3 3;
+  }
+
+  /* the compare midpoint readout ... the chart-metric delta between the two
+     pinned dots, the same number the chips and the answer carry. */
+  .np-timeline-readout {
+    fill: var(--nova-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
   .np-timeline-line {
     fill: none;
     stroke: url(#np-tl-stroke);
