@@ -14,6 +14,10 @@
   /* nova golden hour accent */
   --nova-accent: #c9a84c;
   --nova-accent-soft: rgba(201, 168, 76, 0.12);
+  --nova-accent-ring-subtle: rgba(201, 168, 76, 0.04);
+  /* the primary-cta glow ... one source for the accent drop shadow so a brand
+     tweak is a single edit, not a hunt across pages. */
+  --nova-shadow-accent: 0 8px 24px -12px rgba(201, 168, 76, 0.7);
 
   /* modal + drawer scrims ... two intentional weights so the dimming behind a
      surface is a decision, not per-file drift. overlay for centered modals,

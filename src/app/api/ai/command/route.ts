@@ -5,6 +5,7 @@ import { isCommand } from "@/lib/ai/provider";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
+import { rateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // the AI partner command endpoint. auth-gated ... only a logged-in writer
@@ -18,6 +19,17 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "not signed in" }, { status: 401 });
+  }
+
+  // a partner turn is a real llm call ... a per-user window keeps a mashed
+  // send (or a script) from running up the bill. the cheaper ai routes (xray,
+  // voice/ask) already guard at 12/min; the partner gets more room at 30.
+  const limit = rateLimit(`command:${user.id}`, 30, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "easy ... give nova a second" },
+      { status: 429, headers: { "retry-after": String(Math.ceil(limit.retryAfterMs / 1000)) } },
+    );
   }
 
   let body: unknown;

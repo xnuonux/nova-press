@@ -384,6 +384,7 @@ function VoiceTimelinePanel({
                       }}
                       maxLength={40}
                       autoFocus
+                      aria-label="name this strand (40 character limit)"
                       placeholder={
                         activeFork ? "rename, or empty to release" : "name this strand ..."
                       }

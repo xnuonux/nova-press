@@ -32,13 +32,13 @@ const SHELL_HEAD = `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <style>
   :root { color-scheme: light dark; }
   body { margin:0; min-height:100vh; display:grid; place-items:center;
-    background:#0b0b0f; color:#ece9e1;
+    background:#0a0a0f; color:#f5f5f0;
     font-family: ui-serif, Georgia, "Times New Roman", serif; }
   .card { max-width: 30rem; padding: 3rem 2rem; text-align:center; }
   .dot { display:inline-block; width:7px; height:7px; border-radius:9999px;
     background:#c9a84c; margin-bottom:1.5rem; }
   h1 { font-size:1.6rem; font-weight:500; letter-spacing:-0.01em; margin:0 0 0.75rem; }
-  p { font-size:1rem; line-height:1.6; color:#a8a399; margin:0; }
+  p { font-size:1rem; line-height:1.6; color:#8e8e98; margin:0; }
 </style></head><body><div class="card"><span class="dot"></span>`;
 
 const SHELL_TAIL = `</div></body></html>`;

@@ -4,6 +4,7 @@ import { streamGhost } from "@/lib/ai/ghost";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
+import { rateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // inline ghost-text endpoint. auth-gated like the rest of the partner ... only
@@ -18,6 +19,17 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "not signed in" }, { status: 401 });
+  }
+
+  // the whisper streams on keystroke-driven ui, so this is the easiest fan-out
+  // to abuse. 60/min lets real typing through (the client already debounces)
+  // while killing an automated loop.
+  const limit = rateLimit(`ghost:${user.id}`, 60, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "typing fast ... give it a beat" },
+      { status: 429, headers: { "retry-after": String(Math.ceil(limit.retryAfterMs / 1000)) } },
+    );
   }
 
   let body: unknown;

@@ -44,7 +44,7 @@ export function SubscribeBlock({ slug }: { slug: string }) {
       style={{
         background: "var(--lunari-bg-surface)",
         border: "1px solid var(--lunari-border)",
-        boxShadow: "0 0 0 1px rgba(201,168,76,0.04), 0 30px 80px -50px rgba(0,0,0,0.6)",
+        boxShadow: "0 0 0 1px var(--nova-accent-ring-subtle), 0 30px 80px -50px rgba(0,0,0,0.6)",
       }}
     >
       <p
@@ -61,7 +61,10 @@ export function SubscribeBlock({ slug }: { slug: string }) {
       </h2>
 
       {state === "done" ? (
-        <p className="mt-5 font-serif text-base leading-relaxed" style={{ color: "var(--lunari-fg-muted)" }}>
+        <p
+          className="mt-5 font-serif text-base leading-relaxed"
+          style={{ color: "var(--lunari-fg-muted)" }}
+        >
           you&apos;re on the list ... see you next time.
         </p>
       ) : (
@@ -88,7 +91,7 @@ export function SubscribeBlock({ slug }: { slug: string }) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             aria-label="your email"
-            className="h-11 w-full rounded-lg border px-4 font-serif text-base outline-none sm:max-w-[360px]"
+            className="h-11 w-full rounded-lg border px-4 font-serif text-base sm:max-w-[360px]"
             style={{
               background: "var(--lunari-bg-deep)",
               borderColor: "var(--lunari-border)",
@@ -107,7 +110,10 @@ export function SubscribeBlock({ slug }: { slug: string }) {
       )}
 
       {state === "error" ? (
-        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: "var(--lunari-fg-subtle)" }}>
+        <p
+          className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em]"
+          style={{ color: "var(--lunari-fg-subtle)" }}
+        >
           that didn&apos;t go through ... try again in a sec
         </p>
       ) : null}

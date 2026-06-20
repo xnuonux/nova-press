@@ -9,6 +9,7 @@ import { runRepurposeSet, streamRepurpose } from "@/lib/ai/repurpose";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
+import { rateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // bound the source so one piece can't run up an unbounded bill.
@@ -26,6 +27,17 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "not signed in" }, { status: 401 });
+  }
+
+  // the heaviest ai call in the app ... a multi-format batch recompile. the
+  // tightest window of the ai routes (12/min) since each call fans out across
+  // every channel.
+  const limit = rateLimit(`repurpose:${user.id}`, 12, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "easy ... let the last recompile finish" },
+      { status: 429, headers: { "retry-after": String(Math.ceil(limit.retryAfterMs / 1000)) } },
+    );
   }
 
   let body: unknown;

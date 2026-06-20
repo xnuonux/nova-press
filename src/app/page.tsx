@@ -46,7 +46,7 @@ export default function LandingPage() {
               style={{
                 background: "var(--nova-accent)",
                 color: "var(--lunari-bg-deep)",
-                boxShadow: "0 8px 24px -10px rgba(201, 168, 76, 0.7)",
+                boxShadow: "var(--nova-shadow-accent)",
               }}
             >
               start writing

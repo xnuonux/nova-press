@@ -87,7 +87,13 @@ export function CommandPalette() {
   }, []);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (!open) return;
+    // capture who had focus (usually the editor) so every close path ... escape,
+    // backdrop, or running a command ... hands focus back, instead of stranding
+    // the writer on an unfocused body with broken keyboard nav.
+    const restoreTo = document.activeElement as HTMLElement | null;
+    inputRef.current?.focus();
+    return () => restoreTo?.focus();
   }, [open]);
 
   useEffect(() => {
@@ -129,7 +135,7 @@ export function CommandPalette() {
         style={{
           background: "var(--lunari-bg-elevated)",
           border: "1px solid var(--lunari-border)",
-          boxShadow: "0 40px 120px -40px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,168,76,0.04)",
+          boxShadow: "0 40px 120px -40px rgba(0,0,0,0.7), 0 0 0 1px var(--nova-accent-ring-subtle)",
         }}
       >
         <input

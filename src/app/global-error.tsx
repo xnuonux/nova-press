@@ -28,7 +28,7 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           background: "#0a0a0f",
-          color: "#ece7df",
+          color: "#f5f5f0",
           fontFamily: "Georgia, 'Times New Roman', serif",
         }}
       >
@@ -48,7 +48,7 @@ export default function GlobalError({
           <p
             style={{
               margin: "0 0 28px",
-              color: "#8a857c",
+              color: "#8e8e98",
               fontSize: 16,
               lineHeight: 1.6,
             }}
