@@ -20,7 +20,10 @@ export interface SnapshotInsert {
   user_id: string;
   captured_at: string;
   source: "extraction";
-  fork_label: null;
+  // widened to string|null so the type admits a (future) born-labeled snapshot;
+  // extractedVoiceToSnapshot still emits null, so new snapshots are born into
+  // "your voice" (the null strand). naming happens later via setSnapshotForkLabel.
+  fork_label: string | null;
   sentence_length_avg: number | null;
   sentence_length_variance: number | null;
   paragraph_length_avg: number | null;
@@ -177,19 +180,65 @@ export async function listVoiceSnapshots(
   client: ServerClient,
   userId: string,
   limit = 60,
+  // an OPTIONAL fork lens. undefined (the default) adds NO predicate, so the
+  // query chain stays byte-identical to chunk-1/2 (eq -> order -> limit) and the
+  // existing call sites + their test mock are untouched. a string narrows to that
+  // named strand; the explicit null sentinel narrows to "your voice"
+  // (fork_label IS NULL). the (user_id, fork_label, captured_at DESC) index serves
+  // the filtered read directly.
+  forkFilter?: string | null,
 ): Promise<VoiceSnapshot[]> {
   try {
     const typed = client as unknown as TypedClient;
-    const { data, error } = await typed
-      .from("np_voice_snapshots")
-      .select(SNAPSHOT_COLUMNS)
-      .eq("user_id", userId)
-      .order("captured_at", { ascending: false })
-      .limit(limit);
+    let query = typed.from("np_voice_snapshots").select(SNAPSHOT_COLUMNS).eq("user_id", userId);
+    if (forkFilter !== undefined) {
+      query =
+        forkFilter === null ? query.is("fork_label", null) : query.eq("fork_label", forkFilter);
+    }
+    const { data, error } = await query.order("captured_at", { ascending: false }).limit(limit);
     if (error || !data) return [];
     return (data as unknown as Record<string, unknown>[]).map(rowToSnapshot);
   } catch {
     return [];
+  }
+}
+
+/**
+ * name (or un-name) a strand: set fork_label on the writer's OWN snapshot rows.
+ * the ONLY write chunk 3 adds, and the ONLY mutation the longitudinal self ever
+ * makes to a snapshot. it touches the single metadata TAG the v0_4_0 migration
+ * shipped (with its np_voice_snapshots_update_own RLS policy) expressly for this:
+ * the frozen stats (the y-axes, the jsonb fingerprints, register, provenance) are
+ * physically unreachable because the update payload is the lone key { fork_label }.
+ * it NEVER opens voice_profiles, so the live writing voice (partner / ghost /
+ * repurpose, which read voice_profiles) can't move ... this is a pure read-time
+ * lens. owner-scoped by .eq('user_id') over the RLS USING/WITH CHECK. non-fatal
+ * (the panel posture): returns { ok: false } on any error instead of throwing.
+ */
+export async function setSnapshotForkLabel(
+  client: ServerClient,
+  userId: string,
+  snapshotIds: string[],
+  label: string | null,
+): Promise<{ ok: boolean }> {
+  // an empty id list would be a 0-row update postgres accepts as success ... guard
+  // it so "named nothing" can never masquerade as ok.
+  if (snapshotIds.length === 0) return { ok: false };
+  try {
+    const typed = client as unknown as TypedClient;
+    const { error } = await typed
+      .from("np_voice_snapshots")
+      .update({ fork_label: label })
+      .eq("user_id", userId)
+      .in("id", snapshotIds);
+    if (error) {
+      reportError(new Error(error.message), { tag: "voice-fork-label-failed", userId });
+      return { ok: false };
+    }
+    return { ok: true };
+  } catch (err) {
+    reportError(err, { tag: "voice-fork-label-failed", userId });
+    return { ok: false };
   }
 }
 

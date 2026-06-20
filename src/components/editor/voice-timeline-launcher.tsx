@@ -15,11 +15,13 @@
  * declines honestly (no model call) when there's nothing real to compare.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
+import { nameForkAction } from "@/app/(authed)/library/name-fork-action";
 import { voiceKeeperAudit } from "@/lib/ai/voice-keeper";
 import type { VoiceSnapshot } from "@/lib/db/voice-snapshots";
 import { computeVoiceDrift, type VoiceDriftReport } from "@/lib/voice/drift";
+import { deriveForkRoster, normalizeForkLabel, resolveForkView } from "@/lib/voice/forks";
 import {
   buildTimelineSeries,
   METRICS,
@@ -56,11 +58,21 @@ function VoiceTimelinePanel({
   snapshots: VoiceSnapshot[];
   onClose: () => void;
 }) {
+  // forks are a pure read-time lens: the roster is DERIVED from the loaded rows
+  // (never stored), the active strand is client state, and resolveForkView keeps
+  // the default (null) view a strict referential pass-through ... so "your voice"
+  // feeds the chart the byte-identical array chunk 2 always had.
+  const [activeFork, setActiveFork] = useState<string | null>(null);
+  const roster = useMemo(() => deriveForkRoster(snapshots), [snapshots]);
+  const scoped = useMemo(() => resolveForkView(snapshots, activeFork), [snapshots, activeFork]);
   // the chart reads oldest -> newest left -> right; the server hands them
-  // newest-first, so sort once here for the whole panel.
-  const sorted = useMemo(() => sortAscending(snapshots), [snapshots]);
+  // newest-first, so sort once here for the whole panel (over the active strand).
+  const sorted = useMemo(() => sortAscending(scoped), [scoped]);
   const [metric, setMetric] = useState<MetricKey>("sentence_length");
   const [mode, setMode] = useState<Mode>("scrub");
+  const [naming, setNaming] = useState(false);
+  const [labelDraft, setLabelDraft] = useState("");
+  const [pending, startTransition] = useTransition();
   // scrub playhead defaults to the newest dot ... "where you are now".
   const [selected, setSelected] = useState(() => Math.max(0, sorted.length - 1));
   // compare pins default to the most recent stretch (the question you most likely
@@ -72,6 +84,21 @@ function VoiceTimelinePanel({
   const [activePin, setActivePin] = useState<"a" | "b">("b");
 
   const canCompare = sorted.length >= 2;
+
+  // switching strands changes which dots exist ... reset the scrub + pins into the
+  // new strand's range so the chart never points at a dot the lens removed.
+  useEffect(() => {
+    setSelected(Math.max(0, sorted.length - 1));
+    setPins({ a: Math.max(0, sorted.length - 2), b: Math.max(0, sorted.length - 1) });
+    setNaming(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFork]);
+
+  // if the active strand emptied out (every dot un-named), fall back to your voice
+  // so the panel never shows a strand that no longer exists.
+  useEffect(() => {
+    if (activeFork !== null && !roster.includes(activeFork)) setActiveFork(null);
+  }, [roster, activeFork]);
 
   // esc closes.
   useEffect(() => {
@@ -98,6 +125,29 @@ function VoiceTimelinePanel({
   const newerIdx = Math.max(pins.a, pins.b);
   const older = sorted[olderIdx];
   const newer = sorted[newerIdx];
+
+  // name (or release) a strand: in scrub mode the one selected reading, in compare
+  // mode the whole pinned span. the server action sets fork_label on those rows
+  // and revalidates; on success we switch the lens to the new strand (null when
+  // released). an empty label un-names. this is the ONLY write the panel makes,
+  // and it never touches voice_profiles.
+  const submitFork = useCallback(() => {
+    const span =
+      mode === "compare" && canCompare
+        ? sorted.slice(olderIdx, newerIdx + 1)
+        : [sorted[Math.min(selected, sorted.length - 1)]];
+    const ids = span.filter((s): s is VoiceSnapshot => !!s).map((s) => s.id);
+    if (ids.length === 0) return;
+    const draft = labelDraft;
+    startTransition(async () => {
+      const res = await nameForkAction(ids, draft);
+      if (res.ok) {
+        setActiveFork(normalizeForkLabel(draft));
+        setNaming(false);
+        setLabelDraft("");
+      }
+    });
+  }, [mode, canCompare, sorted, olderIdx, newerIdx, selected, labelDraft]);
 
   return (
     <div
@@ -136,6 +186,30 @@ function VoiceTimelinePanel({
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* fork switcher ... hidden entirely until a second self exists, so a
+                writer who never forks sees the chunk-2 header verbatim. */}
+            {roster.length > 0 ? (
+              <div className="flex items-center gap-1">
+                {[null, ...roster].map((label) => {
+                  const isActive = activeFork === label;
+                  return (
+                    <button
+                      key={label ?? "__your_voice__"}
+                      type="button"
+                      onClick={() => setActiveFork(label)}
+                      className="rounded-lg px-2.5 py-1.5 font-mono text-[10px] lowercase tracking-[0.1em] transition-all duration-200"
+                      style={
+                        isActive
+                          ? { background: "var(--nova-accent-soft)", color: "var(--nova-accent)" }
+                          : { color: "var(--lunari-fg-subtle)" }
+                      }
+                    >
+                      {label ?? "your voice"}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
             {sorted.length >= 1 ? (
               canCompare ? (
                 <button
@@ -224,6 +298,70 @@ function VoiceTimelinePanel({
                   isLatest={Math.min(selected, sorted.length - 1) === sorted.length - 1}
                 />
               )}
+
+              {/* name-this-moment ... a quiet, reversible move. naming a stretch
+                  partitions it into its own strand; an empty label releases it
+                  back to "your voice". a pure metadata tag, never the live voice. */}
+              <div className="mt-4 flex items-center gap-2">
+                {naming ? (
+                  <>
+                    <input
+                      value={labelDraft}
+                      onChange={(e) => setLabelDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          submitFork();
+                        }
+                      }}
+                      maxLength={40}
+                      autoFocus
+                      placeholder={
+                        activeFork ? "rename, or empty to release" : "name this strand ..."
+                      }
+                      className="min-w-0 flex-1 rounded-lg bg-transparent px-3 py-1.5 font-serif text-sm outline-none"
+                      style={{
+                        border: "1px solid var(--lunari-border)",
+                        color: "var(--lunari-fg-primary)",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={submitFork}
+                      disabled={pending}
+                      className="np-btn rounded-lg px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] disabled:opacity-40"
+                      style={{ background: "var(--nova-accent-soft)", color: "var(--nova-accent)" }}
+                    >
+                      {pending ? "saving ..." : "save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNaming(false);
+                        setLabelDraft("");
+                      }}
+                      className="font-mono text-[10px] uppercase tracking-[0.16em] transition-opacity hover:opacity-70"
+                      style={{ color: "var(--lunari-fg-subtle)" }}
+                    >
+                      cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLabelDraft(activeFork ?? "");
+                      setNaming(true);
+                    }}
+                    className="np-warm font-mono text-[10px] uppercase tracking-[0.16em]"
+                    style={{ color: "var(--lunari-fg-subtle)" }}
+                  >
+                    {mode === "compare" && canCompare
+                      ? "name this stretch ↗"
+                      : "name this reading ↗"}
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}

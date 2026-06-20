@@ -6,6 +6,7 @@ import {
   extractedVoiceToSnapshot,
   insertVoiceSnapshot,
   listVoiceSnapshots,
+  setSnapshotForkLabel,
 } from "./voice-snapshots";
 
 // hoisted so the vi.mock factory can reference it (vitest hoists vi.mock above
@@ -189,5 +190,96 @@ describe("listVoiceSnapshots", () => {
       },
     } as unknown as ServerClient;
     expect(await listVoiceSnapshots(client, "user-1")).toEqual([]);
+  });
+});
+
+// a richer read mock: the first eq('user_id') returns a builder that ALSO exposes
+// eq + is, so the optional fork predicate can be asserted ... and the default path
+// can be proven to add NEITHER.
+function makeForkListMock(data: unknown = [], error: unknown = null) {
+  const limit = vi.fn().mockResolvedValue({ data, error });
+  const order = vi.fn().mockReturnValue({ limit });
+  const is = vi.fn().mockReturnValue({ order });
+  const eqFork = vi.fn().mockReturnValue({ order });
+  const builder = { order, is, eq: eqFork };
+  const eqUser = vi.fn().mockReturnValue(builder);
+  const select = vi.fn().mockReturnValue({ eq: eqUser });
+  const from = vi.fn().mockReturnValue({ select });
+  const client = { from } as unknown as ServerClient;
+  return { client, from, eqUser, eqFork, is, order, limit };
+}
+
+describe("listVoiceSnapshots fork lens", () => {
+  it("the default (no forkFilter) path adds NO fork predicate ... eq once, is never (byte-identity gate)", async () => {
+    const { client, eqUser, eqFork, is } = makeForkListMock([]);
+    await listVoiceSnapshots(client, "user-1", 30);
+    expect(eqUser).toHaveBeenCalledTimes(1);
+    expect(eqUser).toHaveBeenCalledWith("user_id", "user-1");
+    expect(eqFork).not.toHaveBeenCalled();
+    expect(is).not.toHaveBeenCalled();
+  });
+
+  it("a named strand adds .eq('fork_label', label)", async () => {
+    const { client, eqFork } = makeForkListMock([]);
+    await listVoiceSnapshots(client, "user-1", 30, "morning");
+    expect(eqFork).toHaveBeenCalledWith("fork_label", "morning");
+  });
+
+  it("the null sentinel narrows to your-voice via .is('fork_label', null)", async () => {
+    const { client, is } = makeForkListMock([]);
+    await listVoiceSnapshots(client, "user-1", 30, null);
+    expect(is).toHaveBeenCalledWith("fork_label", null);
+  });
+});
+
+// from().update().eq().in() -> { error }
+function makeUpdateMock(error: unknown = null) {
+  const inFn = vi.fn().mockResolvedValue({ error });
+  const eq = vi.fn().mockReturnValue({ in: inFn });
+  const update = vi.fn().mockReturnValue({ eq });
+  const from = vi.fn().mockReturnValue({ update });
+  const client = { from } as unknown as ServerClient;
+  return { client, from, update, eq, in: inFn };
+}
+
+describe("setSnapshotForkLabel", () => {
+  it("updates ONLY { fork_label }, scoped to the owner + the given ids", async () => {
+    const { client, from, update, eq, in: inFn } = makeUpdateMock();
+    const r = await setSnapshotForkLabel(client, "user-1", ["s1", "s2"], "morning");
+    expect(from).toHaveBeenCalledWith("np_voice_snapshots");
+    const [payload] = update.mock.calls[0] as unknown as [Record<string, unknown>];
+    // the lone key proves the frozen stats are physically unreachable.
+    expect(Object.keys(payload)).toEqual(["fork_label"]);
+    expect(payload.fork_label).toBe("morning");
+    expect(eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(inFn).toHaveBeenCalledWith("id", ["s1", "s2"]);
+    expect(r).toEqual({ ok: true });
+  });
+
+  it("un-names with a null label", async () => {
+    const { client, update } = makeUpdateMock();
+    await setSnapshotForkLabel(client, "user-1", ["s1"], null);
+    const [payload] = update.mock.calls[0] as unknown as [Record<string, unknown>];
+    expect(payload.fork_label).toBeNull();
+  });
+
+  it("guards an empty id list ... a 0-row update can't masquerade as success", async () => {
+    const { client, from } = makeUpdateMock();
+    const r = await setSnapshotForkLabel(client, "user-1", [], "morning");
+    expect(r).toEqual({ ok: false });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("never touches voice_profiles", async () => {
+    const { client, from } = makeUpdateMock();
+    await setSnapshotForkLabel(client, "user-1", ["s1"], "morning");
+    expect(from).not.toHaveBeenCalledWith("voice_profiles");
+  });
+
+  it("returns { ok: false } on a db error, never throws", async () => {
+    const { client } = makeUpdateMock({ message: "rls denied" });
+    await expect(setSnapshotForkLabel(client, "user-1", ["s1"], "morning")).resolves.toEqual({
+      ok: false,
+    });
   });
 });
