@@ -4693,6 +4693,90 @@ export type Database = {
         }
         Relationships: []
       }
+      np_voice_snapshots: {
+        Row: {
+          avoided_phrases: Json
+          captured_at: string
+          closing_patterns: Json
+          created_at: string
+          emoji_signature: Json
+          extraction_confidence: number | null
+          extraction_model: string
+          fork_label: string | null
+          formality_score: number | null
+          id: string
+          idiosyncratic_phrases: Json
+          metadata: Json
+          opening_patterns: Json
+          paragraph_length_avg: number | null
+          paragraph_length_variance: number | null
+          punctuation_style: Json
+          register: string | null
+          samples_count: number
+          sentence_length_avg: number | null
+          sentence_length_variance: number | null
+          source: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+          vocabulary_signature: string | null
+        }
+        Insert: {
+          avoided_phrases?: Json
+          captured_at?: string
+          closing_patterns?: Json
+          created_at?: string
+          emoji_signature?: Json
+          extraction_confidence?: number | null
+          extraction_model: string
+          fork_label?: string | null
+          formality_score?: number | null
+          id?: string
+          idiosyncratic_phrases?: Json
+          metadata?: Json
+          opening_patterns?: Json
+          paragraph_length_avg?: number | null
+          paragraph_length_variance?: number | null
+          punctuation_style?: Json
+          register?: string | null
+          samples_count?: number
+          sentence_length_avg?: number | null
+          sentence_length_variance?: number | null
+          source?: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+          vocabulary_signature?: string | null
+        }
+        Update: {
+          avoided_phrases?: Json
+          captured_at?: string
+          closing_patterns?: Json
+          created_at?: string
+          emoji_signature?: Json
+          extraction_confidence?: number | null
+          extraction_model?: string
+          fork_label?: string | null
+          formality_score?: number | null
+          id?: string
+          idiosyncratic_phrases?: Json
+          metadata?: Json
+          opening_patterns?: Json
+          paragraph_length_avg?: number | null
+          paragraph_length_variance?: number | null
+          punctuation_style?: Json
+          register?: string | null
+          samples_count?: number
+          sentence_length_avg?: number | null
+          sentence_length_variance?: number | null
+          source?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+          vocabulary_signature?: string | null
+        }
+        Relationships: []
+      }
       omega_insights: {
         Row: {
           confidence: number | null

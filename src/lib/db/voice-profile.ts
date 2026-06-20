@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { composeVoiceCompactView, type VoiceProfileFields } from "@/lib/ai/voice-compact";
 import type { ExtractedVoice } from "@/lib/ai/voice-extract";
+import { insertVoiceSnapshot } from "@/lib/db/voice-snapshots";
+import { reportError } from "@/lib/observability/report-error";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/supabase";
 
@@ -98,7 +100,13 @@ export async function saveWriterVoice(
   const priorHistory: Json[] = Array.isArray(rawHistory) ? (rawHistory as Json[]) : [];
   const extraction_history: Json[] = [
     ...priorHistory,
-    { at: nowIso, by: "nova_press", model: v.model, confidence: v.confidence, samples: v.samples_count },
+    {
+      at: nowIso,
+      by: "nova_press",
+      model: v.model,
+      confidence: v.confidence,
+      samples: v.samples_count,
+    },
   ].slice(-5);
 
   const { error } = await typed.from("voice_profiles").upsert(
@@ -131,4 +139,17 @@ export async function saveWriterVoice(
     { onConflict: "user_id" },
   );
   if (error) throw new Error(`failed to save voice profile: ${error.message}`);
+
+  // the longitudinal self: photograph this freshly-distilled fingerprint into an
+  // immutable, denormalized snapshot, keyed to the SAME nowIso so the dot and the
+  // live row agree. captured here off nova's OWN ExtractedVoice (never a trigger
+  // on the shared voice_profiles row, which gen connect also writes). NON-FATAL:
+  // insertVoiceSnapshot swallows internally, and this catch is belt-and-suspenders
+  // so a history hiccup can NEVER turn the train-my-voice click into a 502 ... the
+  // upsert above is the source of truth, the snapshot is bonus history.
+  try {
+    await insertVoiceSnapshot(client, userId, v, nowIso);
+  } catch (snapErr) {
+    reportError(snapErr, { tag: "voice-snapshot-capture-failed", userId });
+  }
 }

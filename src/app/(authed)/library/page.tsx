@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import { Atmosphere } from "@/components/chrome/atmosphere";
+import { VoiceTimelineLauncher } from "@/components/editor/voice-timeline-launcher";
 import { VoiceTrainer } from "@/components/editor/voice-trainer";
 import { listPiecesForUser, type PieceListItem } from "@/lib/db/pieces";
+import { listVoiceSnapshots } from "@/lib/db/voice-snapshots";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { newPieceAction } from "./new-piece-action";
@@ -10,6 +12,13 @@ import { newPieceAction } from "./new-piece-action";
 export default async function LibraryPage() {
   const supabase = await createSupabaseServerClient();
   const pieces = await listPiecesForUser(supabase);
+  // the longitudinal self: read the writer's voice snapshots alongside their
+  // pieces so the timeline opens instantly (no client fetch, no new route). a
+  // failed read degrades to [] and the panel shows its honest empty state.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const snapshots = user ? await listVoiceSnapshots(supabase, user.id) : [];
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -77,8 +86,9 @@ export default async function LibraryPage() {
           </div>
 
           {pieces.length > 0 ? (
-            <div className="np-rise np-rise-2 mb-10">
+            <div className="np-rise np-rise-2 mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <VoiceTrainer />
+              <VoiceTimelineLauncher snapshots={snapshots} />
             </div>
           ) : null}
 

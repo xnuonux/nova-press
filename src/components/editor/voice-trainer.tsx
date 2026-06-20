@@ -9,11 +9,13 @@
  * "not yet trained" into nova actually mirroring you.
  */
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type State = "idle" | "training" | "done" | "error";
 
 export function VoiceTrainer() {
+  const router = useRouter();
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -31,6 +33,9 @@ export function VoiceTrainer() {
       if (res.ok && data.ok) {
         setState("done");
         setMessage(data.summary ? `nova hears it ... ${data.summary}` : "nova learned your voice.");
+        // a fresh extraction just dropped a new snapshot ... re-run the server
+        // read so "your voice over time" shows the dot without a manual reload.
+        router.refresh();
       } else {
         setState("error");
         setMessage(data.error ?? "couldn't train your voice");
@@ -54,12 +59,18 @@ export function VoiceTrainer() {
           border: "1px solid color-mix(in srgb, var(--nova-accent) 28%, transparent)",
         }}
       >
-        {state === "training" ? "learning ..." : state === "done" ? "voice trained" : "train nova on your voice"}
+        {state === "training"
+          ? "learning ..."
+          : state === "done"
+            ? "voice trained"
+            : "train nova on your voice"}
       </button>
       {message ? (
         <span
           className="font-serif text-sm leading-relaxed"
-          style={{ color: state === "error" ? "var(--lunari-fg-subtle)" : "var(--lunari-fg-muted)" }}
+          style={{
+            color: state === "error" ? "var(--lunari-fg-subtle)" : "var(--lunari-fg-muted)",
+          }}
         >
           {message}
         </span>

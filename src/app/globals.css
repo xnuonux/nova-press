@@ -580,6 +580,53 @@
     background: var(--nova-accent);
   }
 
+  /* the breathing timeline ... your voice over time. a hand-built svg: a faint
+     baseline rail, a golden-hour metric line, one dot per snapshot (opacity
+     keyed to how much signal nova had), and a playhead you scrub across them.
+     no chart dependency ... the series are tens of points and the math is pure
+     (lib/voice/timeline-series). */
+  .np-timeline-rail {
+    stroke: var(--lunari-border);
+    stroke-width: 1;
+  }
+
+  .np-timeline-playhead {
+    stroke: var(--nova-accent);
+    stroke-width: 1;
+    opacity: 0.45;
+  }
+
+  .np-timeline-line {
+    fill: none;
+    stroke: url(#np-tl-stroke);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* the geometry transition (r) eases the selected dot's grow; modern browsers
+     animate the svg r property, and reduced-motion zeroes it globally. */
+  .np-timeline-dot {
+    cursor: pointer;
+    transition:
+      r 160ms var(--ease-out-quart),
+      opacity 160ms var(--ease-out-quart);
+  }
+
+  .np-timeline-halo {
+    fill: var(--nova-accent);
+    opacity: 0.12;
+    pointer-events: none;
+  }
+
+  .np-timeline-now {
+    fill: var(--lunari-fg-subtle);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
   @media (max-width: 640px) {
     .editor-sheet {
       margin: 28px auto 80px;
