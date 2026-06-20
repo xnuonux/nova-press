@@ -7214,6 +7214,54 @@ export type Database = {
         }
         Relationships: []
       }
+      np_newsletter_dispatch: {
+        Row: {
+          attempted_count: number
+          body_hash: string
+          completed_at: string | null
+          created_at: string
+          failed_count: number
+          id: string
+          piece_id: string
+          send_token: string
+          sent_count: number
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempted_count?: number
+          body_hash: string
+          completed_at?: string | null
+          created_at?: string
+          failed_count?: number
+          id?: string
+          piece_id: string
+          send_token?: string
+          sent_count?: number
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempted_count?: number
+          body_hash?: string
+          completed_at?: string | null
+          created_at?: string
+          failed_count?: number
+          id?: string
+          piece_id?: string
+          send_token?: string
+          sent_count?: number
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       np_pieces: {
         Row: {
           body: Json

@@ -156,12 +156,26 @@ describe("unsubscribeByToken", () => {
 });
 
 describe("listConfirmedSubscribers", () => {
-  it("maps confirmed rows to the recipient shape", async () => {
-    const rows = [{ id: "s1", email: "a@x.com", status: "subscribed", confirmed_at: "2026-01-01" }];
+  it("maps confirmed rows to the recipient shape (with unsubscribe token)", async () => {
+    const rows = [
+      {
+        id: "s1",
+        email: "a@x.com",
+        status: "subscribed",
+        confirmed_at: "2026-01-01",
+        unsubscribe_token: "tok-1",
+      },
+    ];
     const { admin } = adminWith(chain({ data: rows, error: null }));
     const out = await listConfirmedSubscribers(admin as never, "w1");
     expect(out).toEqual([
-      { id: "s1", email: "a@x.com", status: "subscribed", confirmedAt: "2026-01-01" },
+      {
+        id: "s1",
+        email: "a@x.com",
+        status: "subscribed",
+        confirmedAt: "2026-01-01",
+        unsubscribeToken: "tok-1",
+      },
     ]);
   });
 

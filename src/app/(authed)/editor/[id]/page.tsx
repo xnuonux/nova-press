@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { Atmosphere } from "@/components/chrome/atmosphere";
+import { NewsletterSendPanel } from "@/components/editor/newsletter-send-panel";
 import { PartnerRail } from "@/components/editor/partner-rail";
 import { PlateShell } from "@/components/editor/plate-shell";
 import { coercePlateValue } from "@/components/editor/plate-text";
@@ -43,6 +44,11 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
           onPublish={publishPieceAction.bind(null, piece.id)}
         />
         <PartnerRail activeWritingFork={activeWritingFork} />
+      </div>
+      {/* writer-commanded newsletter blast ... a quiet affordance, bottom-left so
+          it never collides with the partner rail. only renders once published. */}
+      <div className="fixed bottom-5 left-5 z-40">
+        <NewsletterSendPanel pieceId={piece.id} published={piece.status === "published"} />
       </div>
     </main>
   );

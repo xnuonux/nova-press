@@ -169,20 +169,28 @@ export async function unsubscribeByToken(
   return { ok: true, unsubscribed: !!data };
 }
 
+// a recipient carrying the stable unsubscribe token, so the newsletter footer
+// can print each reader's own one-tap unsubscribe link. extends the pure
+// Recipient shape, so eligibleRecipients<T> preserves the token.
+export interface SubscriberRecipient extends Recipient {
+  unsubscribeToken: string;
+}
+
 /**
  * the writer's CONFIRMED subscribers, for the newsletter blast. RLS scopes to
  * the caller's own rows (the writer's session client). returns the email
- * Recipient shape; the pure eligibleRecipients() applies the final confirmed_at
- * + dedupe gate so the send path and the count preview can never disagree.
+ * Recipient shape plus the unsubscribe token; the pure eligibleRecipients()
+ * applies the final confirmed_at + dedupe gate so the send path and the count
+ * preview can never disagree.
  */
 export async function listConfirmedSubscribers(
   client: ServerClient,
   userId: string,
-): Promise<Recipient[]> {
+): Promise<SubscriberRecipient[]> {
   const typed = client as unknown as TypedClient;
   const { data, error } = await typed
     .from("np_subscriber")
-    .select("id, email, status, confirmed_at")
+    .select("id, email, status, confirmed_at, unsubscribe_token")
     .eq("user_id", userId)
     .eq("status", "subscribed");
   if (error || !data) return [];
@@ -191,6 +199,7 @@ export async function listConfirmedSubscribers(
     email: r.email,
     status: r.status,
     confirmedAt: r.confirmed_at,
+    unsubscribeToken: r.unsubscribe_token,
   }));
 }
 
