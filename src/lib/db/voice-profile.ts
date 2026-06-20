@@ -103,6 +103,85 @@ export async function getWriterVoice(
   }
 }
 
+// a read-only, display-ready view of the writer's distilled voice ... the
+// columns CLAUDE.md lets nova read, camelCased, for the studio's "your voice at
+// a glance" card. never the outreach_* columns.
+export interface VoiceCard {
+  register: string | null;
+  vocabularySignature: string | null;
+  sentenceLengthAvg: number | null;
+  sentenceLengthVariance: number | null;
+  paragraphLengthAvg: number | null;
+  formalityScore: number | null;
+  openingPatterns: string[];
+  closingPatterns: string[];
+  idiosyncraticPhrases: string[];
+  avoidedPhrases: string[];
+  writingSamplesCount: number;
+  lastExtractedAt: string | null;
+  extractionConfidence: number | null;
+  activeForWriting: boolean;
+}
+
+const VOICE_CARD_COLUMNS =
+  "register, vocabulary_signature, sentence_length_avg, sentence_length_variance, paragraph_length_avg, formality_score, opening_patterns, closing_patterns, idiosyncratic_phrases, avoided_phrases, writing_samples_count, last_extracted_at, extraction_confidence, active_for_writing";
+
+function strArray(v: unknown): string[] {
+  return Array.isArray(v)
+    ? v
+        .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+        .map((x) => x.trim())
+    : [];
+}
+
+/**
+ * the signed-in writer's distilled voice for the studio's at-a-glance card.
+ * READ-ONLY, RLS owner-scoped, never throws. returns null when the voice is
+ * untrained ... a row with no register AND no samples (e.g. one another surface
+ * created) reads as untrained, so the studio shows its honest empty state rather
+ * than a blank card. this NEVER writes voice_profiles.
+ */
+export async function readVoiceCard(
+  client: ServerClient,
+  userId: string,
+): Promise<VoiceCard | null> {
+  const typed = client as unknown as TypedClient;
+  try {
+    const { data, error } = await typed
+      .from("voice_profiles")
+      .select(VOICE_CARD_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    const r = data as Record<string, unknown>;
+    const register = typeof r.register === "string" && r.register.trim() ? r.register.trim() : null;
+    const samples = typeof r.writing_samples_count === "number" ? r.writing_samples_count : 0;
+    if (!register && samples === 0) return null;
+    return {
+      register,
+      vocabularySignature:
+        typeof r.vocabulary_signature === "string" ? r.vocabulary_signature : null,
+      sentenceLengthAvg: typeof r.sentence_length_avg === "number" ? r.sentence_length_avg : null,
+      sentenceLengthVariance:
+        typeof r.sentence_length_variance === "number" ? r.sentence_length_variance : null,
+      paragraphLengthAvg:
+        typeof r.paragraph_length_avg === "number" ? r.paragraph_length_avg : null,
+      formalityScore: typeof r.formality_score === "number" ? r.formality_score : null,
+      openingPatterns: strArray(r.opening_patterns),
+      closingPatterns: strArray(r.closing_patterns),
+      idiosyncraticPhrases: strArray(r.idiosyncratic_phrases),
+      avoidedPhrases: strArray(r.avoided_phrases),
+      writingSamplesCount: samples,
+      lastExtractedAt: typeof r.last_extracted_at === "string" ? r.last_extracted_at : null,
+      extractionConfidence:
+        typeof r.extraction_confidence === "number" ? r.extraction_confidence : null,
+      activeForWriting: r.active_for_writing !== false,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * write the extracted voice back to the shared voice_profiles row. upsert on
  * user_id with ONLY nova's columns in the payload, so a conflict update never

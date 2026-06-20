@@ -45,15 +45,24 @@ export default async function LibraryPage() {
             />
             nova press
           </Link>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
+          <div className="flex items-center gap-5">
+            <Link
+              href="/studio"
               className="font-mono text-[11px] uppercase tracking-[0.22em] transition-colors hover:opacity-80"
               style={{ color: "var(--lunari-fg-subtle)" }}
             >
-              sign out
-            </button>
-          </form>
+              voice studio
+            </Link>
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                className="font-mono text-[11px] uppercase tracking-[0.22em] transition-colors hover:opacity-80"
+                style={{ color: "var(--lunari-fg-subtle)" }}
+              >
+                sign out
+              </button>
+            </form>
+          </div>
         </header>
 
         <main className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
