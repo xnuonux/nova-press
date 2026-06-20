@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { addSubscriber, logEmail } from "@/lib/db/subscribers";
 import { getPublishedPieceOwner } from "@/lib/db/pieces";
-import { addSubscriber } from "@/lib/db/subscribers";
+import { getMailer } from "@/lib/email/mailer";
+import { confirmEmail } from "@/lib/email/messages";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -20,6 +22,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 // opt-in are the heavier follow-ups, tracked for when the send layer ships.
 const SUBSCRIBE_LIMIT = 8;
 const SUBSCRIBE_WINDOW_MS = 60_000;
+// at most one confirm email per (writer, email) per window ... a per-destination
+// ceiling so a scripted subscribe loop can't mailbomb a victim's inbox even from
+// rotating ips (the per-ip limit above doesn't catch that).
+const CONFIRM_SEND_WINDOW_MS = 5 * 60_000;
 
 function clientIp(request: NextRequest): string {
   const fwd = request.headers.get("x-forwarded-for");
@@ -60,7 +66,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "missing piece" }, { status: 400 });
   }
   if (typeof email !== "string" || email.length === 0 || email.length > 320) {
-    return NextResponse.json({ ok: false, error: "that email doesn't look right" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "that email doesn't look right" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -78,12 +87,53 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
     }
-    // opaque success: never serialize `already` ... a fresh insert and an
-    // existing membership return the exact same body, so the response can't be
-    // used to confirm whether an email follows a given writer.
+
+    // double opt-in: send the confirm email only when the capture warrants it (a
+    // new or re-opening subscription), throttled per destination. an
+    // already-confirmed re-subscribe sends nothing. the send is dev-stubbed and
+    // logged either way; a send/log failure never changes the opaque response.
+    if (result.sendConfirm && result.confirmToken) {
+      const sendGate = rateLimit(
+        `confirm-send:${owner.userId}:${result.email}`,
+        1,
+        CONFIRM_SEND_WINDOW_MS,
+      );
+      if (sendGate.allowed) {
+        try {
+          const origin = new URL(request.url).origin;
+          const confirmUrl = `${origin}/api/subscribe/confirm?token=${result.confirmToken}`;
+          const msg = confirmEmail(confirmUrl);
+          const sent = await getMailer().send({
+            to: result.email,
+            subject: msg.subject,
+            text: msg.text,
+            kind: "confirm",
+          });
+          await logEmail(admin, {
+            userId: owner.userId,
+            pieceId: owner.pieceId,
+            kind: "confirm",
+            toEmail: result.email,
+            subject: msg.subject,
+            status: sent.stubbed ? "stubbed" : sent.ok ? "sent" : "failed",
+            providerId: sent.providerId ?? null,
+            error: sent.error ?? null,
+          });
+        } catch (err) {
+          reportError(err, { tag: "confirm-send-failed", slug });
+        }
+      }
+    }
+
+    // opaque success: a fresh capture, a re-opened one, and an already-confirmed
+    // membership all return the exact same body, so the response can't be used to
+    // confirm whether an email follows a given writer.
     return NextResponse.json({ ok: true });
   } catch (err) {
     reportError(err, { tag: "subscribe-failed", slug });
-    return NextResponse.json({ ok: false, error: "couldn't save that ... try again" }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, error: "couldn't save that ... try again" },
+      { status: 502 },
+    );
   }
 }

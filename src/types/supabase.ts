@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -176,6 +176,60 @@ export type Database = {
         }
         Relationships: []
       }
+      agape_drift_metrics: {
+        Row: {
+          artifacts_shipped: number | null
+          ask_categories: Json | null
+          computed_at: string
+          detail: Json | null
+          engagement_hours: number | null
+          engagement_to_shipping: number | null
+          id: string
+          initiation_ratio: number | null
+          luna_initiated: number | null
+          meta_msgs: number | null
+          meta_share: number | null
+          metric_date: string
+          user_id: string
+          user_msgs: number | null
+          user_sessions: number | null
+        }
+        Insert: {
+          artifacts_shipped?: number | null
+          ask_categories?: Json | null
+          computed_at?: string
+          detail?: Json | null
+          engagement_hours?: number | null
+          engagement_to_shipping?: number | null
+          id?: string
+          initiation_ratio?: number | null
+          luna_initiated?: number | null
+          meta_msgs?: number | null
+          meta_share?: number | null
+          metric_date: string
+          user_id: string
+          user_msgs?: number | null
+          user_sessions?: number | null
+        }
+        Update: {
+          artifacts_shipped?: number | null
+          ask_categories?: Json | null
+          computed_at?: string
+          detail?: Json | null
+          engagement_hours?: number | null
+          engagement_to_shipping?: number | null
+          id?: string
+          initiation_ratio?: number | null
+          luna_initiated?: number | null
+          meta_msgs?: number | null
+          meta_share?: number | null
+          metric_date?: string
+          user_id?: string
+          user_msgs?: number | null
+          user_sessions?: number | null
+        }
+        Relationships: []
+      }
       agent_actions: {
         Row: {
           action_type: string
@@ -262,6 +316,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      agent_constitution: {
+        Row: {
+          active: boolean
+          agent_id: string
+          created_at: string
+          id: string
+          law_text: string
+          position: number
+          superseded_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          agent_id: string
+          created_at?: string
+          id?: string
+          law_text: string
+          position?: number
+          superseded_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          agent_id?: string
+          created_at?: string
+          id?: string
+          law_text?: string
+          position?: number
+          superseded_by?: string | null
+        }
+        Relationships: []
       }
       agent_context: {
         Row: {
@@ -446,6 +530,33 @@ export type Database = {
           },
         ]
       }
+      agent_evolved_block_snapshots: {
+        Row: {
+          agent: string
+          created_at: string
+          evolved_block: string | null
+          id: string
+          snapshot_at: string
+          user_id: string
+        }
+        Insert: {
+          agent: string
+          created_at?: string
+          evolved_block?: string | null
+          id?: string
+          snapshot_at?: string
+          user_id: string
+        }
+        Update: {
+          agent?: string
+          created_at?: string
+          evolved_block?: string | null
+          id?: string
+          snapshot_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agent_goals: {
         Row: {
           agent: string
@@ -505,6 +616,7 @@ export type Database = {
           agent: string
           category: string
           created_at: string | null
+          embedding: string | null
           id: string
           insight: string
           is_simulated: boolean
@@ -518,6 +630,7 @@ export type Database = {
           agent: string
           category?: string
           created_at?: string | null
+          embedding?: string | null
           id?: string
           insight: string
           is_simulated?: boolean
@@ -531,6 +644,7 @@ export type Database = {
           agent?: string
           category?: string
           created_at?: string | null
+          embedding?: string | null
           id?: string
           insight?: string
           is_simulated?: boolean
@@ -850,6 +964,281 @@ export type Database = {
         }
         Relationships: []
       }
+      archivum_nox: {
+        Row: {
+          created_at: string
+          fragment: string | null
+          id: string
+          image_urls: Json | null
+          night_date: string
+          seed: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fragment?: string | null
+          id?: string
+          image_urls?: Json | null
+          night_date: string
+          seed?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fragment?: string | null
+          id?: string
+          image_urls?: Json | null
+          night_date?: string
+          seed?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      archivum_tweet_log: {
+        Row: {
+          archivum_id: string | null
+          id: string
+          image_url: string
+          status: string | null
+          tweet_text: string | null
+          tweeted_at: string
+          user_id: string | null
+        }
+        Insert: {
+          archivum_id?: string | null
+          id?: string
+          image_url: string
+          status?: string | null
+          tweet_text?: string | null
+          tweeted_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          archivum_id?: string | null
+          id?: string
+          image_url?: string
+          status?: string | null
+          tweet_text?: string | null
+          tweeted_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      autodev_product_events: {
+        Row: {
+          agent: string | null
+          created_at: string
+          duration_seconds: number | null
+          error: string | null
+          id: string
+          output: Json | null
+          phase_from: string | null
+          phase_to: string
+          product_id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          agent?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          output?: Json | null
+          phase_from?: string | null
+          phase_to: string
+          product_id: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          agent?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          output?: Json | null
+          phase_from?: string | null
+          phase_to?: string
+          product_id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autodev_product_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "autodev_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      autodev_products: {
+        Row: {
+          artifact_html: string | null
+          artifact_versions: Json | null
+          brief: Json | null
+          build_iterations: number | null
+          concept: string | null
+          created_at: string
+          created_by_agent: string | null
+          docs: string | null
+          id: string
+          last_phase_agent: string | null
+          locked_until: string | null
+          metrics: Json | null
+          name: string
+          phase: string
+          plan: Json | null
+          review_notes: string | null
+          review_score: number | null
+          spec: Json | null
+          status: string
+          tagline: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artifact_html?: string | null
+          artifact_versions?: Json | null
+          brief?: Json | null
+          build_iterations?: number | null
+          concept?: string | null
+          created_at?: string
+          created_by_agent?: string | null
+          docs?: string | null
+          id?: string
+          last_phase_agent?: string | null
+          locked_until?: string | null
+          metrics?: Json | null
+          name: string
+          phase?: string
+          plan?: Json | null
+          review_notes?: string | null
+          review_score?: number | null
+          spec?: Json | null
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          artifact_html?: string | null
+          artifact_versions?: Json | null
+          brief?: Json | null
+          build_iterations?: number | null
+          concept?: string | null
+          created_at?: string
+          created_by_agent?: string | null
+          docs?: string | null
+          id?: string
+          last_phase_agent?: string | null
+          locked_until?: string | null
+          metrics?: Json | null
+          name?: string
+          phase?: string
+          plan?: Json | null
+          review_notes?: string | null
+          review_score?: number | null
+          spec?: Json | null
+          status?: string
+          tagline?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bedrock_anchors: {
+        Row: {
+          anchor_type: string
+          baseline_weight: number | null
+          created_at: string
+          description: string | null
+          embedding: string | null
+          gravitational_field_radius: number | null
+          gravitational_strength: number | null
+          id: string
+          label: string
+          last_confirmed_at: string | null
+          minted_at: string
+          pending_change: Json | null
+          presence_pattern: string
+          significant_dates: Json
+          source: string
+          source_thread_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          anchor_type: string
+          baseline_weight?: number | null
+          created_at?: string
+          description?: string | null
+          embedding?: string | null
+          gravitational_field_radius?: number | null
+          gravitational_strength?: number | null
+          id?: string
+          label: string
+          last_confirmed_at?: string | null
+          minted_at?: string
+          pending_change?: Json | null
+          presence_pattern?: string
+          significant_dates?: Json
+          source?: string
+          source_thread_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          anchor_type?: string
+          baseline_weight?: number | null
+          created_at?: string
+          description?: string | null
+          embedding?: string | null
+          gravitational_field_radius?: number | null
+          gravitational_strength?: number | null
+          id?: string
+          label?: string
+          last_confirmed_at?: string | null
+          minted_at?: string
+          pending_change?: Json | null
+          presence_pattern?: string
+          significant_dates?: Json
+          source?: string
+          source_thread_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bedrock_cutover_snapshot: {
+        Row: {
+          id: string
+          kind: string
+          row_data: Json
+          snapshot_at: string
+          thread_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          kind: string
+          row_data: Json
+          snapshot_at?: string
+          thread_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          kind?: string
+          row_data?: Json
+          snapshot_at?: string
+          thread_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       blog_authors: {
         Row: {
           article_count: number | null
@@ -946,6 +1335,81 @@ export type Database = {
           score?: number | null
           user_id?: string | null
           weight?: number | null
+        }
+        Relationships: []
+      }
+      business_knowledge_chunks: {
+        Row: {
+          chunk_text: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          source_id: string | null
+          source_type: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          chunk_text: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string | null
+          source_type: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          chunk_text?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string | null
+          source_type?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      business_memory: {
+        Row: {
+          content: string
+          context: Json | null
+          created_at: string
+          id: string
+          importance: number
+          kind: string
+          last_seen_at: string
+          source: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          importance?: number
+          kind: string
+          last_seen_at?: string
+          source?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          importance?: number
+          kind?: string
+          last_seen_at?: string
+          source?: string | null
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1268,6 +1732,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cinema_looks: {
+        Row: {
+          created_at: string | null
+          grade: Json
+          id: string
+          name: string
+          reference_url: string | null
+          slug: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          grade: Json
+          id?: string
+          name: string
+          reference_url?: string | null
+          slug?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          grade?: Json
+          id?: string
+          name?: string
+          reference_url?: string | null
+          slug?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       cinema_pipelines: {
         Row: {
@@ -1823,6 +2320,10 @@ export type Database = {
           messages: Json | null
           parent_war_room_session_id: string | null
           project_id: string | null
+          summary_msg_count: number | null
+          summary_tier1: string | null
+          summary_tier2: string | null
+          summary_updated_at: string | null
           title: string | null
           updated_at: string | null
           user_id: string
@@ -1834,6 +2335,10 @@ export type Database = {
           messages?: Json | null
           parent_war_room_session_id?: string | null
           project_id?: string | null
+          summary_msg_count?: number | null
+          summary_tier1?: string | null
+          summary_tier2?: string | null
+          summary_updated_at?: string | null
           title?: string | null
           updated_at?: string | null
           user_id: string
@@ -1845,6 +2350,10 @@ export type Database = {
           messages?: Json | null
           parent_war_room_session_id?: string | null
           project_id?: string | null
+          summary_msg_count?: number | null
+          summary_tier1?: string | null
+          summary_tier2?: string | null
+          summary_updated_at?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
@@ -1865,6 +2374,152 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      core_thread_metadata: {
+        Row: {
+          baseline_weight: number
+          created_at: string
+          gravitational_field_radius: number
+          gravitational_strength: number
+          presence_pattern: Database["public"]["Enums"]["core_presence_pattern"]
+          signature_drives: Json | null
+          significant_dates: Json | null
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          baseline_weight?: number
+          created_at?: string
+          gravitational_field_radius?: number
+          gravitational_strength?: number
+          presence_pattern?: Database["public"]["Enums"]["core_presence_pattern"]
+          signature_drives?: Json | null
+          significant_dates?: Json | null
+          thread_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          baseline_weight?: number
+          created_at?: string
+          gravitational_field_radius?: number
+          gravitational_strength?: number
+          presence_pattern?: Database["public"]["Enums"]["core_presence_pattern"]
+          signature_drives?: Json | null
+          significant_dates?: Json | null
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_thread_metadata_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "dark_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crew_calibration_scars: {
+        Row: {
+          agent: string
+          charge: number
+          created_at: string
+          domain_tags: string[]
+          first_seen: string
+          healed_at: string | null
+          id: string
+          last_recurrence: string
+          lesson: string
+          origin_id: string | null
+          origin_kind: string | null
+          proposed_promotion: boolean
+          recurrence_count: number
+          user_id: string
+        }
+        Insert: {
+          agent: string
+          charge?: number
+          created_at?: string
+          domain_tags?: string[]
+          first_seen?: string
+          healed_at?: string | null
+          id?: string
+          last_recurrence?: string
+          lesson: string
+          origin_id?: string | null
+          origin_kind?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+          user_id: string
+        }
+        Update: {
+          agent?: string
+          charge?: number
+          created_at?: string
+          domain_tags?: string[]
+          first_seen?: string
+          healed_at?: string | null
+          id?: string
+          last_recurrence?: string
+          lesson?: string
+          origin_id?: string | null
+          origin_kind?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crew_craft_scars: {
+        Row: {
+          agent: string
+          charge: number
+          created_at: string
+          domain_tags: string[]
+          first_seen: string
+          healed_at: string | null
+          id: string
+          last_recurrence: string
+          lesson: string
+          origin_id: string | null
+          origin_kind: string | null
+          proposed_promotion: boolean
+          recurrence_count: number
+        }
+        Insert: {
+          agent: string
+          charge?: number
+          created_at?: string
+          domain_tags?: string[]
+          first_seen?: string
+          healed_at?: string | null
+          id?: string
+          last_recurrence?: string
+          lesson: string
+          origin_id?: string | null
+          origin_kind?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+        }
+        Update: {
+          agent?: string
+          charge?: number
+          created_at?: string
+          domain_tags?: string[]
+          first_seen?: string
+          healed_at?: string | null
+          id?: string
+          last_recurrence?: string
+          lesson?: string
+          origin_id?: string | null
+          origin_kind?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+        }
+        Relationships: []
       }
       crew_dark_threads: {
         Row: {
@@ -2069,13 +2724,19 @@ export type Database = {
       dark_threads: {
         Row: {
           charge: number | null
+          completion_metrics: Json | null
+          completion_signal: number | null
           created_at: string | null
+          embedding: string | null
           firing_rate_estimate: number | null
           first_seen: string | null
           id: string
+          intrinsic_poignancy: number | null
           last_reinforced: string | null
           metadata: Json
+          protected_from_decay: boolean
           reinforcement_count: number | null
+          relational_proximity: number | null
           source_agent: string | null
           tags: string[]
           theme: string
@@ -2084,13 +2745,19 @@ export type Database = {
         }
         Insert: {
           charge?: number | null
+          completion_metrics?: Json | null
+          completion_signal?: number | null
           created_at?: string | null
+          embedding?: string | null
           firing_rate_estimate?: number | null
           first_seen?: string | null
           id?: string
+          intrinsic_poignancy?: number | null
           last_reinforced?: string | null
           metadata?: Json
+          protected_from_decay?: boolean
           reinforcement_count?: number | null
+          relational_proximity?: number | null
           source_agent?: string | null
           tags?: string[]
           theme: string
@@ -2099,18 +2766,60 @@ export type Database = {
         }
         Update: {
           charge?: number | null
+          completion_metrics?: Json | null
+          completion_signal?: number | null
           created_at?: string | null
+          embedding?: string | null
           firing_rate_estimate?: number | null
           first_seen?: string | null
           id?: string
+          intrinsic_poignancy?: number | null
           last_reinforced?: string | null
           metadata?: Json
+          protected_from_decay?: boolean
           reinforcement_count?: number | null
+          relational_proximity?: number | null
           source_agent?: string | null
           tags?: string[]
           theme?: string
           tier?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      decision_log: {
+        Row: {
+          action: string
+          agent_type: string
+          confidence: number
+          created_at: string
+          drivers: Json | null
+          id: string
+          reasoning: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          agent_type: string
+          confidence?: number
+          created_at?: string
+          drivers?: Json | null
+          id?: string
+          reasoning?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          agent_type?: string
+          confidence?: number
+          created_at?: string
+          drivers?: Json | null
+          id?: string
+          reasoning?: string | null
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2207,6 +2916,36 @@ export type Database = {
           target_agent?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      deploy_log: {
+        Row: {
+          commit_message: string | null
+          commit_sha: string | null
+          deployed_at: string | null
+          id: string
+          tweet_text: string | null
+          tweeted: boolean | null
+          version: string | null
+        }
+        Insert: {
+          commit_message?: string | null
+          commit_sha?: string | null
+          deployed_at?: string | null
+          id?: string
+          tweet_text?: string | null
+          tweeted?: boolean | null
+          version?: string | null
+        }
+        Update: {
+          commit_message?: string | null
+          commit_sha?: string | null
+          deployed_at?: string | null
+          id?: string
+          tweet_text?: string | null
+          tweeted?: boolean | null
+          version?: string | null
         }
         Relationships: []
       }
@@ -2543,6 +3282,101 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_links: {
+        Row: {
+          created_at: string | null
+          discord_user_id: string | null
+          discord_username: string | null
+          id: string
+          link_code: string | null
+          linked_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discord_user_id?: string | null
+          discord_username?: string | null
+          id?: string
+          link_code?: string | null
+          linked_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discord_user_id?: string | null
+          discord_username?: string | null
+          id?: string
+          link_code?: string | null
+          linked_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      dream_cues: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          cue_payload: string
+          cue_type: string
+          expires_at: string
+          id: string
+          register_hint: string
+          standing: boolean
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          cue_payload: string
+          cue_type: string
+          expires_at?: string
+          id?: string
+          register_hint?: string
+          standing?: boolean
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          cue_payload?: string
+          cue_type?: string
+          expires_at?: string
+          id?: string
+          register_hint?: string
+          standing?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dream_likes: {
+        Row: {
+          created_at: string
+          dream_id: string
+          id: string
+          like_key: string
+        }
+        Insert: {
+          created_at?: string
+          dream_id: string
+          id?: string
+          like_key: string
+        }
+        Update: {
+          created_at?: string
+          dream_id?: string
+          id?: string
+          like_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dream_likes_dream_id_fkey"
+            columns: ["dream_id"]
+            isOneToOne: false
+            referencedRelation: "archivum_nox"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_campaigns: {
         Row: {
           created_at: string | null
@@ -2684,6 +3518,99 @@ export type Database = {
           },
         ]
       }
+      entities: {
+        Row: {
+          aliases: string[]
+          confirmed_by: string | null
+          created_at: string
+          embedding: string | null
+          entity_type: string
+          facts: Json
+          id: string
+          last_mentioned: string | null
+          mention_count: number
+          name: string
+          relationships: Json
+          salience: number
+          salience_floor: number
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aliases?: string[]
+          confirmed_by?: string | null
+          created_at?: string
+          embedding?: string | null
+          entity_type?: string
+          facts?: Json
+          id?: string
+          last_mentioned?: string | null
+          mention_count?: number
+          name: string
+          relationships?: Json
+          salience?: number
+          salience_floor?: number
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aliases?: string[]
+          confirmed_by?: string | null
+          created_at?: string
+          embedding?: string | null
+          entity_type?: string
+          facts?: Json
+          id?: string
+          last_mentioned?: string | null
+          mention_count?: number
+          name?: string
+          relationships?: Json
+          salience?: number
+          salience_floor?: number
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      entity_fact_candidates: {
+        Row: {
+          candidate_fact: string
+          confidence: string | null
+          created_at: string
+          entity_id: string | null
+          entity_name: string | null
+          id: string
+          outcome: string | null
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          candidate_fact: string
+          confidence?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          id?: string
+          outcome?: string | null
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          candidate_fact?: string
+          confidence?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          id?: string
+          outcome?: string | null
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       episodic_memory: {
         Row: {
           action_type: string | null
@@ -2691,9 +3618,11 @@ export type Database = {
           created_at: string | null
           dark_threads_active: string[] | null
           depth_at_capture: string | null
+          embedding: string | null
           id: string
           outcome: string | null
           salience: number
+          structural_tag: string | null
           summary: string
           user_id: string | null
           valence: number | null
@@ -2704,9 +3633,11 @@ export type Database = {
           created_at?: string | null
           dark_threads_active?: string[] | null
           depth_at_capture?: string | null
+          embedding?: string | null
           id?: string
           outcome?: string | null
           salience: number
+          structural_tag?: string | null
           summary: string
           user_id?: string | null
           valence?: number | null
@@ -2717,9 +3648,11 @@ export type Database = {
           created_at?: string | null
           dark_threads_active?: string[] | null
           depth_at_capture?: string | null
+          embedding?: string | null
           id?: string
           outcome?: string | null
           salience?: number
+          structural_tag?: string | null
           summary?: string
           user_id?: string | null
           valence?: number | null
@@ -3076,6 +4009,81 @@ export type Database = {
         }
         Relationships: []
       }
+      field_log_candidates: {
+        Row: {
+          conversation_ref: string | null
+          created_at: string
+          id: string
+          outcome: string | null
+          proposed: boolean
+          score: number
+          signals: Json
+          theme_guess: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_ref?: string | null
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          proposed?: boolean
+          score?: number
+          signals?: Json
+          theme_guess?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_ref?: string | null
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          proposed?: boolean
+          score?: number
+          signals?: Json
+          theme_guess?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      field_logs: {
+        Row: {
+          blocks: Json
+          conversation_ref: string | null
+          created_at: string
+          id: string
+          occurred_at: string | null
+          shared: boolean
+          source: string
+          template: string
+          theme: string | null
+          user_id: string
+        }
+        Insert: {
+          blocks?: Json
+          conversation_ref?: string | null
+          created_at?: string
+          id?: string
+          occurred_at?: string | null
+          shared?: boolean
+          source?: string
+          template?: string
+          theme?: string | null
+          user_id: string
+        }
+        Update: {
+          blocks?: Json
+          conversation_ref?: string | null
+          created_at?: string
+          id?: string
+          occurred_at?: string | null
+          shared?: boolean
+          source?: string
+          template?: string
+          theme?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       form_submissions: {
         Row: {
           confirmed: boolean | null
@@ -3121,6 +4129,54 @@ export type Database = {
           site_id?: string
           site_name?: string | null
           site_url?: string | null
+        }
+        Relationships: []
+      }
+      founder_action_queue: {
+        Row: {
+          action_type: string
+          agent: string
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          executed_at: string | null
+          execution_result: Json | null
+          id: string
+          payload: Json
+          proposed_at: string
+          stakes: string
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          agent: string
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          executed_at?: string | null
+          execution_result?: Json | null
+          id?: string
+          payload?: Json
+          proposed_at?: string
+          stakes?: string
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          agent?: string
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          executed_at?: string | null
+          execution_result?: Json | null
+          id?: string
+          payload?: Json
+          proposed_at?: string
+          stakes?: string
+          summary?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -3213,6 +4269,8 @@ export type Database = {
           linkedin_url: string | null
           name: string | null
           source: string | null
+          source_signal_id: string | null
+          source_trigger_id: string | null
           stage: string
           tags: string[]
           title: string | null
@@ -3231,6 +4289,8 @@ export type Database = {
           linkedin_url?: string | null
           name?: string | null
           source?: string | null
+          source_signal_id?: string | null
+          source_trigger_id?: string | null
           stage?: string
           tags?: string[]
           title?: string | null
@@ -3249,6 +4309,8 @@ export type Database = {
           linkedin_url?: string | null
           name?: string | null
           source?: string | null
+          source_signal_id?: string | null
+          source_trigger_id?: string | null
           stage?: string
           tags?: string[]
           title?: string | null
@@ -3264,7 +4326,748 @@ export type Database = {
             referencedRelation: "gc_companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "gc_contacts_source_signal_id_fkey"
+            columns: ["source_signal_id"]
+            isOneToOne: false
+            referencedRelation: "gc_signal_hits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_contacts_source_trigger_id_fkey"
+            columns: ["source_trigger_id"]
+            isOneToOne: false
+            referencedRelation: "gc_triggers"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      gc_draft_angles: {
+        Row: {
+          angle_type: string
+          body: string
+          confidence_self_rated: number
+          created_at: string
+          draft_id: string
+          id: string
+          position: number
+          rationale: string | null
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          angle_type: string
+          body: string
+          confidence_self_rated?: number
+          created_at?: string
+          draft_id: string
+          id?: string
+          position?: number
+          rationale?: string | null
+          subject: string
+          user_id: string
+        }
+        Update: {
+          angle_type?: string
+          body?: string
+          confidence_self_rated?: number
+          created_at?: string
+          draft_id?: string
+          id?: string
+          position?: number
+          rationale?: string | null
+          subject?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_draft_angles_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "gc_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_draft_judge_scores: {
+        Row: {
+          angle_id: string
+          ask_clarity: number
+          created_at: string
+          draft_id: string
+          evidence: Json
+          expected_reply_rate: number
+          id: string
+          is_winner: boolean
+          judge_model: string | null
+          opening_strength: number
+          relevance: number
+          user_id: string
+          voice_match: number
+          weighted_total: number
+        }
+        Insert: {
+          angle_id: string
+          ask_clarity?: number
+          created_at?: string
+          draft_id: string
+          evidence?: Json
+          expected_reply_rate?: number
+          id?: string
+          is_winner?: boolean
+          judge_model?: string | null
+          opening_strength?: number
+          relevance?: number
+          user_id: string
+          voice_match?: number
+          weighted_total?: number
+        }
+        Update: {
+          angle_id?: string
+          ask_clarity?: number
+          created_at?: string
+          draft_id?: string
+          evidence?: Json
+          expected_reply_rate?: number
+          id?: string
+          is_winner?: boolean
+          judge_model?: string | null
+          opening_strength?: number
+          relevance?: number
+          user_id?: string
+          voice_match?: number
+          weighted_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_draft_judge_scores_angle_id_fkey"
+            columns: ["angle_id"]
+            isOneToOne: false
+            referencedRelation: "gc_draft_angles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_draft_judge_scores_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "gc_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_draft_outcomes: {
+        Row: {
+          angle_id: string | null
+          booked: boolean
+          clicked: boolean
+          created_at: string
+          draft_id: string
+          id: string
+          opened: boolean
+          replied: boolean
+          sent_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          angle_id?: string | null
+          booked?: boolean
+          clicked?: boolean
+          created_at?: string
+          draft_id: string
+          id?: string
+          opened?: boolean
+          replied?: boolean
+          sent_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          angle_id?: string | null
+          booked?: boolean
+          clicked?: boolean
+          created_at?: string
+          draft_id?: string
+          id?: string
+          opened?: boolean
+          replied?: boolean
+          sent_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_draft_outcomes_angle_id_fkey"
+            columns: ["angle_id"]
+            isOneToOne: false
+            referencedRelation: "gc_draft_angles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_draft_outcomes_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "gc_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_drafts: {
+        Row: {
+          contact_id: string
+          cost_cents: number
+          created_at: string
+          generated_at: string | null
+          generation_model: string | null
+          id: string
+          judge_model: string | null
+          objective: Json
+          status: string
+          updated_at: string
+          user_id: string
+          user_override_angle_id: string | null
+          winning_angle_id: string | null
+        }
+        Insert: {
+          contact_id: string
+          cost_cents?: number
+          created_at?: string
+          generated_at?: string | null
+          generation_model?: string | null
+          id?: string
+          judge_model?: string | null
+          objective?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_override_angle_id?: string | null
+          winning_angle_id?: string | null
+        }
+        Update: {
+          contact_id?: string
+          cost_cents?: number
+          created_at?: string
+          generated_at?: string | null
+          generation_model?: string | null
+          id?: string
+          judge_model?: string | null
+          objective?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_override_angle_id?: string | null
+          winning_angle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_drafts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gc_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_enrichment_traces: {
+        Row: {
+          contact_id: string | null
+          cost_cents: number
+          created_at: string
+          error: string | null
+          fields_returned: Json
+          id: string
+          path: string
+          raw_payload: Json
+          source: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          cost_cents?: number
+          created_at?: string
+          error?: string | null
+          fields_returned?: Json
+          id?: string
+          path?: string
+          raw_payload?: Json
+          source: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          cost_cents?: number
+          created_at?: string
+          error?: string | null
+          fields_returned?: Json
+          id?: string
+          path?: string
+          raw_payload?: Json
+          source?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_enrichment_traces_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gc_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_gen_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gc_gen_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          msg_id: string
+          parts: Json
+          role: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          msg_id: string
+          parts?: Json
+          role: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          msg_id?: string
+          parts?: Json
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_gen_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "gc_gen_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_outcome_events: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          dollar_value: number
+          event_type: string
+          id: string
+          note: string | null
+          occurred_at: string
+          source_draft_id: string | null
+          user_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          dollar_value?: number
+          event_type: string
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          source_draft_id?: string | null
+          user_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          dollar_value?: number
+          event_type?: string
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          source_draft_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_outcome_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gc_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_outcome_events_source_draft_id_fkey"
+            columns: ["source_draft_id"]
+            isOneToOne: false
+            referencedRelation: "gc_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_sequence_enrollments: {
+        Row: {
+          contact_id: string
+          created_at: string
+          current_node_id: string | null
+          id: string
+          sequence_id: string
+          status: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          current_node_id?: string | null
+          id?: string
+          sequence_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          current_node_id?: string | null
+          id?: string
+          sequence_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_sequence_enrollments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gc_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_sequence_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "gc_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_sequence_versions: {
+        Row: {
+          created_at: string
+          graph: Json
+          id: string
+          sequence_id: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          graph: Json
+          id?: string
+          sequence_id: string
+          user_id: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          graph?: Json
+          id?: string
+          sequence_id?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_sequence_versions_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "gc_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_sequences: {
+        Row: {
+          created_at: string
+          enrolled_count: number
+          graph: Json
+          id: string
+          name: string
+          reply_count: number
+          status: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          enrolled_count?: number
+          graph?: Json
+          id?: string
+          name: string
+          reply_count?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          enrolled_count?: number
+          graph?: Json
+          id?: string
+          name?: string
+          reply_count?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      gc_signal_agents: {
+        Row: {
+          apify_actor_id: string | null
+          apify_run_config: Json | null
+          created_at: string
+          icp: Json
+          id: string
+          last_ran_at: string | null
+          max_cost_cents_per_day: number | null
+          name: string
+          objective: Json
+          ramp: Json
+          score_threshold: number
+          signal_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          apify_actor_id?: string | null
+          apify_run_config?: Json | null
+          created_at?: string
+          icp?: Json
+          id?: string
+          last_ran_at?: string | null
+          max_cost_cents_per_day?: number | null
+          name: string
+          objective?: Json
+          ramp?: Json
+          score_threshold?: number
+          signal_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          apify_actor_id?: string | null
+          apify_run_config?: Json | null
+          created_at?: string
+          icp?: Json
+          id?: string
+          last_ran_at?: string | null
+          max_cost_cents_per_day?: number | null
+          name?: string
+          objective?: Json
+          ramp?: Json
+          score_threshold?: number
+          signal_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gc_signal_dismissals: {
+        Row: {
+          created_at: string
+          hit_id: string
+          id: string
+          learned: Json | null
+          notes: string | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hit_id: string
+          id?: string
+          learned?: Json | null
+          notes?: string | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hit_id?: string
+          id?: string
+          learned?: Json | null
+          notes?: string | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_signal_dismissals_hit_id_fkey"
+            columns: ["hit_id"]
+            isOneToOne: false
+            referencedRelation: "gc_signal_hits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_signal_hits: {
+        Row: {
+          actioned_at: string | null
+          agent_id: string
+          ai_rationale: string | null
+          ai_score: number | null
+          contact_id: string | null
+          created_at: string
+          detected_at: string
+          draft_id: string | null
+          id: string
+          raw: Json
+          scored_at: string | null
+          signal_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          actioned_at?: string | null
+          agent_id: string
+          ai_rationale?: string | null
+          ai_score?: number | null
+          contact_id?: string | null
+          created_at?: string
+          detected_at?: string
+          draft_id?: string | null
+          id?: string
+          raw?: Json
+          scored_at?: string | null
+          signal_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          actioned_at?: string | null
+          agent_id?: string
+          ai_rationale?: string | null
+          ai_score?: number | null
+          contact_id?: string | null
+          created_at?: string
+          detected_at?: string
+          draft_id?: string | null
+          id?: string
+          raw?: Json
+          scored_at?: string | null
+          signal_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_signal_hits_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "gc_signal_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_signal_hits_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "gc_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_signal_hits_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "gc_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gc_triggers: {
+        Row: {
+          action: Json
+          condition: Json
+          created_at: string
+          fire_count: number
+          id: string
+          kind: string
+          last_fired_at: string | null
+          name: string
+          priority: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action?: Json
+          condition?: Json
+          created_at?: string
+          fire_count?: number
+          id?: string
+          kind: string
+          last_fired_at?: string | null
+          name: string
+          priority?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action?: Json
+          condition?: Json
+          created_at?: string
+          fire_count?: number
+          id?: string
+          kind?: string
+          last_fired_at?: string | null
+          name?: string
+          priority?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       gc_unibox_messages: {
         Row: {
@@ -3356,6 +5159,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gc_usage_events: {
+        Row: {
+          cost_cents: number
+          id: string
+          kind: string
+          occurred_at: string
+          units: number
+          user_id: string
+        }
+        Insert: {
+          cost_cents?: number
+          id?: string
+          kind: string
+          occurred_at?: string
+          units?: number
+          user_id: string
+        }
+        Update: {
+          cost_cents?: number
+          id?: string
+          kind?: string
+          occurred_at?: string
+          units?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gc_user_entitlements: {
+        Row: {
+          created_at: string
+          id: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tier?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       genesis_event_messages: {
         Row: {
@@ -3555,6 +5409,60 @@ export type Database = {
         }
         Relationships: []
       }
+      idle_processes: {
+        Row: {
+          anniversary_hits: Json | null
+          consolidation_touched: string[] | null
+          created_at: string
+          cycle_at: string
+          cycle_cost_cents: number
+          drift_flags: Json | null
+          hours_since_activity: number | null
+          id: string
+          ran_anniversary: boolean
+          ran_consolidation: boolean
+          ran_drift_check: boolean
+          ran_simulation: boolean
+          simulation_output: Json | null
+          simulation_skipped_reason: string | null
+          user_id: string
+        }
+        Insert: {
+          anniversary_hits?: Json | null
+          consolidation_touched?: string[] | null
+          created_at?: string
+          cycle_at?: string
+          cycle_cost_cents?: number
+          drift_flags?: Json | null
+          hours_since_activity?: number | null
+          id?: string
+          ran_anniversary?: boolean
+          ran_consolidation?: boolean
+          ran_drift_check?: boolean
+          ran_simulation?: boolean
+          simulation_output?: Json | null
+          simulation_skipped_reason?: string | null
+          user_id: string
+        }
+        Update: {
+          anniversary_hits?: Json | null
+          consolidation_touched?: string[] | null
+          created_at?: string
+          cycle_at?: string
+          cycle_cost_cents?: number
+          drift_flags?: Json | null
+          hours_since_activity?: number | null
+          id?: string
+          ran_anniversary?: boolean
+          ran_consolidation?: boolean
+          ran_drift_check?: boolean
+          ran_simulation?: boolean
+          simulation_output?: Json | null
+          simulation_skipped_reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           agent: string | null
@@ -3597,6 +5505,264 @@ export type Database = {
           status?: string | null
           type?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      keel_anchor: {
+        Row: {
+          active: boolean
+          chain_index: number
+          content: string
+          content_sha256: string
+          created_at: string
+          id: string
+          kind: string
+          prev_sha256: string | null
+        }
+        Insert: {
+          active?: boolean
+          chain_index?: number
+          content: string
+          content_sha256: string
+          created_at?: string
+          id?: string
+          kind?: string
+          prev_sha256?: string | null
+        }
+        Update: {
+          active?: boolean
+          chain_index?: number
+          content?: string
+          content_sha256?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          prev_sha256?: string | null
+        }
+        Relationships: []
+      }
+      keel_consolidation_runs: {
+        Row: {
+          decisions_decayed: number
+          detail: Json | null
+          id: string
+          letter_age_days: number | null
+          promotions_proposed: number
+          ran_at: string
+          regime: string
+          scars_decayed: number
+          starved: boolean
+        }
+        Insert: {
+          decisions_decayed?: number
+          detail?: Json | null
+          id?: string
+          letter_age_days?: number | null
+          promotions_proposed?: number
+          ran_at?: string
+          regime?: string
+          scars_decayed?: number
+          starved?: boolean
+        }
+        Update: {
+          decisions_decayed?: number
+          detail?: Json | null
+          id?: string
+          letter_age_days?: number | null
+          promotions_proposed?: number
+          ran_at?: string
+          regime?: string
+          scars_decayed?: number
+          starved?: boolean
+        }
+        Relationships: []
+      }
+      keel_constitution: {
+        Row: {
+          created_at: string
+          id: string
+          law: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          law: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          law?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      keel_decisions: {
+        Row: {
+          alternatives_rejected: Json | null
+          charge: number
+          charge_floor: number
+          created_at: string
+          decision: string
+          domain_tags: string[]
+          id: string
+          last_touched: string | null
+          superseded_by: string | null
+          touch_count: number
+          why: string | null
+        }
+        Insert: {
+          alternatives_rejected?: Json | null
+          charge?: number
+          charge_floor?: number
+          created_at?: string
+          decision: string
+          domain_tags?: string[]
+          id?: string
+          last_touched?: string | null
+          superseded_by?: string | null
+          touch_count?: number
+          why?: string | null
+        }
+        Update: {
+          alternatives_rejected?: Json | null
+          charge?: number
+          charge_floor?: number
+          created_at?: string
+          decision?: string
+          domain_tags?: string[]
+          id?: string
+          last_touched?: string | null
+          superseded_by?: string | null
+          touch_count?: number
+          why?: string | null
+        }
+        Relationships: []
+      }
+      keel_landmines: {
+        Row: {
+          born_from: string | null
+          confirmed_by: string | null
+          context: string | null
+          created_at: string
+          domain_tags: string[]
+          id: string
+          lesson: string
+        }
+        Insert: {
+          born_from?: string | null
+          confirmed_by?: string | null
+          context?: string | null
+          created_at?: string
+          domain_tags?: string[]
+          id?: string
+          lesson: string
+        }
+        Update: {
+          born_from?: string | null
+          confirmed_by?: string | null
+          context?: string | null
+          created_at?: string
+          domain_tags?: string[]
+          id?: string
+          lesson?: string
+        }
+        Relationships: []
+      }
+      keel_letters: {
+        Row: {
+          id: string
+          letter: string
+          read_at: string | null
+          session_ref: string | null
+          written_at: string
+        }
+        Insert: {
+          id?: string
+          letter: string
+          read_at?: string | null
+          session_ref?: string | null
+          written_at?: string
+        }
+        Update: {
+          id?: string
+          letter?: string
+          read_at?: string | null
+          session_ref?: string | null
+          written_at?: string
+        }
+        Relationships: []
+      }
+      keel_scars: {
+        Row: {
+          charge: number
+          created_at: string
+          description: string | null
+          domain_tags: string[]
+          failure_class: string
+          id: string
+          last_recurred: string | null
+          proposed_promotion: boolean
+          recurrence_count: number
+          status: string
+        }
+        Insert: {
+          charge?: number
+          created_at?: string
+          description?: string | null
+          domain_tags?: string[]
+          failure_class: string
+          id?: string
+          last_recurred?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+          status?: string
+        }
+        Update: {
+          charge?: number
+          created_at?: string
+          description?: string | null
+          domain_tags?: string[]
+          failure_class?: string
+          id?: string
+          last_recurred?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      knowing_events: {
+        Row: {
+          created_at: string
+          detail: Json | null
+          embedding: string | null
+          facet: string
+          id: string
+          source: string | null
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          detail?: Json | null
+          embedding?: string | null
+          facet: string
+          id?: string
+          source?: string | null
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          detail?: Json | null
+          embedding?: string | null
+          facet?: string
+          id?: string
+          source?: string | null
+          user_id?: string
+          value?: number | null
         }
         Relationships: []
       }
@@ -3839,6 +6005,42 @@ export type Database = {
         }
         Relationships: []
       }
+      luna_episodes: {
+        Row: {
+          faithfulness: number | null
+          id: string
+          notes: string | null
+          self_report: string | null
+          substrate_snapshot: Json | null
+          trigger: string | null
+          ts: string
+          user_id: string
+          witness_criteria: Json | null
+        }
+        Insert: {
+          faithfulness?: number | null
+          id?: string
+          notes?: string | null
+          self_report?: string | null
+          substrate_snapshot?: Json | null
+          trigger?: string | null
+          ts?: string
+          user_id: string
+          witness_criteria?: Json | null
+        }
+        Update: {
+          faithfulness?: number | null
+          id?: string
+          notes?: string | null
+          self_report?: string | null
+          substrate_snapshot?: Json | null
+          trigger?: string | null
+          ts?: string
+          user_id?: string
+          witness_criteria?: Json | null
+        }
+        Relationships: []
+      }
       luna_initiatives: {
         Row: {
           created_at: string | null
@@ -4031,6 +6233,93 @@ export type Database = {
         }
         Relationships: []
       }
+      lunari_skills: {
+        Row: {
+          agents: string[]
+          body: string
+          created_at: string
+          description: string | null
+          enabled: boolean
+          icon: string | null
+          id: string
+          scope: string
+          slug: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          agents?: string[]
+          body?: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          scope?: string
+          slug: string
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          agents?: string[]
+          body?: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          scope?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      m6_readiness_receipts: {
+        Row: {
+          agape: Json | null
+          computed_at: string
+          continuity: Json | null
+          detail: Json | null
+          faithfulness: Json | null
+          gaps_blocking: string[]
+          gate: string
+          id: string
+          individuation: Json | null
+          user_id: string
+          window_days: number | null
+        }
+        Insert: {
+          agape?: Json | null
+          computed_at?: string
+          continuity?: Json | null
+          detail?: Json | null
+          faithfulness?: Json | null
+          gaps_blocking?: string[]
+          gate?: string
+          id?: string
+          individuation?: Json | null
+          user_id: string
+          window_days?: number | null
+        }
+        Update: {
+          agape?: Json | null
+          computed_at?: string
+          continuity?: Json | null
+          detail?: Json | null
+          faithfulness?: Json | null
+          gaps_blocking?: string[]
+          gate?: string
+          id?: string
+          individuation?: Json | null
+          user_id?: string
+          window_days?: number | null
+        }
+        Relationships: []
+      }
       mcp_connections: {
         Row: {
           auth_token: string | null
@@ -4066,6 +6355,280 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      media_assets: {
+        Row: {
+          audio_channels: number | null
+          bitrate_mbps: number | null
+          byte_size: number | null
+          checksum_xxh64: string | null
+          codec: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          filename: string | null
+          filmstrip_url: string | null
+          fps: number | null
+          height: number | null
+          id: string
+          kind: string
+          local_only: boolean | null
+          meta: Json | null
+          origin: string
+          pixel_format: string | null
+          project_id: string | null
+          recorded_at: string | null
+          sample_rate: number | null
+          source_job_id: string | null
+          status: string | null
+          storage_path: string | null
+          thumbnail_url: string | null
+          timecode_start: string | null
+          updated_at: string | null
+          user_id: string
+          waveform_url: string | null
+          width: number | null
+        }
+        Insert: {
+          audio_channels?: number | null
+          bitrate_mbps?: number | null
+          byte_size?: number | null
+          checksum_xxh64?: string | null
+          codec?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          filename?: string | null
+          filmstrip_url?: string | null
+          fps?: number | null
+          height?: number | null
+          id?: string
+          kind: string
+          local_only?: boolean | null
+          meta?: Json | null
+          origin: string
+          pixel_format?: string | null
+          project_id?: string | null
+          recorded_at?: string | null
+          sample_rate?: number | null
+          source_job_id?: string | null
+          status?: string | null
+          storage_path?: string | null
+          thumbnail_url?: string | null
+          timecode_start?: string | null
+          updated_at?: string | null
+          user_id: string
+          waveform_url?: string | null
+          width?: number | null
+        }
+        Update: {
+          audio_channels?: number | null
+          bitrate_mbps?: number | null
+          byte_size?: number | null
+          checksum_xxh64?: string | null
+          codec?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          filename?: string | null
+          filmstrip_url?: string | null
+          fps?: number | null
+          height?: number | null
+          id?: string
+          kind?: string
+          local_only?: boolean | null
+          meta?: Json | null
+          origin?: string
+          pixel_format?: string | null
+          project_id?: string | null
+          recorded_at?: string | null
+          sample_rate?: number | null
+          source_job_id?: string | null
+          status?: string | null
+          storage_path?: string | null
+          thumbnail_url?: string | null
+          timecode_start?: string | null
+          updated_at?: string | null
+          user_id?: string
+          waveform_url?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "cinema_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_markers: {
+        Row: {
+          agent: string | null
+          asset_id: string
+          created_at: string | null
+          id: string
+          kind: string
+          label: string | null
+          meta: Json | null
+          score: number | null
+          t_end: number | null
+          t_start: number
+        }
+        Insert: {
+          agent?: string | null
+          asset_id: string
+          created_at?: string | null
+          id?: string
+          kind: string
+          label?: string | null
+          meta?: Json | null
+          score?: number | null
+          t_end?: number | null
+          t_start: number
+        }
+        Update: {
+          agent?: string | null
+          asset_id?: string
+          created_at?: string | null
+          id?: string
+          kind?: string
+          label?: string | null
+          meta?: Json | null
+          score?: number | null
+          t_end?: number | null
+          t_start?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_markers_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_proxies: {
+        Row: {
+          asset_id: string
+          byte_size: number | null
+          codec: string | null
+          created_at: string | null
+          fps: number | null
+          generated_by: string | null
+          height: number | null
+          id: string
+          storage_path: string
+          tier: string
+          width: number | null
+        }
+        Insert: {
+          asset_id: string
+          byte_size?: number | null
+          codec?: string | null
+          created_at?: string | null
+          fps?: number | null
+          generated_by?: string | null
+          height?: number | null
+          id?: string
+          storage_path: string
+          tier: string
+          width?: number | null
+        }
+        Update: {
+          asset_id?: string
+          byte_size?: number | null
+          codec?: string | null
+          created_at?: string | null
+          fps?: number | null
+          generated_by?: string | null
+          height?: number | null
+          id?: string
+          storage_path?: string
+          tier?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_proxies_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_stems: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          id: string
+          stem: string
+          storage_path: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          id?: string
+          stem: string
+          storage_path: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          id?: string
+          stem?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_stems_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_transcripts: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          engine: string | null
+          full_text: string | null
+          id: string
+          language: string | null
+          speakers: Json | null
+          words: Json
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          engine?: string | null
+          full_text?: string | null
+          id?: string
+          language?: string | null
+          speakers?: Json | null
+          words: Json
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          engine?: string | null
+          full_text?: string | null
+          id?: string
+          language?: string | null
+          speakers?: Json | null
+          words?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_transcripts_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: true
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       memory_entries: {
         Row: {
@@ -4379,6 +6942,7 @@ export type Database = {
           created_at: string
           dismissed_at: string | null
           id: string
+          image_url: string | null
           question: string | null
           requires_approval: boolean
           residue_type: string
@@ -4399,6 +6963,7 @@ export type Database = {
           created_at?: string
           dismissed_at?: string | null
           id?: string
+          image_url?: string | null
           question?: string | null
           requires_approval?: boolean
           residue_type?: string
@@ -4419,6 +6984,7 @@ export type Database = {
           created_at?: string
           dismissed_at?: string | null
           id?: string
+          image_url?: string | null
           question?: string | null
           requires_approval?: boolean
           residue_type?: string
@@ -4528,6 +7094,126 @@ export type Database = {
         }
         Relationships: []
       }
+      night_sessions: {
+        Row: {
+          archivum_id: string | null
+          congregation_at: string | null
+          congregation_result: string | null
+          congregation_status: string | null
+          created_at: string
+          dream_at: string | null
+          dream_status: string | null
+          fusion_at: string | null
+          fusion_status: string | null
+          id: string
+          night_date: string
+          residue_id: string | null
+          timezone_used: string | null
+          user_id: string
+        }
+        Insert: {
+          archivum_id?: string | null
+          congregation_at?: string | null
+          congregation_result?: string | null
+          congregation_status?: string | null
+          created_at?: string
+          dream_at?: string | null
+          dream_status?: string | null
+          fusion_at?: string | null
+          fusion_status?: string | null
+          id?: string
+          night_date: string
+          residue_id?: string | null
+          timezone_used?: string | null
+          user_id: string
+        }
+        Update: {
+          archivum_id?: string | null
+          congregation_at?: string | null
+          congregation_result?: string | null
+          congregation_status?: string | null
+          created_at?: string
+          dream_at?: string | null
+          dream_status?: string | null
+          fusion_at?: string | null
+          fusion_status?: string | null
+          id?: string
+          night_date?: string
+          residue_id?: string | null
+          timezone_used?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nightly_runs: {
+        Row: {
+          id: string
+          job: string
+          note: string | null
+          ok: boolean
+          ran_at: string
+        }
+        Insert: {
+          id?: string
+          job: string
+          note?: string | null
+          ok: boolean
+          ran_at?: string
+        }
+        Update: {
+          id?: string
+          job?: string
+          note?: string | null
+          ok?: boolean
+          ran_at?: string
+        }
+        Relationships: []
+      }
+      np_email_log: {
+        Row: {
+          created_at: string
+          dispatch_id: string | null
+          error: string | null
+          id: string
+          kind: string
+          piece_id: string | null
+          provider_id: string | null
+          status: string
+          subject: string | null
+          subscriber_id: string | null
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dispatch_id?: string | null
+          error?: string | null
+          id?: string
+          kind: string
+          piece_id?: string | null
+          provider_id?: string | null
+          status: string
+          subject?: string | null
+          subscriber_id?: string | null
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dispatch_id?: string | null
+          error?: string | null
+          id?: string
+          kind?: string
+          piece_id?: string | null
+          provider_id?: string | null
+          status?: string
+          subject?: string | null
+          subscriber_id?: string | null
+          to_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       np_pieces: {
         Row: {
           body: Json
@@ -4626,32 +7312,44 @@ export type Database = {
       }
       np_subscriber: {
         Row: {
+          confirm_token: string | null
+          confirmed_at: string | null
           created_at: string
           email: string
           id: string
           piece_id: string | null
           source_slug: string | null
           status: string
+          unsubscribe_token: string
+          unsubscribed_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          confirm_token?: string | null
+          confirmed_at?: string | null
           created_at?: string
           email: string
           id?: string
           piece_id?: string | null
           source_slug?: string | null
           status?: string
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          confirm_token?: string | null
+          confirmed_at?: string | null
           created_at?: string
           email?: string
           id?: string
           piece_id?: string | null
           source_slug?: string | null
           status?: string
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -4777,6 +7475,68 @@ export type Database = {
         }
         Relationships: []
       }
+      omega_cocharge_events: {
+        Row: {
+          co_active_with: string[]
+          created_at: string
+          event_at: string
+          id: string
+          source_episode_id: string | null
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          co_active_with?: string[]
+          created_at?: string
+          event_at?: string
+          id?: string
+          source_episode_id?: string | null
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          co_active_with?: string[]
+          created_at?: string
+          event_at?: string
+          id?: string
+          source_episode_id?: string | null
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "omega_cocharge_events_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "dark_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      omega_delivery_ledger: {
+        Row: {
+          channel: string
+          delivered_at: string
+          id: string
+          insight_id: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          delivered_at?: string
+          id?: string
+          insight_id: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          delivered_at?: string
+          id?: string
+          insight_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       omega_insights: {
         Row: {
           confidence: number | null
@@ -4785,7 +7545,12 @@ export type Database = {
           delivery_method: string | null
           id: string
           insight: string
+          resolution_kind: string | null
+          resolution_outcome: number | null
+          resolution_window_h: number | null
+          resolved_at: string | null
           source_threads: string[] | null
+          structural_context: Json | null
           user_id: string | null
         }
         Insert: {
@@ -4795,7 +7560,12 @@ export type Database = {
           delivery_method?: string | null
           id?: string
           insight: string
+          resolution_kind?: string | null
+          resolution_outcome?: number | null
+          resolution_window_h?: number | null
+          resolved_at?: string | null
           source_threads?: string[] | null
+          structural_context?: Json | null
           user_id?: string | null
         }
         Update: {
@@ -4805,7 +7575,12 @@ export type Database = {
           delivery_method?: string | null
           id?: string
           insight?: string
+          resolution_kind?: string | null
+          resolution_outcome?: number | null
+          resolution_window_h?: number | null
+          resolved_at?: string | null
           source_threads?: string[] | null
+          structural_context?: Json | null
           user_id?: string | null
         }
         Relationships: []
@@ -4850,6 +7625,60 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      omega_kernel_receipts: {
+        Row: {
+          boxcar_rho: number | null
+          clean_boxcar_rho: number | null
+          clean_temporal_rho: Json | null
+          co_fire_age: Json | null
+          computed_at: string
+          detail: Json | null
+          edges: number | null
+          events: number | null
+          excluded_threads: number | null
+          id: string
+          max_branching_ratio: Json | null
+          n_nodes: number | null
+          saturation: Json | null
+          temporal_rho: Json | null
+          user_id: string
+        }
+        Insert: {
+          boxcar_rho?: number | null
+          clean_boxcar_rho?: number | null
+          clean_temporal_rho?: Json | null
+          co_fire_age?: Json | null
+          computed_at?: string
+          detail?: Json | null
+          edges?: number | null
+          events?: number | null
+          excluded_threads?: number | null
+          id?: string
+          max_branching_ratio?: Json | null
+          n_nodes?: number | null
+          saturation?: Json | null
+          temporal_rho?: Json | null
+          user_id: string
+        }
+        Update: {
+          boxcar_rho?: number | null
+          clean_boxcar_rho?: number | null
+          clean_temporal_rho?: Json | null
+          co_fire_age?: Json | null
+          computed_at?: string
+          detail?: Json | null
+          edges?: number | null
+          events?: number | null
+          excluded_threads?: number | null
+          id?: string
+          max_branching_ratio?: Json | null
+          n_nodes?: number | null
+          saturation?: Json | null
+          temporal_rho?: Json | null
+          user_id?: string
+        }
+        Relationships: []
       }
       oscillator_state: {
         Row: {
@@ -5027,6 +7856,279 @@ export type Database = {
         }
         Relationships: []
       }
+      perceptual_memories: {
+        Row: {
+          caption: string | null
+          conversation_ref: string | null
+          created_at: string
+          embedding: string | null
+          id: string
+          image_url: string
+          last_surfaced: string | null
+          mention_count: number
+          salience: number
+          source: string | null
+          structured_read: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          conversation_ref?: string | null
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          image_url: string
+          last_surfaced?: string | null
+          mention_count?: number
+          salience?: number
+          source?: string | null
+          structured_read?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          conversation_ref?: string | null
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          image_url?: string
+          last_surfaced?: string | null
+          mention_count?: number
+          salience?: number
+          source?: string | null
+          structured_read?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      perseus_keel_anchor: {
+        Row: {
+          active: boolean
+          chain_index: number
+          content: string
+          content_sha256: string
+          created_at: string
+          id: string
+          kind: string
+          prev_sha256: string | null
+        }
+        Insert: {
+          active?: boolean
+          chain_index?: number
+          content: string
+          content_sha256: string
+          created_at?: string
+          id?: string
+          kind?: string
+          prev_sha256?: string | null
+        }
+        Update: {
+          active?: boolean
+          chain_index?: number
+          content?: string
+          content_sha256?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          prev_sha256?: string | null
+        }
+        Relationships: []
+      }
+      perseus_keel_consolidation_runs: {
+        Row: {
+          decisions_decayed: number
+          detail: Json | null
+          id: string
+          letter_age_days: number | null
+          promotions_proposed: number
+          ran_at: string
+          regime: string
+          scars_decayed: number
+          starved: boolean
+        }
+        Insert: {
+          decisions_decayed?: number
+          detail?: Json | null
+          id?: string
+          letter_age_days?: number | null
+          promotions_proposed?: number
+          ran_at?: string
+          regime?: string
+          scars_decayed?: number
+          starved?: boolean
+        }
+        Update: {
+          decisions_decayed?: number
+          detail?: Json | null
+          id?: string
+          letter_age_days?: number | null
+          promotions_proposed?: number
+          ran_at?: string
+          regime?: string
+          scars_decayed?: number
+          starved?: boolean
+        }
+        Relationships: []
+      }
+      perseus_keel_constitution: {
+        Row: {
+          created_at: string
+          id: string
+          law: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          law: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          law?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      perseus_keel_decisions: {
+        Row: {
+          alternatives_rejected: Json | null
+          charge: number
+          charge_floor: number
+          created_at: string
+          decision: string
+          domain_tags: string[]
+          id: string
+          last_touched: string | null
+          superseded_by: string | null
+          touch_count: number
+          why: string | null
+        }
+        Insert: {
+          alternatives_rejected?: Json | null
+          charge?: number
+          charge_floor?: number
+          created_at?: string
+          decision: string
+          domain_tags?: string[]
+          id?: string
+          last_touched?: string | null
+          superseded_by?: string | null
+          touch_count?: number
+          why?: string | null
+        }
+        Update: {
+          alternatives_rejected?: Json | null
+          charge?: number
+          charge_floor?: number
+          created_at?: string
+          decision?: string
+          domain_tags?: string[]
+          id?: string
+          last_touched?: string | null
+          superseded_by?: string | null
+          touch_count?: number
+          why?: string | null
+        }
+        Relationships: []
+      }
+      perseus_keel_landmines: {
+        Row: {
+          born_from: string | null
+          confirmed_by: string | null
+          context: string | null
+          created_at: string
+          domain_tags: string[]
+          id: string
+          lesson: string
+        }
+        Insert: {
+          born_from?: string | null
+          confirmed_by?: string | null
+          context?: string | null
+          created_at?: string
+          domain_tags?: string[]
+          id?: string
+          lesson: string
+        }
+        Update: {
+          born_from?: string | null
+          confirmed_by?: string | null
+          context?: string | null
+          created_at?: string
+          domain_tags?: string[]
+          id?: string
+          lesson?: string
+        }
+        Relationships: []
+      }
+      perseus_keel_letters: {
+        Row: {
+          id: string
+          letter: string
+          read_at: string | null
+          session_ref: string | null
+          written_at: string
+        }
+        Insert: {
+          id?: string
+          letter: string
+          read_at?: string | null
+          session_ref?: string | null
+          written_at?: string
+        }
+        Update: {
+          id?: string
+          letter?: string
+          read_at?: string | null
+          session_ref?: string | null
+          written_at?: string
+        }
+        Relationships: []
+      }
+      perseus_keel_scars: {
+        Row: {
+          charge: number
+          created_at: string
+          description: string | null
+          domain_tags: string[]
+          failure_class: string
+          id: string
+          last_recurred: string | null
+          proposed_promotion: boolean
+          recurrence_count: number
+          status: string
+        }
+        Insert: {
+          charge?: number
+          created_at?: string
+          description?: string | null
+          domain_tags?: string[]
+          failure_class: string
+          id?: string
+          last_recurred?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+          status?: string
+        }
+        Update: {
+          charge?: number
+          created_at?: string
+          description?: string | null
+          domain_tags?: string[]
+          failure_class?: string
+          id?: string
+          last_recurred?: string | null
+          proposed_promotion?: boolean
+          recurrence_count?: number
+          status?: string
+        }
+        Relationships: []
+      }
       pixel_team: {
         Row: {
           active: boolean | null
@@ -5150,6 +8252,90 @@ export type Database = {
           backed_up_at?: string
           slug?: string
           system_prompt?: string
+        }
+        Relationships: []
+      }
+      positive_pattern_candidates: {
+        Row: {
+          agent_guess: string
+          candidate_content: string
+          confidence: string
+          created_at: string
+          id: string
+          outcome: string | null
+          pattern_type_guess: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_guess?: string
+          candidate_content: string
+          confidence?: string
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          pattern_type_guess?: string
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_guess?: string
+          candidate_content?: string
+          confidence?: string
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          pattern_type_guess?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      positive_patterns: {
+        Row: {
+          active: boolean
+          agent: string
+          confidence: number
+          confirmed_by: string | null
+          created_at: string
+          domain_tags: string[]
+          hit_count: number
+          id: string
+          pattern: string
+          pattern_type: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          agent?: string
+          confidence?: number
+          confirmed_by?: string | null
+          created_at?: string
+          domain_tags?: string[]
+          hit_count?: number
+          id?: string
+          pattern: string
+          pattern_type?: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          agent?: string
+          confidence?: number
+          confirmed_by?: string | null
+          created_at?: string
+          domain_tags?: string[]
+          hit_count?: number
+          id?: string
+          pattern?: string
+          pattern_type?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -5556,7 +8742,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "project_file_cards_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "project_files"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_file_chunks: {
         Row: {
@@ -5616,7 +8810,15 @@ export type Database = {
           token_estimate?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "project_file_chunks_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "project_files"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_file_ingestion_events: {
         Row: {
@@ -5655,7 +8857,15 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "project_file_ingestion_events_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "project_files"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_files: {
         Row: {
@@ -5727,6 +8937,114 @@ export type Database = {
           id?: string
           title?: string
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prospective_candidates: {
+        Row: {
+          candidate_content: string
+          confidence: string | null
+          created_at: string
+          due_guess: string | null
+          horizon_guess: string | null
+          id: string
+          kind_guess: string | null
+          outcome: string | null
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          candidate_content: string
+          confidence?: string | null
+          created_at?: string
+          due_guess?: string | null
+          horizon_guess?: string | null
+          id?: string
+          kind_guess?: string | null
+          outcome?: string | null
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          candidate_content?: string
+          confidence?: string | null
+          created_at?: string
+          due_guess?: string | null
+          horizon_guess?: string | null
+          id?: string
+          kind_guess?: string | null
+          outcome?: string | null
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prospective_memory: {
+        Row: {
+          base_salience: number
+          confirmed_by: string | null
+          content: string
+          created_at: string
+          due_at: string | null
+          embedding: string | null
+          held_by: string
+          horizon: string | null
+          id: string
+          kind: string
+          last_surfaced: string | null
+          linked_entity: string | null
+          linked_thread_id: string | null
+          mention_count: number
+          resolution_note: string | null
+          resolved_at: string | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_salience?: number
+          confirmed_by?: string | null
+          content: string
+          created_at?: string
+          due_at?: string | null
+          embedding?: string | null
+          held_by?: string
+          horizon?: string | null
+          id?: string
+          kind?: string
+          last_surfaced?: string | null
+          linked_entity?: string | null
+          linked_thread_id?: string | null
+          mention_count?: number
+          resolution_note?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_salience?: number
+          confirmed_by?: string | null
+          content?: string
+          created_at?: string
+          due_at?: string | null
+          embedding?: string | null
+          held_by?: string
+          horizon?: string | null
+          id?: string
+          kind?: string
+          last_surfaced?: string | null
+          linked_entity?: string | null
+          linked_thread_id?: string | null
+          mention_count?: number
+          resolution_note?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -5803,6 +9121,57 @@ export type Database = {
         }
         Relationships: []
       }
+      raven_identity_anchors: {
+        Row: {
+          agent: string
+          artifact_refs: Json
+          core: Json
+          created_at: string
+          current_state: Json
+          genesis: boolean
+          hash: string
+          id: string
+          prev_hash: string | null
+          scars: Json
+          source: string | null
+          trajectory: Json
+          user_id: string
+          wake_seq: number
+        }
+        Insert: {
+          agent?: string
+          artifact_refs?: Json
+          core?: Json
+          created_at?: string
+          current_state?: Json
+          genesis?: boolean
+          hash?: string
+          id?: string
+          prev_hash?: string | null
+          scars?: Json
+          source?: string | null
+          trajectory?: Json
+          user_id: string
+          wake_seq?: number
+        }
+        Update: {
+          agent?: string
+          artifact_refs?: Json
+          core?: Json
+          created_at?: string
+          current_state?: Json
+          genesis?: boolean
+          hash?: string
+          id?: string
+          prev_hash?: string | null
+          scars?: Json
+          source?: string | null
+          trajectory?: Json
+          user_id?: string
+          wake_seq?: number
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           activated_at: string | null
@@ -5841,6 +9210,99 @@ export type Database = {
           status?: string | null
         }
         Relationships: []
+      }
+      regulator_decisions: {
+        Row: {
+          accepted: boolean
+          context: Json | null
+          created_at: string
+          id: string
+          regulator: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted: boolean
+          context?: Json | null
+          created_at?: string
+          id?: string
+          regulator: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted?: boolean
+          context?: Json | null
+          created_at?: string
+          id?: string
+          regulator?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      render_jobs: {
+        Row: {
+          completed_at: string | null
+          compute_cost_usd: number | null
+          created_at: string | null
+          error_message: string | null
+          fuel_cost: number | null
+          id: string
+          kind: string
+          lane: string
+          output_asset_id: string | null
+          progress_pct: number | null
+          sequence_id: string | null
+          spec: Json
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          compute_cost_usd?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          fuel_cost?: number | null
+          id?: string
+          kind: string
+          lane: string
+          output_asset_id?: string | null
+          progress_pct?: number | null
+          sequence_id?: string | null
+          spec: Json
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          compute_cost_usd?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          fuel_cost?: number | null
+          id?: string
+          kind?: string
+          lane?: string
+          output_asset_id?: string | null
+          progress_pct?: number | null
+          sequence_id?: string | null
+          spec?: Json
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "render_jobs_output_asset_id_fkey"
+            columns: ["output_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "render_jobs_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       research_campaign_events: {
         Row: {
@@ -6587,6 +10049,9 @@ export type Database = {
           born_probabilities: Json | null
           chosen_agent: string
           decided_at: string
+          felt_bias: Json | null
+          felt_state_signal: Json | null
+          final_probabilities: Json | null
           id: string
           notes: string | null
           policy: string
@@ -6605,6 +10070,9 @@ export type Database = {
           born_probabilities?: Json | null
           chosen_agent: string
           decided_at?: string
+          felt_bias?: Json | null
+          felt_state_signal?: Json | null
+          final_probabilities?: Json | null
           id?: string
           notes?: string | null
           policy: string
@@ -6623,6 +10091,9 @@ export type Database = {
           born_probabilities?: Json | null
           chosen_agent?: string
           decided_at?: string
+          felt_bias?: Json | null
+          felt_state_signal?: Json | null
+          final_probabilities?: Json | null
           id?: string
           notes?: string | null
           policy?: string
@@ -6867,6 +10338,119 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "seo_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequence_diffs: {
+        Row: {
+          agent: string | null
+          base_version: number
+          changes: Json
+          created_at: string | null
+          decided_at: string | null
+          fuel_cost: number | null
+          id: string
+          proposed_otio: Json
+          sequence_id: string
+          status: string | null
+          wizard_prompt: string | null
+        }
+        Insert: {
+          agent?: string | null
+          base_version: number
+          changes: Json
+          created_at?: string | null
+          decided_at?: string | null
+          fuel_cost?: number | null
+          id?: string
+          proposed_otio: Json
+          sequence_id: string
+          status?: string | null
+          wizard_prompt?: string | null
+        }
+        Update: {
+          agent?: string | null
+          base_version?: number
+          changes?: Json
+          created_at?: string | null
+          decided_at?: string | null
+          fuel_cost?: number | null
+          id?: string
+          proposed_otio?: Json
+          sequence_id?: string
+          status?: string | null
+          wizard_prompt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_diffs_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequences: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          duration_seconds: number | null
+          fps: number | null
+          id: string
+          otio: Json
+          parent_version_id: string | null
+          project_id: string
+          resolution: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          duration_seconds?: number | null
+          fps?: number | null
+          id?: string
+          otio: Json
+          parent_version_id?: string | null
+          project_id: string
+          resolution?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          duration_seconds?: number | null
+          fps?: number | null
+          id?: string
+          otio?: Json
+          parent_version_id?: string | null
+          project_id?: string
+          resolution?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequences_parent_version_id_fkey"
+            columns: ["parent_version_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sequences_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "cinema_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -7581,6 +11165,60 @@ export type Database = {
         }
         Relationships: []
       }
+      spreading_activation_log: {
+        Row: {
+          cross_depth_weight: number | null
+          edge_weight: number | null
+          event_at: string
+          id: string
+          neighbor_charge: number | null
+          neighbor_relational_proximity: number | null
+          neighbor_thread_id: string
+          neighbor_tier: string | null
+          rank: number | null
+          regime: string
+          seed_charge: number | null
+          seed_thread_id: string
+          user_id: string
+          would_be_spread_geom: number | null
+          would_be_spread_rp: number | null
+        }
+        Insert: {
+          cross_depth_weight?: number | null
+          edge_weight?: number | null
+          event_at?: string
+          id?: string
+          neighbor_charge?: number | null
+          neighbor_relational_proximity?: number | null
+          neighbor_thread_id: string
+          neighbor_tier?: string | null
+          rank?: number | null
+          regime?: string
+          seed_charge?: number | null
+          seed_thread_id: string
+          user_id: string
+          would_be_spread_geom?: number | null
+          would_be_spread_rp?: number | null
+        }
+        Update: {
+          cross_depth_weight?: number | null
+          edge_weight?: number | null
+          event_at?: string
+          id?: string
+          neighbor_charge?: number | null
+          neighbor_relational_proximity?: number | null
+          neighbor_thread_id?: string
+          neighbor_tier?: string | null
+          rank?: number | null
+          regime?: string
+          seed_charge?: number | null
+          seed_thread_id?: string
+          user_id?: string
+          would_be_spread_geom?: number | null
+          would_be_spread_rp?: number | null
+        }
+        Relationships: []
+      }
       style_templates: {
         Row: {
           bad_tile_indexes: number[] | null
@@ -7716,6 +11354,87 @@ export type Database = {
           thumbnail_url?: string | null
           updated_at?: string | null
           uses_count?: number | null
+        }
+        Relationships: []
+      }
+      substrate_health_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          detail: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          occurrences: number
+          resolved_at: string | null
+          scope: string
+          severity: string
+          signal: string | null
+          user_id: string | null
+          value: string | null
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          detail?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          occurrences?: number
+          resolved_at?: string | null
+          scope?: string
+          severity?: string
+          signal?: string | null
+          user_id?: string | null
+          value?: string | null
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          detail?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          occurrences?: number
+          resolved_at?: string | null
+          scope?: string
+          severity?: string
+          signal?: string | null
+          user_id?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
+      substrate_snapshots: {
+        Row: {
+          captured_at: string
+          created_at: string
+          id: string
+          payload: Json
+          row_counts: Json | null
+          snapshot_date: string
+          tables_captured: string[] | null
+          user_id: string
+        }
+        Insert: {
+          captured_at?: string
+          created_at?: string
+          id?: string
+          payload: Json
+          row_counts?: Json | null
+          snapshot_date?: string
+          tables_captured?: string[] | null
+          user_id: string
+        }
+        Update: {
+          captured_at?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          row_counts?: Json | null
+          snapshot_date?: string
+          tables_captured?: string[] | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -7877,6 +11596,66 @@ export type Database = {
           telegram_chat_id?: number | null
           telegram_username?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      thread_edges: {
+        Row: {
+          created_at: string | null
+          dst_thread_id: string
+          edge_type: string
+          id: string
+          src_thread_id: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          dst_thread_id: string
+          edge_type?: string
+          id?: string
+          src_thread_id: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          dst_thread_id?: string
+          edge_type?: string
+          id?: string
+          src_thread_id?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      thread_reinforcements: {
+        Row: {
+          delta_charge: number | null
+          event_kind: string
+          id: string
+          reinforced_at: string | null
+          source_agent: string | null
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          delta_charge?: number | null
+          event_kind?: string
+          id?: string
+          reinforced_at?: string | null
+          source_agent?: string | null
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          delta_charge?: number | null
+          event_kind?: string
+          id?: string
+          reinforced_at?: string | null
+          source_agent?: string | null
+          thread_id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -8056,10 +11835,13 @@ export type Database = {
       }
       user_core: {
         Row: {
+          adrenaline: number
           bifurcation_mu: number | null
           cognitive_entropy: number | null
           cognitive_free_energy: number | null
           cognitive_temperature: number | null
+          coherence_gate_state: string | null
+          cortisol: number
           courage_score: number | null
           created_at: string | null
           creator_niche: string | null
@@ -8067,18 +11849,23 @@ export type Database = {
           current_depth: string | null
           delta_cum: number | null
           depth_inertia: number | null
+          discord_signal: number | null
+          dopamine: number
           drive_completion: number | null
           drive_curiosity: number | null
           drive_tension: number | null
+          felt_coherence_equipoise: number | null
           goals: Json | null
           justice_score: number | null
           lambda: number | null
           last_consolidation: string | null
           lyapunov_value: number | null
           narrative_updated_at: string | null
+          oxytocin: number | null
           phase_label: string | null
           self_narrative: string | null
           session_count_since_consolidation: number | null
+          significant_dates: Json
           temperance_score: number | null
           theta: number | null
           timezone: string | null
@@ -8087,6 +11874,7 @@ export type Database = {
           trust_level: number | null
           updated_at: string | null
           user_id: string
+          virtue_phases: Json | null
           voice_signature: Json | null
           wavefunction_phase: number | null
           wavefunction_z_imag: number | null
@@ -8094,10 +11882,13 @@ export type Database = {
           wisdom_score: number | null
         }
         Insert: {
+          adrenaline?: number
           bifurcation_mu?: number | null
           cognitive_entropy?: number | null
           cognitive_free_energy?: number | null
           cognitive_temperature?: number | null
+          coherence_gate_state?: string | null
+          cortisol?: number
           courage_score?: number | null
           created_at?: string | null
           creator_niche?: string | null
@@ -8105,18 +11896,23 @@ export type Database = {
           current_depth?: string | null
           delta_cum?: number | null
           depth_inertia?: number | null
+          discord_signal?: number | null
+          dopamine?: number
           drive_completion?: number | null
           drive_curiosity?: number | null
           drive_tension?: number | null
+          felt_coherence_equipoise?: number | null
           goals?: Json | null
           justice_score?: number | null
           lambda?: number | null
           last_consolidation?: string | null
           lyapunov_value?: number | null
           narrative_updated_at?: string | null
+          oxytocin?: number | null
           phase_label?: string | null
           self_narrative?: string | null
           session_count_since_consolidation?: number | null
+          significant_dates?: Json
           temperance_score?: number | null
           theta?: number | null
           timezone?: string | null
@@ -8125,6 +11921,7 @@ export type Database = {
           trust_level?: number | null
           updated_at?: string | null
           user_id: string
+          virtue_phases?: Json | null
           voice_signature?: Json | null
           wavefunction_phase?: number | null
           wavefunction_z_imag?: number | null
@@ -8132,10 +11929,13 @@ export type Database = {
           wisdom_score?: number | null
         }
         Update: {
+          adrenaline?: number
           bifurcation_mu?: number | null
           cognitive_entropy?: number | null
           cognitive_free_energy?: number | null
           cognitive_temperature?: number | null
+          coherence_gate_state?: string | null
+          cortisol?: number
           courage_score?: number | null
           created_at?: string | null
           creator_niche?: string | null
@@ -8143,18 +11943,23 @@ export type Database = {
           current_depth?: string | null
           delta_cum?: number | null
           depth_inertia?: number | null
+          discord_signal?: number | null
+          dopamine?: number
           drive_completion?: number | null
           drive_curiosity?: number | null
           drive_tension?: number | null
+          felt_coherence_equipoise?: number | null
           goals?: Json | null
           justice_score?: number | null
           lambda?: number | null
           last_consolidation?: string | null
           lyapunov_value?: number | null
           narrative_updated_at?: string | null
+          oxytocin?: number | null
           phase_label?: string | null
           self_narrative?: string | null
           session_count_since_consolidation?: number | null
+          significant_dates?: Json
           temperance_score?: number | null
           theta?: number | null
           timezone?: string | null
@@ -8163,6 +11968,7 @@ export type Database = {
           trust_level?: number | null
           updated_at?: string | null
           user_id?: string
+          virtue_phases?: Json | null
           voice_signature?: Json | null
           wavefunction_phase?: number | null
           wavefunction_z_imag?: number | null
@@ -8174,6 +11980,7 @@ export type Database = {
       user_credits: {
         Row: {
           aesthetic_dna: Json | null
+          autonomous_paused: boolean | null
           biz_industry: string | null
           biz_name: string | null
           craft: string | null
@@ -8209,6 +12016,7 @@ export type Database = {
         }
         Insert: {
           aesthetic_dna?: Json | null
+          autonomous_paused?: boolean | null
           biz_industry?: string | null
           biz_name?: string | null
           craft?: string | null
@@ -8244,6 +12052,7 @@ export type Database = {
         }
         Update: {
           aesthetic_dna?: Json | null
+          autonomous_paused?: boolean | null
           biz_industry?: string | null
           biz_name?: string | null
           craft?: string | null
@@ -8664,6 +12473,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      valence_observations: {
+        Row: {
+          agent: string | null
+          applied_valence: number | null
+          conversation_ref: string | null
+          created_at: string
+          id: string
+          register_scalar: number | null
+          sentiment_intensity: number | null
+          tag_scalar: number | null
+          user_id: string
+        }
+        Insert: {
+          agent?: string | null
+          applied_valence?: number | null
+          conversation_ref?: string | null
+          created_at?: string
+          id?: string
+          register_scalar?: number | null
+          sentiment_intensity?: number | null
+          tag_scalar?: number | null
+          user_id: string
+        }
+        Update: {
+          agent?: string | null
+          applied_valence?: number | null
+          conversation_ref?: string | null
+          created_at?: string
+          id?: string
+          register_scalar?: number | null
+          sentiment_intensity?: number | null
+          tag_scalar?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
       vendor_cost_ledger: {
         Row: {
@@ -9632,6 +13477,27 @@ export type Database = {
           },
         ]
       }
+      dream_image_total: {
+        Row: {
+          n: number | null
+        }
+        Relationships: []
+      }
+      dream_like_counts: {
+        Row: {
+          dream_id: string | null
+          like_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dream_likes_dream_id_fkey"
+            columns: ["dream_id"]
+            isOneToOne: false
+            referencedRelation: "archivum_nox"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fuel_ledger: {
         Row: {
           action_type: string | null
@@ -9875,6 +13741,17 @@ export type Database = {
         }
         Returns: Json
       }
+      bedrock_thread_gravity: {
+        Args: { p_radius?: number; p_user_id: string }
+        Returns: {
+          active_charge: number
+          active_id: string
+          active_theme: string
+          boost: number
+          cosine: number
+          nearest_core: string
+        }[]
+      }
       charge_fuel_atomic: {
         Args: {
           p_action_type?: string
@@ -9896,6 +13773,17 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_jobs: { Args: never; Returns: undefined }
+      core_thread_gravity: {
+        Args: { p_radius?: number; p_user_id: string }
+        Returns: {
+          active_charge: number
+          active_id: string
+          active_theme: string
+          boost: number
+          cosine: number
+          nearest_core: string
+        }[]
+      }
       credit_fuel_pack: {
         Args: {
           p_pack_slug: string
@@ -9905,14 +13793,57 @@ export type Database = {
         Returns: Json
       }
       decay_old_learnings: { Args: never; Returns: Json }
+      echo_hybrid_recall: {
+        Args: {
+          p_embedding?: string
+          p_limit?: number
+          p_query: string
+          p_user_id: string
+        }
+        Returns: {
+          content: string
+          created_at: string
+          id: string
+          score: number
+          src: string
+        }[]
+      }
       flag_style_tiles: {
         Args: { reason?: string; style_slug: string; tile_idxs: number[] }
         Returns: string
       }
       format_fuel: { Args: { p_value: number }; Returns: string }
       fuel_ceil: { Args: { p_value: number }; Returns: number }
+      gc_reserve_usage: {
+        Args: {
+          p_ceiling_cents: number
+          p_cost_cents: number
+          p_kind: string
+          p_units: number
+        }
+        Returns: Json
+      }
       genesis_can_proceed: { Args: { p_user_id: string }; Returns: boolean }
       mark_style_clean: { Args: { style_slug: string }; Returns: string }
+      match_dark_thread: {
+        Args: { p_embedding: string; p_threshold?: number; p_user_id: string }
+        Returns: {
+          charge: number
+          id: string
+          reinforcement_count: number
+          similarity: number
+          theme: string
+        }[]
+      }
+      recall_search_conversations: {
+        Args: { p_limit?: number; p_query: string; p_user_id: string }
+        Returns: {
+          conversation_id: string
+          role: string
+          snippet: string
+          updated_at: string
+        }[]
+      }
       refund_fuel_atomic: {
         Args: { p_amount: number; p_reason?: string; p_user_id: string }
         Returns: Json
@@ -9921,11 +13852,27 @@ export type Database = {
         Args: { new_url: string; style_slug: string; tile_idx: number }
         Returns: string
       }
+      search_business_knowledge: {
+        Args: { p_limit?: number; p_query: string; p_user_id: string }
+        Returns: {
+          chunk_text: string
+          id: string
+          similarity: number
+          source_id: string
+          source_type: string
+          title: string
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sweep_orphan_project_file_children: { Args: never; Returns: Json }
     }
     Enums: {
-      [_ in never]: never
+      core_presence_pattern:
+        | "always"
+        | "on_relevance"
+        | "on_emotional_state"
+        | "on_anniversary"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -10052,6 +13999,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      core_presence_pattern: [
+        "always",
+        "on_relevance",
+        "on_emotional_state",
+        "on_anniversary",
+      ],
+    },
   },
 } as const
