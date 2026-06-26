@@ -13,9 +13,9 @@
 
 ## status
 
-- last completed: **phase 0.2** ... the schema is LIVE on the substrate (v0_7_0 applied, `src/types/supabase.ts` regenerated) + the db layer (`works.ts` / `nodes.ts` / `links.ts`) + the pure tree logic (buildTree / midpointPosition / collectSubtreeIds / flattenSkeleton, 9-test pin).
-- current fire: **phase 0.3** ... the import/export keystone.
-- the suite: 399 tests green.
+- last completed: **phase 0.3** ... the import/export keystone (`@platejs/markdown` installed; `src/lib/io/markdown.ts` converts md <-> Slate via a headless plate editor, 5-test round-trip pin; `POST /api/import` + `POST /api/export` auth-gated, Slate JSON as the one source of truth).
+- current fire: **phase 0.4** ... the binder rail at `/work/[id]` (+ playwright + screenshot).
+- the suite: 404 tests green.
 
 ## the ladder
 
@@ -23,7 +23,7 @@
 
 - [x] 0.1 `v0_7_0_np_works.sql` + `src/types/works.ts` + `src/lib/forms/` (registry + constraints + test) + the vision/architecture docs.
 - [x] 0.2 applied `v0_7_0` to the live substrate (3 tables + 12 policies + 3 np_pieces columns, RLS on) + regenerated `src/types/supabase.ts`; built the db layer `src/lib/db/works.ts` + `nodes.ts` + `links.ts` (`createWork` + skeleton seed, `createNode` / `createLeafNode` / `moveNode` / `deleteNodeSubtree`, `getWorkTree`, `promotePieceToWork`, `createLink` / `backlinks` / `resolveLink`) + the pure `src/lib/works/tree.ts` + `map.ts` + a 9-test pin.
-- [ ] 0.3 the import/export keystone: install `@platejs/markdown`; `POST /api/import` (md/txt -> Slate -> a piece) + `POST /api/export` (Slate -> md). the spine, proven end to end.
+- [x] 0.3 the import/export keystone: installed `@platejs/markdown`; `src/lib/io/markdown.ts` (`markdownToSlate` / `slateToMarkdown` via a headless `createSlateEditor` + basic-nodes + link + MarkdownPlugin) + a 5-test round-trip pin; `POST /api/import` (md -> Slate -> a new piece, RLS-owned) + `POST /api/export` (pieceId -> Slate -> md). Slate JSON is the one source of truth, proven end to end.
 - [ ] 0.4 the binder rail at `/work/[id]`: the CTE tree, drag-reorder via fractional `position`, open a prose leaf in the existing `plate-shell` verbatim. `/library` untouched. + playwright e2e + screenshot.
 - ship gate: a writer wraps a standalone piece in a Work, sees it in the binder, imports a markdown file, exports it back. every existing flow still works.
 
