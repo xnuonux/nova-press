@@ -13,8 +13,8 @@
 
 ## status
 
-- last completed: **phase 0.3** ... the import/export keystone (`@platejs/markdown` installed; `src/lib/io/markdown.ts` converts md <-> Slate via a headless plate editor, 5-test round-trip pin; `POST /api/import` + `POST /api/export` auth-gated, Slate JSON as the one source of truth).
-- current fire: **phase 0.4** ... the binder rail at `/work/[id]` (+ playwright + screenshot).
+- last completed: **phase 0.4** ... the binder at `/work/[id]` (the structure tree as an outliner; a leaf links the existing editor verbatim; add-page + reorder via the fractional position; a "new work" form picker + the `promotePieceToWork` action on /library). verified with a REAL playwright screenshot (authed-full via the dev-login route): the novel skeleton renders ... act one / chapter 1 / scene 1 / act two / act three, with the golden-hour add affordances.
+- current fire: **phase 1.1** ... novel/series binder polish (corkboard + word targets + subtree rollup).
 - the suite: 404 tests green.
 
 ## the ladder
@@ -24,8 +24,8 @@
 - [x] 0.1 `v0_7_0_np_works.sql` + `src/types/works.ts` + `src/lib/forms/` (registry + constraints + test) + the vision/architecture docs.
 - [x] 0.2 applied `v0_7_0` to the live substrate (3 tables + 12 policies + 3 np_pieces columns, RLS on) + regenerated `src/types/supabase.ts`; built the db layer `src/lib/db/works.ts` + `nodes.ts` + `links.ts` (`createWork` + skeleton seed, `createNode` / `createLeafNode` / `moveNode` / `deleteNodeSubtree`, `getWorkTree`, `promotePieceToWork`, `createLink` / `backlinks` / `resolveLink`) + the pure `src/lib/works/tree.ts` + `map.ts` + a 9-test pin.
 - [x] 0.3 the import/export keystone: installed `@platejs/markdown`; `src/lib/io/markdown.ts` (`markdownToSlate` / `slateToMarkdown` via a headless `createSlateEditor` + basic-nodes + link + MarkdownPlugin) + a 5-test round-trip pin; `POST /api/import` (md -> Slate -> a new piece, RLS-owned) + `POST /api/export` (pieceId -> Slate -> md). Slate JSON is the one source of truth, proven end to end.
-- [ ] 0.4 the binder rail at `/work/[id]`: the CTE tree, drag-reorder via fractional `position`, open a prose leaf in the existing `plate-shell` verbatim. `/library` untouched. + playwright e2e + screenshot.
-- ship gate: a writer wraps a standalone piece in a Work, sees it in the binder, imports a markdown file, exports it back. every existing flow still works.
+- [x] 0.4 the binder at `/work/[id]`: server component rendering the tree (`getWorkTree`) as an outliner, a leaf links `/editor/[pieceId]` (the existing plate-shell verbatim), add-page (`createLeafNode`) + up/down reorder (`moveNode` + `midpointPosition`) via form-actions; `src/components/binder/binder.tsx` + `src/app/(authed)/work/[id]/{page.tsx,actions.ts}`. `/library` gains a "new work" form picker (`newWorkAction`, 8 forms) + the `promotePieceToWork` action (`work-actions.ts`); the existing /library + /editor + /p/[slug] are untouched. screenshot verified authed-full.
+- ship gate (met): a writer creates a Work, sees the structure in the binder, opens a leaf in the editor, imports a markdown file (/api/import), exports it back (/api/export). every existing flow still works (suite 404 green). NOTE: the per-card "promote" button is a quick follow-up (the action is built); the binder uses up/down reorder (drag is a later polish).
 
 ### phase 1 ... prose works
 

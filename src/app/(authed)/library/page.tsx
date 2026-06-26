@@ -9,6 +9,7 @@ import { listVoiceSnapshots } from "@/lib/db/voice-snapshots";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { newPieceAction } from "./new-piece-action";
+import { newWorkAction } from "./work-actions";
 
 export default async function LibraryPage() {
   const supabase = await createSupabaseServerClient();
@@ -83,19 +84,52 @@ export default async function LibraryPage() {
                 </p>
               ) : null}
             </div>
-            <form action={newPieceAction}>
-              <button
-                type="submit"
-                className="np-btn inline-flex h-11 items-center rounded-md px-5 font-sans text-sm font-medium"
-                style={{
-                  background: "var(--nova-accent)",
-                  color: "var(--lunari-bg-deep)",
-                  boxShadow: "var(--nova-shadow-accent)",
-                }}
-              >
-                new piece
-              </button>
-            </form>
+            <div className="flex items-center gap-2.5">
+              {/* a Work is a manuscript over the structure tree (a haiku to a
+                  trilogy); pick the form, the registry seeds its skeleton. */}
+              <form action={newWorkAction} className="flex items-center gap-2">
+                <select
+                  name="formProfile"
+                  defaultValue="novel"
+                  aria-label="form"
+                  className="h-11 rounded-md border bg-transparent px-3 font-mono text-[11px] uppercase tracking-[0.16em]"
+                  style={{ borderColor: "var(--lunari-border)", color: "var(--lunari-fg-subtle)" }}
+                >
+                  <option value="novel">novel</option>
+                  <option value="short_story">short story</option>
+                  <option value="prose">prose</option>
+                  <option value="essay">essay</option>
+                  <option value="haiku">haiku</option>
+                  <option value="sonnet">sonnet</option>
+                  <option value="encyclopaedia">encyclopaedia</option>
+                  <option value="conlang">conlang</option>
+                </select>
+                <button
+                  type="submit"
+                  className="np-btn inline-flex h-11 items-center rounded-md px-5 font-sans text-sm font-medium"
+                  style={{
+                    border: "1px solid var(--nova-accent)",
+                    color: "var(--nova-accent)",
+                    background: "transparent",
+                  }}
+                >
+                  new work
+                </button>
+              </form>
+              <form action={newPieceAction}>
+                <button
+                  type="submit"
+                  className="np-btn inline-flex h-11 items-center rounded-md px-5 font-sans text-sm font-medium"
+                  style={{
+                    background: "var(--nova-accent)",
+                    color: "var(--lunari-bg-deep)",
+                    boxShadow: "var(--nova-shadow-accent)",
+                  }}
+                >
+                  new piece
+                </button>
+              </form>
+            </div>
           </div>
 
           {pieces.length > 0 ? (
