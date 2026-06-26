@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Binder } from "@/components/binder/binder";
 import { Atmosphere } from "@/components/chrome/atmosphere";
+import { VoiceTrainer } from "@/components/editor/voice-trainer";
 import { getWorkById, getWorkTree } from "@/lib/db/works";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { TreeNode } from "@/types/works";
@@ -86,6 +87,13 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
               {pages} {pages === 1 ? "page" : "pages"}
               {work.wordCount > 0 ? ` · ${work.wordCount.toLocaleString()} words` : ""}
             </p>
+
+            {/* train nova on THIS work's prose ... a book's own voice, distilled
+                from the book. the source scopes to the work; the result lands in
+                your one voice profile (last-writer-wins). */}
+            <div className="mt-5">
+              <VoiceTrainer workId={work.id} label="train nova on this work" />
+            </div>
           </div>
 
           <Binder

@@ -4,6 +4,7 @@ import {
   createDraftPiece,
   getPieceById,
   listPiecesForUser,
+  listPieceTextsForWork,
   publishPiece,
   savePieceContent,
 } from "./pieces";
@@ -228,6 +229,65 @@ describe("savePieceContent", () => {
     await expect(savePieceContent(client, "piece-uuid", sampleUpdate)).resolves.toEqual({
       workId: null,
     });
+  });
+});
+
+// listPieceTextsForWork: from().select("body").eq("work_id").neq("status").order().limit()
+function makeWorkTextsMock(rows: unknown[] | null = [], error: unknown = null) {
+  const limit = vi.fn().mockResolvedValue({ data: rows, error });
+  const order = vi.fn(() => ({ limit }));
+  const neq = vi.fn(() => ({ order }));
+  const eq = vi.fn(() => ({ neq }));
+  const select = vi.fn(() => ({ eq }));
+  const from = vi.fn(() => ({ select }));
+  return {
+    client: { from } as unknown as ServerClient,
+    from,
+    select,
+    eq,
+    neq,
+    order,
+    limit,
+  };
+}
+
+const textBody = [{ type: "p", children: [{ text: "the cold stove waiting" }] }];
+const emptyBody = [{ type: "p", children: [{ text: "" }] }];
+
+describe("listPieceTextsForWork", () => {
+  it("scopes the read to the work via work_id (the heart of work-scoped voice)", async () => {
+    const { client, from, eq } = makeWorkTextsMock([]);
+    await listPieceTextsForWork(client, "work-123");
+    expect(from).toHaveBeenCalledWith("np_pieces");
+    expect(eq).toHaveBeenCalledWith("work_id", "work-123");
+  });
+
+  it("excludes archived pieces and orders by last_edited_at desc", async () => {
+    const { client, neq, order } = makeWorkTextsMock([]);
+    await listPieceTextsForWork(client, "work-123");
+    expect(neq).toHaveBeenCalledWith("status", "archived");
+    expect(order).toHaveBeenCalledWith("last_edited_at", { ascending: false });
+  });
+
+  it("honors the sample limit (default 8, override passes through)", async () => {
+    const a = makeWorkTextsMock([]);
+    await listPieceTextsForWork(a.client, "work-123");
+    expect(a.limit).toHaveBeenCalledWith(8);
+    const b = makeWorkTextsMock([]);
+    await listPieceTextsForWork(b.client, "work-123", 3);
+    expect(b.limit).toHaveBeenCalledWith(3);
+  });
+
+  it("returns each piece's plain text, dropping empty bodies", async () => {
+    const { client } = makeWorkTextsMock([{ body: textBody }, { body: emptyBody }]);
+    await expect(listPieceTextsForWork(client, "work-123")).resolves.toEqual([
+      "the cold stove waiting",
+    ]);
+  });
+
+  it("throws when the client returns an error", async () => {
+    const { client } = makeWorkTextsMock(null, { message: "no work read" });
+    await expect(listPieceTextsForWork(client, "work-123")).rejects.toThrow(/no work read/);
   });
 });
 

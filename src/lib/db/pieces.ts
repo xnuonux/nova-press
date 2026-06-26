@@ -74,6 +74,32 @@ export async function listPieceTextsForUser(client: ServerClient, limit = 8): Pr
     .filter((text) => text.length > 0);
 }
 
+// the prose of ONE work as plain text, for work-scoped voice extraction: a
+// novel's voice distilled from the novel itself, not the whole library (which
+// might mix a newsletter, a haiku, a technical note). rls scopes to the caller's
+// rows, so an unowned workId simply reads empty ... no cross-writer leak. most
+// recently edited leaf first, empty bodies dropped.
+export async function listPieceTextsForWork(
+  client: ServerClient,
+  workId: string,
+  limit = 8,
+): Promise<string[]> {
+  const typed = client as unknown as TypedClient;
+  const { data, error } = await typed
+    .from("np_pieces")
+    .select("body")
+    .eq("work_id", workId)
+    .neq("status", "archived")
+    .order("last_edited_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    throw new Error(`failed to list work piece texts: ${error.message}`);
+  }
+  return (data ?? [])
+    .map((row) => plateText(coercePlateValue(row.body)).trim())
+    .filter((text) => text.length > 0);
+}
+
 // create a fresh draft. db defaults populate title ('untitled'),
 // body ('[]'::jsonb), status ('draft'), visibility ('private'), and the
 // timestamps. only user_id is required.
