@@ -161,8 +161,11 @@ describe("getPieceById", () => {
   });
 });
 
-function makeUpdateMock(error: unknown = null) {
-  const eq = vi.fn().mockResolvedValue({ error });
+function makeUpdateMock(error: unknown = null, row: unknown = { work_id: null }) {
+  // savePieceContent now RETURNs work_id: update().eq().select().maybeSingle()
+  const maybeSingle = vi.fn().mockResolvedValue({ data: error ? null : row, error });
+  const select = vi.fn(() => ({ maybeSingle }));
+  const eq = vi.fn(() => ({ select }));
   const update = vi.fn(() => ({ eq }));
   const from = vi.fn(() => ({ update }));
   return {
@@ -170,6 +173,8 @@ function makeUpdateMock(error: unknown = null) {
     from,
     update,
     eq,
+    select,
+    maybeSingle,
   };
 }
 
@@ -209,6 +214,20 @@ describe("savePieceContent", () => {
   it("throws when the client returns an error", async () => {
     const { client } = makeUpdateMock({ message: "denied" });
     await expect(savePieceContent(client, "piece-uuid", sampleUpdate)).rejects.toThrow(/denied/);
+  });
+
+  it("returns the piece's work_id from the same write (drives the binder rollup gate)", async () => {
+    const { client } = makeUpdateMock(null, { work_id: "work-123" });
+    await expect(savePieceContent(client, "piece-uuid", sampleUpdate)).resolves.toEqual({
+      workId: "work-123",
+    });
+  });
+
+  it("returns a null workId for a standalone library piece", async () => {
+    const { client } = makeUpdateMock(null, { work_id: null });
+    await expect(savePieceContent(client, "piece-uuid", sampleUpdate)).resolves.toEqual({
+      workId: null,
+    });
   });
 });
 
@@ -269,7 +288,9 @@ describe("publishPiece", () => {
 
   it("does not retry when an already-published piece collides on its own slug", async () => {
     const live = { ...draft, status: "published", slug: "the-title" };
-    const { client, updateCalls } = makePublishMock(live, [{ data: null, error: { code: "23505" } }]);
+    const { client, updateCalls } = makePublishMock(live, [
+      { data: null, error: { code: "23505" } },
+    ]);
     await expect(publishPiece(client, "p1")).rejects.toThrow(/already in use/);
     expect(updateCalls()).toBe(1);
   });

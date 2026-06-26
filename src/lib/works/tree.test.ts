@@ -6,7 +6,13 @@
 // ordering, and skeleton flattening (parents before children).
 
 import { describe, it, expect } from "vitest";
-import { buildTree, midpointPosition, collectSubtreeIds, flattenSkeleton } from "./tree";
+import {
+  buildTree,
+  midpointPosition,
+  collectSubtreeIds,
+  flattenSkeleton,
+  rollupWordCounts,
+} from "./tree";
 import type { StructureNode } from "@/types/works";
 import type { NodeSeed } from "@/lib/forms/types";
 
@@ -92,6 +98,45 @@ describe("collectSubtreeIds gathers a node and all its descendants", () => {
 
   it("a leaf returns just itself", () => {
     expect(collectSubtreeIds(nodes, "c1")).toEqual(["c1"]);
+  });
+});
+
+describe("rollupWordCounts sums each leaf up its ancestors into a work total", () => {
+  // a tiny novel: act one { chapter 1 { scene a (leaf), scene b (leaf) } },
+  // act two { scene c (leaf) }.
+  const nodes = [
+    node({ id: "act1", parentId: null, position: 1 }),
+    node({ id: "ch1", parentId: "act1", position: 1 }),
+    node({ id: "sa", parentId: "ch1", position: 1, isLeaf: true }),
+    node({ id: "sb", parentId: "ch1", position: 2, isLeaf: true }),
+    node({ id: "act2", parentId: null, position: 2 }),
+    node({ id: "sc", parentId: "act2", position: 1, isLeaf: true }),
+  ];
+  const leafCounts = new Map([
+    ["sa", 300],
+    ["sb", 200],
+    ["sc", 150],
+  ]);
+
+  it("rolls leaf counts up to chapter, act, and the work total", () => {
+    const { totals, workTotal } = rollupWordCounts(nodes, leafCounts);
+    expect(totals.get("sa")).toBe(300);
+    expect(totals.get("ch1")).toBe(500); // 300 + 200
+    expect(totals.get("act1")).toBe(500);
+    expect(totals.get("act2")).toBe(150);
+    expect(workTotal).toBe(650); // 500 + 150
+  });
+
+  it("a leaf with no recorded count contributes zero, never NaN", () => {
+    const { totals, workTotal } = rollupWordCounts(nodes, new Map([["sa", 300]]));
+    expect(totals.get("ch1")).toBe(300);
+    expect(workTotal).toBe(300);
+  });
+
+  it("surfaces an orphan's words instead of losing them (orphan is a root)", () => {
+    const withOrphan = [...nodes, node({ id: "ghost", parentId: "missing", isLeaf: true })];
+    const { workTotal } = rollupWordCounts(withOrphan, new Map([...leafCounts, ["ghost", 99]]));
+    expect(workTotal).toBe(749); // 650 + 99
   });
 });
 

@@ -8,8 +8,8 @@ import type { Work, TreeNode } from "@/types/works";
 
 import { getForm } from "@/lib/forms/constraints";
 import { rowToWork } from "@/lib/works/map";
-import { buildTree, flattenSkeleton } from "@/lib/works/tree";
-import { listNodesForWork } from "./nodes";
+import { buildTree, flattenSkeleton, rollupWordCounts } from "@/lib/works/tree";
+import { listNodesForWork, listNodeRollupRows } from "./nodes";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type TypedClient = SupabaseClient<Database>;
@@ -125,6 +125,82 @@ export async function createWork(
 export async function getWorkTree(client: ServerClient, workId: string): Promise<TreeNode[]> {
   const nodes = await listNodesForWork(client, workId);
   return buildTree(nodes);
+}
+
+// roll the work's leaf word counts up the tree: each node's word_count becomes
+// its subtree total, the work's word_count the grand total. the leaf source is
+// the bound piece (np_pieces.word_count, derived server-side on autosave), so
+// the count is always real words, never a client claim. only rows whose total
+// actually drifted are written. RLS scopes every read + write to the caller.
+// called from the editor's save action when a piece belongs to a Work; a
+// standalone library piece never triggers it, so /editor carries zero extra cost.
+export async function recomputeWorkWordCounts(
+  client: ServerClient,
+  workId: string,
+): Promise<{ workTotal: number }> {
+  const typed = client as unknown as TypedClient;
+  const nodes = await listNodeRollupRows(client, workId);
+
+  // a leaf's words live on its piece; map both node_id and piece id -> count so
+  // a leaf resolves whichever way it was bound.
+  const { data: pieces, error } = await typed
+    .from("np_pieces")
+    .select("id, node_id, word_count")
+    .eq("work_id", workId);
+  if (error) {
+    throw new Error(`failed to read piece counts: ${error.message}`);
+  }
+  const byNodeId = new Map<string, number>();
+  const byPieceId = new Map<string, number>();
+  for (const p of pieces ?? []) {
+    if (p.node_id) byNodeId.set(p.node_id, p.word_count ?? 0);
+    byPieceId.set(p.id, p.word_count ?? 0);
+  }
+
+  const leafCounts = new Map<string, number>();
+  for (const n of nodes) {
+    if (!n.isLeaf) continue;
+    const count = byNodeId.get(n.id) ?? (n.pieceId ? byPieceId.get(n.pieceId) : undefined) ?? 0;
+    leafCounts.set(n.id, count);
+  }
+
+  const { totals, workTotal } = rollupWordCounts(nodes, leafCounts);
+
+  // write back only the nodes whose stored count drifted (most saves touch one
+  // leaf + its ancestor chain, so this is a handful of rows, not the whole tree).
+  for (const n of nodes) {
+    const next = totals.get(n.id) ?? 0;
+    if (next === n.wordCount) continue;
+    const { error: upErr } = await typed
+      .from("np_nodes")
+      .update({ word_count: next })
+      .eq("id", n.id);
+    if (upErr) {
+      throw new Error(`failed to update node word_count: ${upErr.message}`);
+    }
+  }
+
+  // gate the work write the same way the node writes are gated: the stored work
+  // total is the sum of the root nodes' stored counts (recompute is the sole
+  // writer of both), so when it already equals workTotal a save changed no
+  // counts ... skip the round-trip + the updated_at bump it would churn. root =
+  // parentId null or pointing outside the set (mirrors the orphan-as-root rule).
+  const idSet = new Set(nodes.map((n) => n.id));
+  const prevWorkTotal = nodes
+    .filter((n) => n.parentId == null || !idSet.has(n.parentId))
+    .reduce((sum, n) => sum + n.wordCount, 0);
+
+  if (workTotal !== prevWorkTotal) {
+    const { error: workErr } = await typed
+      .from("np_works")
+      .update({ word_count: workTotal })
+      .eq("id", workId);
+    if (workErr) {
+      throw new Error(`failed to update work word_count: ${workErr.message}`);
+    }
+  }
+
+  return { workTotal };
 }
 
 // the zero-friction on-ramp: wrap an existing standalone piece in a one-leaf

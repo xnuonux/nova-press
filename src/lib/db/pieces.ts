@@ -130,10 +130,13 @@ export async function savePieceContent(
   client: ServerClient,
   id: string,
   update: PieceContentUpdate,
-): Promise<void> {
+): Promise<{ workId: string | null }> {
   const typed = client as unknown as TypedClient;
   const nowIso = new Date().toISOString();
-  const { error } = await typed
+  // RETURNING work_id folds the binder's rollup gate into this existing write,
+  // so a standalone library piece (work_id null) truly pays nothing extra ...
+  // no second round-trip just to learn it isn't part of a Work.
+  const { data, error } = await typed
     .from("np_pieces")
     .update({
       title: update.title,
@@ -143,10 +146,13 @@ export async function savePieceContent(
       last_autosaved_at: nowIso,
       last_edited_at: nowIso,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("work_id")
+    .maybeSingle();
   if (error) {
     throw new Error(`failed to save np_pieces content: ${error.message}`);
   }
+  return { workId: data?.work_id ?? null };
 }
 
 export interface PublishedPiece {

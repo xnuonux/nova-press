@@ -34,6 +34,52 @@ export async function listNodesForWork(
   return (data ?? []).map((r) => rowToNode(r as NodeRow));
 }
 
+// a single node by id, RLS-scoped (null if not owned / absent). the card editor
+// reads this to merge a word target into node_metadata without clobbering any
+// other keys the bag may hold.
+export async function getNodeById(client: ServerClient, id: string): Promise<StructureNode | null> {
+  const typed = client as unknown as TypedClient;
+  const { data, error } = await typed.from("np_nodes").select("*").eq("id", id).maybeSingle();
+  if (error) {
+    throw new Error(`failed to fetch np_nodes row: ${error.message}`);
+  }
+  return data ? rowToNode(data as NodeRow) : null;
+}
+
+/** the lean shape the word-count rollup needs ... no jsonb, no title. */
+export interface NodeRollupRow {
+  id: string;
+  parentId: string | null;
+  isLeaf: boolean;
+  pieceId: string | null;
+  wordCount: number;
+}
+
+// a narrow read for recomputeWorkWordCounts: just the columns the rollup + the
+// drift comparison touch, so an autosave never ships the full node rows (the
+// node_metadata / record jsonb and all) merely to sum integers. the binder keeps
+// using listNodesForWork, which needs the whole row.
+export async function listNodeRollupRows(
+  client: ServerClient,
+  workId: string,
+): Promise<NodeRollupRow[]> {
+  const typed = client as unknown as TypedClient;
+  const { data, error } = await typed
+    .from("np_nodes")
+    .select("id, parent_id, is_leaf, piece_id, word_count")
+    .eq("work_id", workId);
+  if (error) {
+    throw new Error(`failed to list node rollup rows: ${error.message}`);
+  }
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    parentId: r.parent_id,
+    isLeaf: r.is_leaf,
+    pieceId: r.piece_id,
+    wordCount: r.word_count,
+  }));
+}
+
 export interface CreateNodeInput {
   workId: string;
   parentId: string | null;
@@ -135,6 +181,7 @@ export async function updateNode(
     synopsis?: string | null;
     nodeType?: string;
     record?: Record<string, unknown>;
+    nodeMetadata?: Record<string, unknown>;
   },
 ): Promise<void> {
   const typed = client as unknown as TypedClient;
@@ -143,6 +190,9 @@ export async function updateNode(
   if (patch.synopsis !== undefined) update.synopsis = patch.synopsis;
   if (patch.nodeType !== undefined) update.node_type = patch.nodeType;
   if (patch.record !== undefined) update.record = patch.record as unknown as Json;
+  if (patch.nodeMetadata !== undefined) {
+    update.node_metadata = patch.nodeMetadata as unknown as Json;
+  }
   if (Object.keys(update).length === 0) return;
   const { error } = await typed.from("np_nodes").update(update).eq("id", id);
   if (error) {

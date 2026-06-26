@@ -7,7 +7,7 @@ import { getWorkById, getWorkTree } from "@/lib/db/works";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { TreeNode } from "@/types/works";
 
-import { createLeafAction, reorderNodeAction } from "./actions";
+import { createLeafAction, reorderNodeAction, setCardAction } from "./actions";
 
 function countLeaves(tree: TreeNode[]): number {
   let n = 0;
@@ -84,6 +84,7 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
               {work.formProfile}
               {" · "}
               {pages} {pages === 1 ? "page" : "pages"}
+              {work.wordCount > 0 ? ` · ${work.wordCount.toLocaleString()} words` : ""}
             </p>
           </div>
 
@@ -92,6 +93,7 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             tree={tree}
             createLeaf={createLeafAction}
             reorder={reorderNodeAction}
+            setCard={setCardAction}
           />
         </main>
       </div>

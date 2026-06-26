@@ -81,6 +81,46 @@ export function collectSubtreeIds(nodes: readonly StructureNode[], rootId: strin
   return out;
 }
 
+/**
+ * roll a flat node list up into per-node subtree word counts + a work total.
+ * leaf counts come in keyed by node id (a leaf's words live on its piece); a
+ * container's count is the sum of its whole subtree. parent resolution mirrors
+ * buildTree ... an orphan is treated as a root, so no words are ever lost; the
+ * visited set keeps a corrupt parent loop from spinning us.
+ */
+export function rollupWordCounts(
+  nodes: readonly Pick<StructureNode, "id" | "parentId" | "isLeaf">[],
+  leafCounts: ReadonlyMap<string, number>,
+): { totals: Map<string, number>; workTotal: number } {
+  const ids = new Set<string>();
+  for (const n of nodes) ids.add(n.id);
+
+  const childrenOf = new Map<string | null, string[]>();
+  for (const n of nodes) {
+    const key = n.parentId != null && ids.has(n.parentId) ? n.parentId : null;
+    const arr = childrenOf.get(key) ?? [];
+    arr.push(n.id);
+    childrenOf.set(key, arr);
+  }
+  const byId = new Map(nodes.map((n) => [n.id, n] as const));
+
+  const totals = new Map<string, number>();
+  const seen = new Set<string>();
+  const visit = (id: string): number => {
+    if (seen.has(id)) return totals.get(id) ?? 0; // cycle guard
+    seen.add(id);
+    const node = byId.get(id);
+    let sum = node && node.isLeaf ? (leafCounts.get(id) ?? 0) : 0;
+    for (const childId of childrenOf.get(id) ?? []) sum += visit(childId);
+    totals.set(id, sum);
+    return sum;
+  };
+
+  let workTotal = 0;
+  for (const rootId of childrenOf.get(null) ?? []) workTotal += visit(rootId);
+  return { totals, workTotal };
+}
+
 /** a node to insert when seeding a form skeleton (always parent-before-child). */
 export interface SeedSpec {
   tempId: string;

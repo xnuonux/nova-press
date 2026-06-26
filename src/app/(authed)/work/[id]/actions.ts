@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { listNodesForWork, createLeafNode, moveNode } from "@/lib/db/nodes";
+import {
+  listNodesForWork,
+  createLeafNode,
+  moveNode,
+  updateNode,
+  getNodeById,
+} from "@/lib/db/nodes";
 import { midpointPosition } from "@/lib/works/tree";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -40,6 +46,47 @@ export async function createLeafAction(formData: FormData): Promise<void> {
     title,
     position: lastPos + 1,
     pieceKind,
+  });
+
+  revalidatePath(`/work/${workId}`);
+}
+
+// set a node's corkboard card: a one-line synopsis + an optional word target
+// (a chapter/scene goal). the synopsis is a first-class column; the target rides
+// node_metadata.wordTarget. a blank synopsis clears it; a blank or non-positive
+// target clears the goal. RLS scopes the write; the binder refreshes after.
+export async function setCardAction(formData: FormData): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const workId = String(formData.get("workId") ?? "");
+  const nodeId = String(formData.get("nodeId") ?? "");
+  if (!workId || !nodeId) return;
+
+  const synopsis = String(formData.get("synopsis") ?? "").trim();
+  const targetRaw = String(formData.get("wordTarget") ?? "").trim();
+  const target = Number.parseInt(targetRaw, 10);
+
+  // merge the word target into the node's existing node_metadata rather than
+  // replacing the whole bag, so any other key it holds survives a card save. a
+  // blank or non-positive target clears just the wordTarget. RLS scopes the read.
+  const node = await getNodeById(supabase, nodeId);
+  if (!node) return;
+  const nodeMetadata: Record<string, unknown> = { ...node.nodeMetadata };
+  if (Number.isFinite(target) && target > 0) {
+    nodeMetadata.wordTarget = target;
+  } else {
+    delete nodeMetadata.wordTarget;
+  }
+
+  await updateNode(supabase, nodeId, {
+    synopsis: synopsis ? synopsis : null,
+    nodeMetadata,
   });
 
   revalidatePath(`/work/${workId}`);

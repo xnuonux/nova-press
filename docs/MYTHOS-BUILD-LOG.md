@@ -13,9 +13,11 @@
 
 ## status
 
-- last completed: **phase 0.4** ... the binder at `/work/[id]` (the structure tree as an outliner; a leaf links the existing editor verbatim; add-page + reorder via the fractional position; a "new work" form picker + the `promotePieceToWork` action on /library). verified with a REAL playwright screenshot (authed-full via the dev-login route): the novel skeleton renders ... act one / chapter 1 / scene 1 / act two / act three, with the golden-hour add affordances.
-- current fire: **phase 1.1** ... novel/series binder polish (corkboard + word targets + subtree rollup).
-- the suite: 404 tests green.
+- last completed: **phase 1.1** ... the corkboard + word targets + the subtree word-count rollup. each binder row now carries a card: a one-line synopsis (the `np_nodes.synopsis` column), a live subtree word count, and an optional word target (rides `node_metadata.wordTarget`) with a quiet golden meter. the rollup is wired into the editor's autosave: when a Work-bound leaf saves, `recomputeWorkWordCounts` rolls the leaf's words up its ancestor chain + the work total (pure `rollupWordCounts` does the math, pinned by 3 tests). a standalone library piece has no `workId` and skips it, so `/editor` carries zero extra cost. verified end to end with a REAL playwright run + db read: typed 16 words into a leaf, autosave rolled them up to chapter 1 / act one / the work header (16 words); set a card on act one and it shows "16 / 500" with the synopsis line; db confirms `word_count=16` on the chain + `node_metadata {"wordTarget":500}`.
+- current fire: **phase 1.2** ... work-scoped voice extraction (`listPieceTextsForUser` by `work_id`).
+- the suite: 409 tests green.
+- review pass (1.1): an adversarial review workflow (4 lenses, every finding skeptic-verified) caught 9 real issues; all fixed + re-verified. the headline one was a blocker ... the corkboard synopsis was trapped inside a closed `<details>`, so it never rendered at rest; it now lives outside the fold (playwright confirms it's visible with zero details open). also: the card toggle is keyboard/touch reachable (opacity-40 + focus-visible), `setCardAction` merges into `node_metadata` instead of clobbering it, the work word_count write is drift-gated, recompute reads a narrow column set (no jsonb per autosave), the save-card button uses `--lunari-bg-deep`, the input focus border renders golden (computed `rgb(201,168,76)`), and a standalone piece's autosave folds `work_id` into the existing write so it pays zero extra queries.
+- known follow-up (cheap): a seeded skeleton leaf (e.g. the novel's "scene 1") is a placeholder label with no piece yet, so it isn't openable until you "+ page" a real leaf. lazy-mint a piece on first click of a skeleton leaf (a small open-or-create action) so the seeded scaffold is writable straight away.
 
 ## the ladder
 
@@ -29,7 +31,7 @@
 
 ### phase 1 ... prose works
 
-- [ ] 1.1 novel/series binder + corkboard (synopsis cards writing `position`) + chapter word-targets + subtree word-count rollup in the autosave action.
+- [x] 1.1 the corkboard + word targets + the subtree rollup: per-row card (synopsis + a live subtree count + a word target with a golden meter); pure `rollupWordCounts` (3-test pin) + `recomputeWorkWordCounts` (writes only the drifted node rows + the work total) wired into the editor save action (gated on a `workId`, so standalone pieces are untouched); `setCardAction` writes the synopsis + `node_metadata.wordTarget`; `updateNode` learns `nodeMetadata`. screenshot + db verified: 16 words roll leaf -> chapter -> act -> work; act one shows "16 / 500".
 - [ ] 1.2 work-scoped voice extraction (`listPieceTextsForUser` by `work_id`).
 - [ ] 1.3 work-level reading at `/w/[slug]` (tree -> TOC + paginated `PieceBody` per leaf).
 - [ ] 1.4 export OUT: `mammoth` + `docx` (docx in/out), `@lesjoursfr/html-to-epub` (epub).
