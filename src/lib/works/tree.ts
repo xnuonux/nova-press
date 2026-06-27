@@ -121,6 +121,63 @@ export function rollupWordCounts(
   return { totals, workTotal };
 }
 
+/** one entry in a Work's reading order: a node, flattened depth-first. */
+export interface ReadingSection {
+  id: string;
+  title: string;
+  depth: number;
+  isLeaf: boolean;
+  pieceId: string | null;
+}
+
+/**
+ * flatten a built tree into reading order (depth-first pre-order: a parent, then
+ * its children, siblings by position). this is the spine of the public /w/[slug]
+ * view ... the toc and the body both walk it. a container becomes a heading, a
+ * leaf carries the pieceId whose body renders beneath it.
+ */
+export function flattenForReading(tree: readonly TreeNode[]): ReadingSection[] {
+  const out: ReadingSection[] = [];
+  const walk = (nodes: readonly TreeNode[]): void => {
+    for (const n of nodes) {
+      out.push({ id: n.id, title: n.title, depth: n.depth, isLeaf: n.isLeaf, pieceId: n.pieceId });
+      if (n.children.length > 0) walk(n.children);
+    }
+  };
+  walk(tree);
+  return out;
+}
+
+/**
+ * drop leaves with no real text and any container left with no surviving
+ * descendant, so a published Work's reading view shows only what's actually
+ * written (a print-grade artifact, not a half-filled skeleton). operates on the
+ * flat reading order: a container survives iff some deeper section before its
+ * next same-or-shallower sibling survives. `hasText` is asked only of leaves.
+ */
+export function pruneEmptyReading(
+  sections: readonly ReadingSection[],
+  hasText: (section: ReadingSection) => boolean,
+): ReadingSection[] {
+  const survives = new Array<boolean>(sections.length).fill(false);
+  for (let i = sections.length - 1; i >= 0; i -= 1) {
+    const s = sections[i]!;
+    if (s.isLeaf) {
+      survives[i] = hasText(s);
+      continue;
+    }
+    let kept = false;
+    for (let j = i + 1; j < sections.length && sections[j]!.depth > s.depth; j += 1) {
+      if (survives[j]) {
+        kept = true;
+        break;
+      }
+    }
+    survives[i] = kept;
+  }
+  return sections.filter((_, i) => survives[i]);
+}
+
 /** a node to insert when seeding a form skeleton (always parent-before-child). */
 export interface SeedSpec {
   tempId: string;

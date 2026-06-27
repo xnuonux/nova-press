@@ -8,7 +8,7 @@ import { getWorkById, getWorkTree } from "@/lib/db/works";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { TreeNode } from "@/types/works";
 
-import { createLeafAction, reorderNodeAction, setCardAction } from "./actions";
+import { createLeafAction, reorderNodeAction, setCardAction, publishWorkAction } from "./actions";
 
 function countLeaves(tree: TreeNode[]): number {
   let n = 0;
@@ -91,8 +91,53 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             {/* train nova on THIS work's prose ... a book's own voice, distilled
                 from the book. the source scopes to the work; the result lands in
                 your one voice profile (last-writer-wins). */}
-            <div className="mt-5">
+            <div className="mt-5 flex flex-col gap-3">
               <VoiceTrainer workId={work.id} label="train nova on this work" />
+
+              {/* publish to /w/[slug] ... a whole Work as one reading experience.
+                  only offered once there are words to read; once live, the read
+                  link opens the public view and the button re-publishes. */}
+              {work.status === "published" && work.slug ? (
+                <div className="flex flex-wrap items-center gap-4">
+                  <a
+                    href={`/w/${work.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono text-[11px] uppercase tracking-[0.2em] transition-opacity hover:opacity-80"
+                    style={{ color: "var(--nova-accent)" }}
+                  >
+                    published ... read it
+                  </a>
+                  <form action={publishWorkAction}>
+                    <input type="hidden" name="workId" value={work.id} />
+                    <button
+                      type="submit"
+                      className="font-mono text-[11px] uppercase tracking-[0.2em] transition-opacity hover:opacity-80"
+                      style={{ color: "var(--lunari-fg-subtle)" }}
+                    >
+                      republish
+                    </button>
+                  </form>
+                </div>
+              ) : work.wordCount > 0 ? (
+                <form action={publishWorkAction}>
+                  <input type="hidden" name="workId" value={work.id} />
+                  <button
+                    type="submit"
+                    className="np-btn inline-flex h-9 items-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.18em]"
+                    style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
+                  >
+                    publish this work
+                  </button>
+                </form>
+              ) : (
+                <span
+                  className="font-mono text-[11px] uppercase tracking-[0.18em]"
+                  style={{ color: "var(--lunari-fg-subtle)" }}
+                >
+                  write a page or two to publish
+                </span>
+              )}
             </div>
           </div>
 

@@ -12,6 +12,8 @@ import {
   collectSubtreeIds,
   flattenSkeleton,
   rollupWordCounts,
+  flattenForReading,
+  pruneEmptyReading,
 } from "./tree";
 import type { StructureNode } from "@/types/works";
 import type { NodeSeed } from "@/lib/forms/types";
@@ -137,6 +139,57 @@ describe("rollupWordCounts sums each leaf up its ancestors into a work total", (
     const withOrphan = [...nodes, node({ id: "ghost", parentId: "missing", isLeaf: true })];
     const { workTotal } = rollupWordCounts(withOrphan, new Map([...leafCounts, ["ghost", 99]]));
     expect(workTotal).toBe(749); // 650 + 99
+  });
+});
+
+describe("flattenForReading walks a tree into depth-first reading order", () => {
+  const nodes = [
+    node({ id: "act1", parentId: null, position: 1, title: "act one" }),
+    node({ id: "ch1", parentId: "act1", position: 1, title: "chapter 1" }),
+    node({ id: "sa", parentId: "ch1", position: 1, title: "scene 1", isLeaf: true, pieceId: "pa" }),
+    node({ id: "sb", parentId: "ch1", position: 2, title: "scene 2", isLeaf: true, pieceId: "pb" }),
+    node({ id: "act2", parentId: null, position: 2, title: "act two" }),
+  ];
+
+  it("emits parent-then-children, siblings by position, with depth + leaf info", () => {
+    const sections = flattenForReading(buildTree(nodes));
+    expect(sections.map((s) => s.id)).toEqual(["act1", "ch1", "sa", "sb", "act2"]);
+    expect(sections.map((s) => s.depth)).toEqual([0, 1, 2, 2, 0]);
+    const scene1 = sections.find((s) => s.id === "sa")!;
+    expect(scene1.isLeaf).toBe(true);
+    expect(scene1.pieceId).toBe("pa");
+    const act1 = sections.find((s) => s.id === "act1")!;
+    expect(act1.isLeaf).toBe(false);
+    expect(act1.pieceId).toBeNull();
+  });
+
+  it("is empty for an empty tree", () => {
+    expect(flattenForReading([])).toEqual([]);
+  });
+});
+
+describe("pruneEmptyReading drops empty leaves and the containers left hollow", () => {
+  const sections = [
+    { id: "act1", title: "act one", depth: 0, isLeaf: false, pieceId: null },
+    { id: "ch1", title: "chapter 1", depth: 1, isLeaf: false, pieceId: null },
+    { id: "sa", title: "scene 1", depth: 2, isLeaf: true, pieceId: "pa" }, // empty
+    { id: "sb", title: "scene 2", depth: 2, isLeaf: true, pieceId: "pb" }, // written
+    { id: "act2", title: "act two", depth: 0, isLeaf: false, pieceId: null }, // hollow
+    { id: "act3", title: "act three", depth: 0, isLeaf: false, pieceId: null },
+    { id: "sc", title: "epilogue", depth: 1, isLeaf: true, pieceId: "pc" }, // written, under act3
+  ];
+  const written = new Set(["pb", "pc"]);
+  const hasText = (s: { pieceId: string | null }) => !!s.pieceId && written.has(s.pieceId);
+
+  it("keeps written leaves + their ancestors, drops empty leaves + hollow containers", () => {
+    const kept = pruneEmptyReading(sections, hasText).map((s) => s.id);
+    // act1 survives (sb written under ch1), ch1 survives, sa dropped (empty), sb kept,
+    // act2 dropped (no written descendant), act3 survives (sc written), sc kept.
+    expect(kept).toEqual(["act1", "ch1", "sb", "act3", "sc"]);
+  });
+
+  it("returns nothing when every leaf is empty", () => {
+    expect(pruneEmptyReading(sections, () => false)).toEqual([]);
   });
 });
 

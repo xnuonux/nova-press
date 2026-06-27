@@ -10,6 +10,7 @@ import {
   updateNode,
   getNodeById,
 } from "@/lib/db/nodes";
+import { publishWork } from "@/lib/db/works";
 import { midpointPosition } from "@/lib/works/tree";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -89,6 +90,27 @@ export async function setCardAction(formData: FormData): Promise<void> {
     nodeMetadata,
   });
 
+  revalidatePath(`/work/${workId}`);
+}
+
+// publish the work to /w/[slug] ... mint a globally-unique slug + flip it public
+// (publishWork mirrors publishPiece's collision retry). invoked from the work
+// page form; re-checks the session and refreshes so the page shows the live
+// "read" link. the button only shows for a work with words, and publishWork
+// guards the empty case server-side too.
+export async function publishWorkAction(formData: FormData): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const workId = String(formData.get("workId") ?? "");
+  if (!workId) return;
+
+  await publishWork(supabase, workId);
   revalidatePath(`/work/${workId}`);
 }
 

@@ -1,19 +1,37 @@
 import "server-only";
 
+import { randomBytes } from "node:crypto";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 import type { Work, TreeNode } from "@/types/works";
 
+import { coercePlateValue, plateText } from "@/components/editor/plate-text";
 import { getForm } from "@/lib/forms/constraints";
-import { rowToWork } from "@/lib/works/map";
-import { buildTree, flattenSkeleton, rollupWordCounts } from "@/lib/works/tree";
+import { rowToWork, rowToNode } from "@/lib/works/map";
+import {
+  buildTree,
+  flattenSkeleton,
+  rollupWordCounts,
+  flattenForReading,
+  pruneEmptyReading,
+} from "@/lib/works/tree";
 import { listNodesForWork, listNodeRollupRows } from "./nodes";
+import { slugify, slugWithSuffix } from "./slug";
+
+// the np_nodes columns the reading tree needs ... explicitly NOT user_id, so the
+// service-role read never pulls an owner column into memory (matching the
+// piece-reader discipline). rowToNode tolerates the absent user_id (it maps to
+// undefined, which the reading projection never reads).
+const READING_NODE_COLUMNS =
+  "id, work_id, parent_id, node_type, title, position, is_leaf, piece_id, child_work_id, record, synopsis, canon, word_count, status, node_metadata, created_at, updated_at";
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type TypedClient = SupabaseClient<Database>;
 type WorkRow = Database["public"]["Tables"]["np_works"]["Row"];
+type NodeRow = Database["public"]["Tables"]["np_nodes"]["Row"];
 
 const WORK_LIST_COLUMNS =
   "id, title, form_profile, family, status, visibility, slug, word_count, updated_at";
@@ -274,4 +292,162 @@ export async function promotePieceToWork(
   }
 
   return { workId, nodeId };
+}
+
+// publish a Work to /w/[slug]. owner-scoped via RLS (.eq id), mirroring
+// publishPiece exactly: resolve a globally-unique slug against the partial
+// unique index (np_works_published_slug_uniq), retrying with a short suffix on a
+// 23505 collision, and keep an already-published work's slug stable across
+// re-publishes. an empty work (no rolled-up words) can't ship ... the public
+// reading view would have nothing to read.
+export async function publishWork(client: ServerClient, workId: string): Promise<{ slug: string }> {
+  const typed = client as unknown as TypedClient;
+
+  const work = await getWorkById(client, workId);
+  if (!work) {
+    throw new Error("work not found");
+  }
+  if (work.wordCount <= 0) {
+    throw new Error("can't publish an empty work ... write a page or two first");
+  }
+
+  const baseSlug = work.slug ?? slugify(work.title);
+  const nowIso = new Date().toISOString();
+
+  let candidate = baseSlug;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const { data, error } = await typed
+      .from("np_works")
+      .update({
+        slug: candidate,
+        status: "published",
+        visibility: "public",
+        published_at: work.publishedAt ?? nowIso,
+      })
+      .eq("id", workId)
+      .select("slug")
+      .maybeSingle();
+    if (!error) {
+      // a null row back means the write matched nothing ... RLS filtered us out
+      // or the row vanished between the read and the update.
+      if (!data) {
+        throw new Error("failed to publish: work not found or not owned");
+      }
+      return { slug: data.slug ?? candidate };
+    }
+    if (error.code !== "23505") {
+      throw new Error(`failed to publish np_works row: ${error.message}`);
+    }
+    // a published work keeps its stable slug, so a collision on its own slug is a
+    // real conflict, not a fresh-name race ... don't spin a new suffix.
+    if (work.status === "published") {
+      throw new Error("failed to publish: slug already in use");
+    }
+    candidate = slugWithSuffix(baseSlug, randomBytes(3).toString("hex"));
+  }
+  throw new Error("failed to publish: could not find a free slug");
+}
+
+/** one rendered section of a published Work ... a container heading or a leaf
+ *  whose body renders beneath it. `body` is the raw stored jsonb (the page
+ *  coerces it), null for a container. */
+export interface PublishedWorkSection {
+  id: string;
+  title: string;
+  depth: number;
+  isLeaf: boolean;
+  /** the raw stored jsonb leaf body (the page coerces it); null for a container. */
+  body: unknown;
+}
+
+export interface PublishedWork {
+  title: string;
+  slug: string;
+  publishedAt: string | null;
+  wordCount: number;
+  sections: PublishedWorkSection[];
+}
+
+// the public read for /w/[slug]. MUST run on the service-role (admin) client:
+// the reader is anonymous and np_works / np_nodes / np_pieces are all RLS
+// owner-only, so an owner-scoped client returns nothing for a stranger. the
+// WHERE gate on the WORK (published + shareable) is the real boundary; once the
+// work passes, its whole tree + leaf bodies are readable (publishing a work
+// publishes its contents). never selects user_id or any owner column.
+export async function getPublishedWorkBySlug(
+  admin: TypedClient,
+  slug: string,
+): Promise<PublishedWork | null> {
+  const { data: work, error } = await admin
+    .from("np_works")
+    .select("id, title, slug, published_at, word_count")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .in("visibility", ["unlisted", "public"])
+    .maybeSingle();
+  if (error) {
+    throw new Error(`failed to fetch published work: ${error.message}`);
+  }
+  if (!work) {
+    return null;
+  }
+
+  // the node tree, ordered by sibling position, restitched + flattened into
+  // reading order (the work gate above is the boundary, not these reads). the
+  // explicit column set keeps user_id off the service-role payload.
+  const { data: nodeRows, error: nodeErr } = await admin
+    .from("np_nodes")
+    .select(READING_NODE_COLUMNS)
+    .eq("work_id", work.id)
+    .order("position", { ascending: true });
+  if (nodeErr) {
+    throw new Error(`failed to fetch published work nodes: ${nodeErr.message}`);
+  }
+  const nodes = (nodeRows ?? []).map((r) => rowToNode(r as unknown as NodeRow));
+  const skeleton = flattenForReading(buildTree(nodes));
+
+  // the leaf bodies, by piece id. scoped to THIS work (work_id), so a stray /
+  // forged piece_id pointer can never resolve another owner's piece on this
+  // rls-bypassed read ... the where-clause does the ownership scoping, never the
+  // unvalidated pointer. only id + body, never user_id / owner columns.
+  const leafPieceIds = skeleton
+    .filter((s) => s.isLeaf && s.pieceId)
+    .map((s) => s.pieceId as string);
+  const bodyByPiece = new Map<string, unknown>();
+  if (leafPieceIds.length > 0) {
+    const { data: pieces, error: pieceErr } = await admin
+      .from("np_pieces")
+      .select("id, body")
+      .eq("work_id", work.id)
+      .in("id", leafPieceIds);
+    if (pieceErr) {
+      throw new Error(`failed to fetch published work bodies: ${pieceErr.message}`);
+    }
+    for (const p of pieces ?? []) {
+      bodyByPiece.set(p.id, p.body);
+    }
+  }
+
+  // a published work shows only what's written: drop empty leaves + the
+  // containers they leave hollow, so the reading view never dangles a bare
+  // "scene 1" marker over an unwritten placeholder.
+  const hasText = (s: { isLeaf: boolean; pieceId: string | null }): boolean => {
+    if (!s.isLeaf || !s.pieceId) return false;
+    return plateText(coercePlateValue(bodyByPiece.get(s.pieceId))).trim().length > 0;
+  };
+  const sections: PublishedWorkSection[] = pruneEmptyReading(skeleton, hasText).map((s) => ({
+    id: s.id,
+    title: s.title,
+    depth: s.depth,
+    isLeaf: s.isLeaf,
+    body: s.isLeaf && s.pieceId ? (bodyByPiece.get(s.pieceId) ?? null) : null,
+  }));
+
+  return {
+    title: work.title,
+    slug: work.slug as string,
+    publishedAt: work.published_at,
+    wordCount: work.word_count,
+    sections,
+  };
 }
