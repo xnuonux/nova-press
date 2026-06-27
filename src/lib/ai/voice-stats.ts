@@ -26,8 +26,19 @@ const WORD_RE = /\p{L}[\p{L}\p{N}'']*/gu;
 // a broad emoji range (pictographs + symbols + dingbats), enough for a rate.
 const EMOJI_RE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/gu;
 
-function countWords(text: string): number {
+export function countWords(text: string): number {
   return (text.match(WORD_RE) ?? []).length;
+}
+
+// the word count of each real sentence in a stretch of text ... the one
+// definition of "a sentence" (the SENTENCE_SPLIT enders, skipping nova's "..."
+// pause) that both voice extraction and the editorial lenses measure against,
+// so a writer's baseline and a piece's drift are computed the same way.
+export function sentenceWordCounts(text: string): number[] {
+  return text
+    .split(SENTENCE_SPLIT)
+    .map((s) => countWords(s))
+    .filter((n) => n > 0);
 }
 
 function mean(xs: number[]): number {
@@ -45,14 +56,15 @@ function round2(n: number): number {
 }
 
 export function extractVoiceStats(samples: string[]): VoiceStats {
-  const joined = samples.map((s) => s.trim()).filter(Boolean).join("\n\n");
+  const joined = samples
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join("\n\n");
   const totalWords = countWords(joined);
 
-  // sentences: split on real enders, keep ones with actual words.
-  const sentenceWordCounts = joined
-    .split(SENTENCE_SPLIT)
-    .map((s) => countWords(s))
-    .filter((n) => n > 0);
+  // sentences: the one definition (the exported helper), so the baseline here
+  // and the editorial lenses' per-piece measurement can never drift apart.
+  const sentenceCounts = sentenceWordCounts(joined);
 
   // paragraphs: blank-line separated blocks with words in them.
   const paragraphWordCounts = joined
@@ -76,8 +88,8 @@ export function extractVoiceStats(samples: string[]): VoiceStats {
   const emojiCount = countOf(EMOJI_RE);
 
   return {
-    sentence_length_avg: sentenceWordCounts.length ? round2(mean(sentenceWordCounts)) : null,
-    sentence_length_variance: sentenceWordCounts.length ? round2(variance(sentenceWordCounts)) : null,
+    sentence_length_avg: sentenceCounts.length ? round2(mean(sentenceCounts)) : null,
+    sentence_length_variance: sentenceCounts.length ? round2(variance(sentenceCounts)) : null,
     paragraph_length_avg: paragraphWordCounts.length ? round2(mean(paragraphWordCounts)) : null,
     paragraph_length_variance: paragraphWordCounts.length
       ? round2(variance(paragraphWordCounts))
