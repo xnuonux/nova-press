@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { coercePlateValue, plateText } from "@/components/editor/plate-text";
 import { streamAuthor } from "@/lib/ai/author";
 import { isAuthorTask } from "@/lib/ai/provider";
+import { readBibleForWork } from "@/lib/db/bible";
 import { getPieceById } from "@/lib/db/pieces";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
@@ -103,6 +104,10 @@ export async function POST(request: NextRequest) {
     // re-aims the source to a named strand's snapshot. the read never throws.
     const activeFork = await getActiveWritingFork(supabase, user.id);
     const voice = await getWriterVoice(supabase, user.id, activeFork);
+    // the world bible ... when the piece belongs to a work, fold its codex into
+    // the reserved prompt slot so a drafted beat / coined line stays in-world. ""
+    // for a standalone library piece or an empty bible; the read never throws.
+    const bible = piece.work_id ? await readBibleForWork(supabase, piece.work_id) : "";
     const stream = streamAuthor({
       task,
       title: piece.title,
@@ -110,7 +115,7 @@ export async function POST(request: NextRequest) {
       document,
       voiceCompactView: voice.voiceCompactView,
       exemplars: voice.exemplars,
-      // bible stays undefined ... phase 4 (world bible) fills this slot.
+      bible: bible || undefined,
     });
     return new Response(stream, {
       headers: {

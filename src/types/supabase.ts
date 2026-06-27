@@ -1461,6 +1461,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      cc_coordination: {
+        Row: {
+          cc_id: string;
+          created_at: string | null;
+          expires_at: string | null;
+          files: string[] | null;
+          id: string;
+          kind: string;
+          message: string | null;
+          payload: Json | null;
+          status: string;
+          updated_at: string | null;
+          version_target: string | null;
+        };
+        Insert: {
+          cc_id: string;
+          created_at?: string | null;
+          expires_at?: string | null;
+          files?: string[] | null;
+          id?: string;
+          kind: string;
+          message?: string | null;
+          payload?: Json | null;
+          status?: string;
+          updated_at?: string | null;
+          version_target?: string | null;
+        };
+        Update: {
+          cc_id?: string;
+          created_at?: string | null;
+          expires_at?: string | null;
+          files?: string[] | null;
+          id?: string;
+          kind?: string;
+          message?: string | null;
+          payload?: Json | null;
+          status?: string;
+          updated_at?: string | null;
+          version_target?: string | null;
+        };
+        Relationships: [];
+      };
       chat_attachments: {
         Row: {
           content_type: string | null;
@@ -6542,6 +6584,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      luna_cross_project: {
+        Row: {
+          created_at: string;
+          generated_at: string;
+          id: string;
+          project_count: number;
+          synthesis: Json;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          generated_at?: string;
+          id?: string;
+          project_count?: number;
+          synthesis?: Json;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          generated_at?: string;
+          id?: string;
+          project_count?: number;
+          synthesis?: Json;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       luna_episodes: {
         Row: {
           faithfulness: number | null;
@@ -7514,6 +7583,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      monitor_observations: {
+        Row: {
+          confidence: number;
+          created_at: string;
+          grounding: Json;
+          id: string;
+          kind: string;
+          observation: string;
+          rationale: string | null;
+          surfaced: boolean;
+          user_id: string;
+        };
+        Insert: {
+          confidence?: number;
+          created_at?: string;
+          grounding?: Json;
+          id?: string;
+          kind: string;
+          observation: string;
+          rationale?: string | null;
+          surfaced?: boolean;
+          user_id: string;
+        };
+        Update: {
+          confidence?: number;
+          created_at?: string;
+          grounding?: Json;
+          id?: string;
+          kind?: string;
+          observation?: string;
+          rationale?: string | null;
+          surfaced?: boolean;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       morning_residue: {
         Row: {
           approved_at: string | null;
@@ -7745,6 +7850,199 @@ export type Database = {
           note?: string | null;
           ok?: boolean;
           ran_at?: string;
+        };
+        Relationships: [];
+      };
+      np_bible_aliases: {
+        Row: {
+          alias: string;
+          created_at: string;
+          entity_id: string;
+          id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          alias: string;
+          created_at?: string;
+          entity_id: string;
+          id?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          alias?: string;
+          created_at?: string;
+          entity_id?: string;
+          id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "np_bible_aliases_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "np_bible_entities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      np_bible_entities: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: string;
+          metadata: Json;
+          name: string;
+          summary: string | null;
+          updated_at: string;
+          user_id: string;
+          work_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          metadata?: Json;
+          name: string;
+          summary?: string | null;
+          updated_at?: string;
+          user_id: string;
+          work_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          metadata?: Json;
+          name?: string;
+          summary?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          work_id?: string;
+        };
+        Relationships: [];
+      };
+      np_bible_facts: {
+        Row: {
+          created_at: string;
+          entity_id: string;
+          fact: string;
+          id: string;
+          source_piece_id: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          entity_id: string;
+          fact: string;
+          id?: string;
+          source_piece_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          entity_id?: string;
+          fact?: string;
+          id?: string;
+          source_piece_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "np_bible_facts_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "np_bible_entities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      np_continuity_flags: {
+        Row: {
+          created_at: string;
+          entity_id: string | null;
+          id: string;
+          kind: string;
+          message: string;
+          piece_id: string | null;
+          scope: Json;
+          status: string;
+          updated_at: string;
+          user_id: string;
+          work_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          entity_id?: string | null;
+          id?: string;
+          kind?: string;
+          message: string;
+          piece_id?: string | null;
+          scope?: Json;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+          work_id: string;
+        };
+        Update: {
+          created_at?: string;
+          entity_id?: string | null;
+          id?: string;
+          kind?: string;
+          message?: string;
+          piece_id?: string | null;
+          scope?: Json;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+          work_id?: string;
+        };
+        Relationships: [];
+      };
+      np_continuity_scans: {
+        Row: {
+          body_hash: string;
+          completed_at: string | null;
+          created_at: string;
+          flags_found: number;
+          id: string;
+          scan_metadata: Json;
+          scan_token: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+          work_id: string;
+        };
+        Insert: {
+          body_hash: string;
+          completed_at?: string | null;
+          created_at?: string;
+          flags_found?: number;
+          id?: string;
+          scan_metadata?: Json;
+          scan_token?: string;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+          work_id: string;
+        };
+        Update: {
+          body_hash?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          flags_found?: number;
+          id?: string;
+          scan_metadata?: Json;
+          scan_token?: string;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+          work_id?: string;
         };
         Relationships: [];
       };
@@ -9761,10 +10059,14 @@ export type Database = {
         Row: {
           context: string | null;
           created_at: string | null;
+          created_by: string;
           description: string | null;
           icon: string | null;
           id: string;
           is_desktop: boolean;
+          memory: Json | null;
+          memory_anchor: string | null;
+          memory_updated_at: string | null;
           title: string;
           updated_at: string | null;
           user_id: string;
@@ -9772,10 +10074,14 @@ export type Database = {
         Insert: {
           context?: string | null;
           created_at?: string | null;
+          created_by?: string;
           description?: string | null;
           icon?: string | null;
           id?: string;
           is_desktop?: boolean;
+          memory?: Json | null;
+          memory_anchor?: string | null;
+          memory_updated_at?: string | null;
           title?: string;
           updated_at?: string | null;
           user_id: string;
@@ -9783,10 +10089,14 @@ export type Database = {
         Update: {
           context?: string | null;
           created_at?: string | null;
+          created_by?: string;
           description?: string | null;
           icon?: string | null;
           id?: string;
           is_desktop?: boolean;
+          memory?: Json | null;
+          memory_anchor?: string | null;
+          memory_updated_at?: string | null;
           title?: string;
           updated_at?: string | null;
           user_id?: string;
