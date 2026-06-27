@@ -7748,6 +7748,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      np_editorial_passes: {
+        Row: {
+          created_at: string;
+          findings: Json;
+          generated_at: string;
+          id: string;
+          lens_keys: string[];
+          pass_metadata: Json;
+          piece_id: string;
+          source_edited_at: string;
+          stage: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          findings?: Json;
+          generated_at?: string;
+          id?: string;
+          lens_keys?: string[];
+          pass_metadata?: Json;
+          piece_id: string;
+          source_edited_at: string;
+          stage: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          findings?: Json;
+          generated_at?: string;
+          id?: string;
+          lens_keys?: string[];
+          pass_metadata?: Json;
+          piece_id?: string;
+          source_edited_at?: string;
+          stage?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       np_email_log: {
         Row: {
           created_at: string;
@@ -7947,6 +7989,7 @@ export type Database = {
         Row: {
           body: Json;
           created_at: string;
+          editorial_stage: string;
           excerpt: string | null;
           id: string;
           kind: string;
@@ -7969,6 +8012,7 @@ export type Database = {
         Insert: {
           body?: Json;
           created_at?: string;
+          editorial_stage?: string;
           excerpt?: string | null;
           id?: string;
           kind?: string;
@@ -7991,6 +8035,7 @@ export type Database = {
         Update: {
           body?: Json;
           created_at?: string;
+          editorial_stage?: string;
           excerpt?: string | null;
           id?: string;
           kind?: string;
@@ -13022,6 +13067,8 @@ export type Database = {
           credits_reset_at: string | null;
           email: string | null;
           evening_brief: boolean | null;
+          free_fuel: number;
+          free_fuel_reset_at: string;
           fuel_rollover_days: number | null;
           id: string;
           is_founding_crew: boolean | null;
@@ -13058,6 +13105,8 @@ export type Database = {
           credits_reset_at?: string | null;
           email?: string | null;
           evening_brief?: boolean | null;
+          free_fuel?: number;
+          free_fuel_reset_at?: string;
           fuel_rollover_days?: number | null;
           id?: string;
           is_founding_crew?: boolean | null;
@@ -13094,6 +13143,8 @@ export type Database = {
           credits_reset_at?: string | null;
           email?: string | null;
           evening_brief?: boolean | null;
+          free_fuel?: number;
+          free_fuel_reset_at?: string;
           fuel_rollover_days?: number | null;
           id?: string;
           is_founding_crew?: boolean | null;
@@ -14986,6 +15037,7 @@ export type Database = {
         Args: { new_url: string; style_slug: string; tile_idx: number };
         Returns: string;
       };
+      reset_monthly_free_fuel: { Args: never; Returns: number };
       search_business_knowledge: {
         Args: { p_limit?: number; p_query: string; p_user_id: string };
         Returns: {
