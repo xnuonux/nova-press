@@ -51,6 +51,7 @@ const LABEL: Record<AuthorTask, string> = {
   expand: "expanding",
   "draft-beat": "drafting",
   outline: "scaffolding",
+  coin: "coining",
 };
 
 export function AuthorBeat({ pieceId }: { pieceId: string }) {
@@ -78,7 +79,10 @@ export function AuthorBeat({ pieceId }: { pieceId: string }) {
     const lines = auditedLines(b.task, b.text);
     cancel();
     if (lines.length === 0) return;
-    const nodes = lines.map((line) => ({ type: "p", children: [{ text: line }] }));
+    // a coined line weaves in as a verse line so it sits inside the poem; every
+    // other task lands as a paragraph.
+    const nodeType = b.task === "coin" ? "verse_line" : "p";
+    const nodes = lines.map((line) => ({ type: nodeType, children: [{ text: line }] }));
     try {
       editor.tf.focus();
       // weave the beat in right after the block it was run on, clamped to the

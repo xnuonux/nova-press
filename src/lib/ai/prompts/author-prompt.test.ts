@@ -91,4 +91,22 @@ describe("buildAuthorPrompt", () => {
       expect(system).toMatch(/output only the (prose|list)/);
     }
   });
+
+  it("instructs coin to fit the poem's measure + rhyme, one line only", () => {
+    const { system } = buildAuthorPrompt({ task: "coin", title: "", context: "" });
+    expect(system).toContain("coin a single line of verse");
+    expect(system).toContain("exactly one line");
+    expect(system).toContain("output only the line");
+  });
+
+  it("labels the coin seed, and falls back to the poem so far when bare", () => {
+    expect(
+      buildAuthorPrompt({ task: "coin", title: "", context: "answer the line about the moon" })
+        .prompt,
+    ).toContain("what the line should do: answer the line about the moon");
+    expect(
+      buildAuthorPrompt({ task: "coin", title: "", context: "", document: "the first line here" })
+        .prompt,
+    ).toContain("coin the next line that fits the poem so far.");
+  });
 });

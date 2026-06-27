@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { BULLET_ITEM, NUMBER_ITEM, groupBodyBlocks, isListType } from "./piece-blocks";
+import { BULLET_ITEM, NUMBER_ITEM, VERSE_LINE, groupBodyBlocks, isListType } from "./piece-blocks";
 
 const p = (text: string) => ({ type: "p", children: [{ text }] });
 const bullet = (text: string) => ({ type: BULLET_ITEM, children: [{ text }] });
 const number = (text: string) => ({ type: NUMBER_ITEM, children: [{ text }] });
+const verse = (text: string) => ({ type: VERSE_LINE, children: [{ text }] });
 
 describe("isListType", () => {
   it("recognizes both list-item types", () => {
@@ -78,5 +79,23 @@ describe("groupBodyBlocks", () => {
     const groups = groupBodyBlocks([null, undefined, { type: BULLET_ITEM }]);
     expect(groups).toHaveLength(3);
     expect(groups[2]).toMatchObject({ kind: "list", ordered: false });
+  });
+
+  it("collapses a run of verse lines into one poem", () => {
+    const groups = groupBodyBlocks([verse("line one"), verse("line two"), verse("line three")]);
+    expect(groups).toHaveLength(1);
+    const g = groups[0];
+    expect(g?.kind).toBe("verse");
+    if (g?.kind === "verse") expect(g.items.map((it) => it.index)).toEqual([0, 1, 2]);
+  });
+
+  it("separates two verse runs split by a paragraph (two stanzas)", () => {
+    const groups = groupBodyBlocks([verse("a one"), verse("a two"), p(""), verse("b one")]);
+    expect(groups.map((g) => g.kind)).toEqual(["verse", "block", "verse"]);
+  });
+
+  it("keeps verse and lists as distinct group kinds", () => {
+    const groups = groupBodyBlocks([verse("a poem line"), bullet("a list item")]);
+    expect(groups.map((g) => g.kind)).toEqual(["verse", "list"]);
   });
 });

@@ -4,7 +4,7 @@ import { streamText } from "ai";
 
 import { reportError } from "@/lib/observability/report-error";
 
-import { paragraphCut } from "./ghost-format";
+import { lineCut, paragraphCut } from "./ghost-format";
 import { buildAuthorPrompt } from "./prompts/author-prompt";
 import { AUTHOR_CONFIG, getPartnerModel, type AuthorTask } from "./provider";
 
@@ -62,11 +62,11 @@ export function streamAuthor(input: AuthorInput): ReadableStream<Uint8Array> {
       try {
         for await (const chunk of result.textStream) {
           acc += chunk.replace(/\s*[—–]\s*/g, " ... ");
-          if (cfg.oneBeat) {
-            const cut = paragraphCut(acc);
-            // ignore a paragraph break the model emits BEFORE any real content
-            // (a stray leading blank line) ... cutting there closes on an empty
-            // beat. only the first break that FOLLOWS real prose ends the beat.
+          if (cfg.stop !== "none") {
+            const cut = cfg.stop === "line" ? lineCut(acc) : paragraphCut(acc);
+            // ignore a break the model emits BEFORE any real content (a stray
+            // leading blank line / newline) ... cutting there closes on an empty
+            // beat. only the first break that FOLLOWS real text ends the stream.
             if (cut > 0 && acc.slice(0, cut).trim().length > 0) {
               const tail = acc.slice(sent, cut);
               if (tail) controller.enqueue(encoder.encode(tail));

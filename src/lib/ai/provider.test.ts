@@ -56,10 +56,11 @@ describe("resolveProviderConfig", () => {
 });
 
 describe("isAuthorTask + AUTHOR_CONFIG", () => {
-  it("accepts the three author tasks, nothing else", () => {
+  it("accepts the four author tasks, nothing else", () => {
     expect(isAuthorTask("expand")).toBe(true);
     expect(isAuthorTask("draft-beat")).toBe(true);
     expect(isAuthorTask("outline")).toBe(true);
+    expect(isAuthorTask("coin")).toBe(true);
     expect(isAuthorTask("continue")).toBe(false); // a partner command, not a task
     expect(isAuthorTask("")).toBe(false);
     expect(isAuthorTask(42)).toBe(false);
@@ -71,23 +72,26 @@ describe("isAuthorTask + AUTHOR_CONFIG", () => {
     // a task is never a command and vice versa ... the route validators can't cross.
     expect(isCommand("expand")).toBe(false);
     expect(isCommand("outline")).toBe(false);
+    expect(isCommand("coin")).toBe(false);
     expect(isAuthorTask("respond")).toBe(false);
   });
 
-  it("gives every task a sane generation budget", () => {
+  it("gives every task a sane generation budget + a known stop mode", () => {
     for (const cfg of Object.values(AUTHOR_CONFIG)) {
       expect(cfg.temperature).toBeGreaterThan(0);
       expect(cfg.temperature).toBeLessThanOrEqual(1);
       expect(cfg.maxTokens).toBeGreaterThan(0);
-      expect(typeof cfg.oneBeat).toBe("boolean");
+      expect(["paragraph", "line", "none"]).toContain(cfg.stop);
     }
   });
 
-  it("stops the beat tasks at one paragraph, lets the outline run as a list", () => {
-    expect(AUTHOR_CONFIG.expand.oneBeat).toBe(true);
-    expect(AUTHOR_CONFIG["draft-beat"].oneBeat).toBe(true);
-    expect(AUTHOR_CONFIG.outline.oneBeat).toBe(false);
-    // an outline needs the most room (a list of beats); a beat is one paragraph.
+  it("stops each task at the right boundary", () => {
+    expect(AUTHOR_CONFIG.expand.stop).toBe("paragraph");
+    expect(AUTHOR_CONFIG["draft-beat"].stop).toBe("paragraph");
+    expect(AUTHOR_CONFIG.outline.stop).toBe("none"); // a multi-line skeleton
+    expect(AUTHOR_CONFIG.coin.stop).toBe("line"); // exactly one verse line
+    // an outline needs the most room (a list of beats); a coin is a single line.
     expect(AUTHOR_CONFIG.outline.maxTokens).toBeGreaterThan(AUTHOR_CONFIG.expand.maxTokens);
+    expect(AUTHOR_CONFIG.coin.maxTokens).toBeLessThan(AUTHOR_CONFIG.expand.maxTokens);
   });
 });

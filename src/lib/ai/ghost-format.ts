@@ -36,6 +36,18 @@ export function paragraphCut(text: string): number {
 }
 
 /**
+ * where to cut a streamed single LINE (a coined verse line): the first hard line
+ * break that FOLLOWS real content, exclusive. skipping the leading whitespace
+ * means a stray leading newline can't pin the cut at index 0 and disable the
+ * line-stop (the same leading-blank tolerance paragraphCut has). returns -1 when
+ * no break has followed content yet (the small token cap is the backstop).
+ */
+export function lineCut(text: string): number {
+  const lead = text.length - text.replace(/^\s+/, "").length;
+  return text.indexOf("\n", lead);
+}
+
+/**
  * turn the raw continuation into what we show and insert. strips a leading
  * space (we decide that ourselves), collapses a boundary double space the
  * per-chunk dash swap can leave, and adds one leading space when the suggestion

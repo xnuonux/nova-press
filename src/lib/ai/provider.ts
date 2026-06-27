@@ -87,26 +87,29 @@ export function isCommand(value: unknown): value is Command {
 // the ai AUTHOR ... the generative counterpart to the partner/ghost. where the
 // partner spars and the ghost whispers a line, the author writes a whole beat IN
 // the writer's voice: expand a note into prose, draft the beat described at the
-// caret, or scaffold the piece into an outline. it never runs past what was
-// asked ... a beat is one paragraph, an outline is a skeleton, never a chapter.
-export type AuthorTask = "expand" | "draft-beat" | "outline";
+// caret, scaffold the piece into an outline, or COIN a single verse line that
+// fits the poem's measure + rhyme (the repair half of the poetry loop). it never
+// runs past what was asked ... a beat is one paragraph, an outline is a skeleton,
+// a coin is exactly one line, never a chapter.
+export type AuthorTask = "expand" | "draft-beat" | "outline" | "coin";
 
 export interface AuthorConfig {
   temperature: number;
   maxTokens: number;
-  // a beat is one paragraph: the stream stops at the first paragraph break so
-  // the author never bleeds into a second beat. false for the outline, which is
-  // a multi-line skeleton by design.
-  oneBeat: boolean;
+  // where the stream stops so the author never overruns what was asked: at the
+  // first paragraph break ("paragraph", a beat), the first hard line break
+  // ("line", a coined verse line), or not at all ("none", the multi-line outline).
+  stop: "paragraph" | "line" | "none";
 }
 
-// per-task generation settings. the beat tasks get a paragraph's worth of room
-// and stop at the paragraph break; the outline gets more room for a short list
-// of beats but is still a skeleton, never drafted prose.
+// per-task generation settings. a beat stops at the paragraph break; a coined
+// verse line stops at the first line break (and runs hot ... verse wants a little
+// surprise); the outline runs free as a short skeleton list.
 export const AUTHOR_CONFIG: Record<AuthorTask, AuthorConfig> = {
-  expand: { temperature: 0.7, maxTokens: 220, oneBeat: true },
-  "draft-beat": { temperature: 0.7, maxTokens: 240, oneBeat: true },
-  outline: { temperature: 0.6, maxTokens: 380, oneBeat: false },
+  expand: { temperature: 0.7, maxTokens: 220, stop: "paragraph" },
+  "draft-beat": { temperature: 0.7, maxTokens: 240, stop: "paragraph" },
+  outline: { temperature: 0.6, maxTokens: 380, stop: "none" },
+  coin: { temperature: 0.85, maxTokens: 60, stop: "line" },
 };
 
 export function isAuthorTask(value: unknown): value is AuthorTask {

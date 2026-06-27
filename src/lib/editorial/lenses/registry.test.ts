@@ -4,21 +4,38 @@ import { deriveBlocks, type LensInput, type Lens } from "./core";
 import { LENS_REGISTRY, getLens, lensesForStage, runLenses, runStage } from "./registry";
 
 describe("the lens registry maps lenses to stages", () => {
-  it("the four lenses are registered with their kinds", () => {
+  it("every lens is registered with its kind, in order", () => {
     expect(LENS_REGISTRY.map((d) => d.key)).toEqual([
       "structure",
+      "form-shape",
+      "scansion",
+      "rhyme",
       "voice-drift",
       "readability",
       "mechanical",
     ]);
     expect(getLens("structure")!.kind).toBe("model");
     expect(getLens("mechanical")!.kind).toBe("deterministic");
+    expect(getLens("scansion")!.kind).toBe("deterministic");
     expect(getLens("nope")).toBeUndefined();
   });
 
   it("lensesForStage returns the right lenses per stage", () => {
     expect(lensesForStage("drafting").map((d) => d.key)).toEqual([]);
-    expect(lensesForStage("developmental").map((d) => d.key)).toEqual(["structure", "voice-drift"]);
+    // the verse lenses join the prose lenses (they self-gate to [] on prose).
+    expect(lensesForStage("developmental").map((d) => d.key)).toEqual([
+      "structure",
+      "form-shape",
+      "voice-drift",
+    ]);
+    expect(lensesForStage("line").map((d) => d.key)).toEqual([
+      "form-shape",
+      "scansion",
+      "rhyme",
+      "voice-drift",
+      "readability",
+      "mechanical",
+    ]);
     expect(lensesForStage("proof").map((d) => d.key)).toEqual(["mechanical"]);
     expect(lensesForStage("exported").map((d) => d.key)).toEqual([]);
   });

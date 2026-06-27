@@ -7,8 +7,11 @@
 import type { EditorialStage, Finding } from "@/types/editorial";
 
 import type { Lens, LensInput } from "./core";
+import { formShapeLens } from "./form-shape";
 import { mechanicalLens } from "./mechanical";
 import { readabilityLens } from "./readability";
+import { rhymeLens } from "./rhyme";
+import { scansionLens } from "./scansion";
 import { structureLens } from "./structure";
 import { voiceDriftLens } from "./voice-drift";
 
@@ -26,6 +29,18 @@ export interface LensDescriptor {
 // first (the shape), then voice, then the fine mechanics last.
 export const LENS_REGISTRY: readonly LensDescriptor[] = [
   { key: "structure", lens: structureLens, kind: "model", stages: ["developmental"] },
+  // the verse lenses ... deterministic + SELF-GATING (a poem-free piece gets [],
+  // so they're free to register across the prose stages too). form-shape reads
+  // the stanza shape (a structural read, so it joins at developmental); scansion +
+  // rhyme read the line, so they run at the line + copy polish stages.
+  {
+    key: "form-shape",
+    lens: formShapeLens,
+    kind: "deterministic",
+    stages: ["developmental", "line", "copy"],
+  },
+  { key: "scansion", lens: scansionLens, kind: "deterministic", stages: ["line", "copy"] },
+  { key: "rhyme", lens: rhymeLens, kind: "deterministic", stages: ["line", "copy"] },
   {
     key: "voice-drift",
     lens: voiceDriftLens,

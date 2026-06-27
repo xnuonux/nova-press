@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { joinGhost, paragraphCut, sentenceCut } from "./ghost-format";
+import { joinGhost, lineCut, paragraphCut, sentenceCut } from "./ghost-format";
 
 describe("sentenceCut", () => {
   it("returns -1 while no boundary has arrived", () => {
@@ -59,6 +59,26 @@ describe("paragraphCut", () => {
 
   it("cuts at the FIRST break when several arrive", () => {
     expect(paragraphCut("one\n\ntwo\n\nthree")).toBe("one".length);
+  });
+});
+
+describe("lineCut", () => {
+  it("returns -1 while a single line has no break", () => {
+    expect(lineCut("a coined line of verse")).toBe(-1);
+    expect(lineCut("")).toBe(-1);
+  });
+
+  it("cuts at the first hard line break", () => {
+    expect(lineCut("the silver moon hung low\nand a second line")).toBe(
+      "the silver moon hung low".length,
+    );
+  });
+
+  it("skips a leading newline so the cut still lands after real content", () => {
+    // a model that opens with a stray newline must not disable the line-stop.
+    expect(lineCut("\nthe moon hangs low\nand more")).toBe("\nthe moon hangs low".length);
+    expect(lineCut("  \n  the moon hangs low\nand more")).toBe("  \n  the moon hangs low".length);
+    expect(lineCut("\nthe moon hangs low")).toBe(-1); // only a leading break, no real break yet
   });
 });
 

@@ -207,6 +207,23 @@
     opacity: 0.6;
   }
 
+  /* a poem in the published column ... lines hold their breaks, single-spaced
+     like verse and set in from the measure with a quiet golden rule, so a stanza
+     reads as a held shape rather than loose paragraphs. an empty line keeps its
+     height (a stanza gap). */
+  .prose-nova .np-verse {
+    margin: 1.6em 0;
+    padding-left: 1.1em;
+    border-left: 2px solid color-mix(in srgb, var(--nova-accent) 30%, transparent);
+  }
+
+  .prose-nova .np-verse-line {
+    display: block;
+    min-height: 1.7em;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
   .prose-nova strong {
     font-weight: 600;
     color: var(--lunari-fg-primary);
@@ -389,6 +406,14 @@
     text-decoration-color: var(--nova-accent-soft);
     text-underline-offset: 2px;
     cursor: text;
+  }
+
+  /* a verse line in the editor ... single-spaced like a poem, with a quiet left
+     rule so a run of lines reads as a held measure, not loose paragraphs. */
+  .editor-body .np-verse-line {
+    line-height: 1.4;
+    padding-left: 1em;
+    box-shadow: inset 2px 0 0 -1px color-mix(in srgb, var(--nova-accent) 32%, transparent);
   }
 
   /* blur-rise ... the just-typed character sharpens into place. it's a slate

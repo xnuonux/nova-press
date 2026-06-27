@@ -29,6 +29,7 @@ const AUTHOR_INSTRUCTION: Record<AuthorTask, string> = {
     "draft the beat described below into one paragraph of finished prose, in the writer's voice, picking up the rhythm of the piece so far. realize just this beat ... don't race ahead to the next one. exactly one paragraph, then stop. output only the prose.",
   outline:
     "scaffold the piece into an outline of beats: a short ordered list, one beat per line, each a single plain line naming what happens or what's argued there (not drafted prose). 5 to 9 beats, in the writer's voice, no numbering, no headers, no preamble. output only the list, one beat per line.",
+  coin: "coin a single line of verse in the writer's voice. read the poem so far below and fit it: match the line length / measure the other lines hold, and if the poem rhymes, end on a word that chimes with the line it should answer. the note (if any) says what the line should do. exactly one line, no line break, then stop. output only the line.",
 };
 
 export interface AuthorParts {
@@ -86,13 +87,23 @@ export function buildAuthorPrompt(parts: AuthorParts): { system: string; prompt:
   const docBlock = doc ? `the piece so far:\n${doc}\n\n` : "";
 
   // the seed line is labelled per task so nova knows what it's acting on. an
-  // outline with no premise just scaffolds the piece so far (the doc block).
+  // outline / coin with no seed leans on the doc block (the piece / poem so far).
   const seed = parts.context.trim();
+  const seedLabel =
+    parts.task === "outline"
+      ? "the premise"
+      : parts.task === "expand"
+        ? "the note to expand"
+        : parts.task === "coin"
+          ? "what the line should do"
+          : "the beat to draft";
   const seedBlock = seed
-    ? `${parts.task === "outline" ? "the premise" : parts.task === "expand" ? "the note to expand" : "the beat to draft"}: ${seed}`
+    ? `${seedLabel}: ${seed}`
     : parts.task === "outline"
       ? "scaffold the piece so far into its beats."
-      : "";
+      : parts.task === "coin"
+        ? "coin the next line that fits the poem so far."
+        : "";
 
   const prompt = `${titleLine}${docBlock}${seedBlock}`.trim();
   return { system, prompt };

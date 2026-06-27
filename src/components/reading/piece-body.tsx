@@ -96,6 +96,20 @@ export function PieceBody({ value }: { value: Value }) {
           const key = `list-${group.items[0]?.index ?? 0}`;
           return group.ordered ? <ol key={key}>{items}</ol> : <ul key={key}>{items}</ul>;
         }
+        if (group.kind === "verse") {
+          // a poem ... each line is a block-level span so breaks are preserved;
+          // an empty line holds its height (a stanza gap) via a nbsp.
+          const lines = group.items.map(({ block, index }) => (
+            <span key={index} className="np-verse-line">
+              {blockHasText(block.children) ? renderChildren(block.children) : " "}
+            </span>
+          ));
+          return (
+            <div key={`verse-${group.items[0]?.index ?? 0}`} className="np-verse">
+              {lines}
+            </div>
+          );
+        }
         const { block, index } = group;
         const kids = renderChildren(block.children);
         switch (block.type) {

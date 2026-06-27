@@ -59,6 +59,12 @@ const COMMANDS: Command[] = [
     words: ["divider", "hr", "rule", "line", "break"],
   },
   {
+    key: "verse_line",
+    label: "verse",
+    hint: "a line of poetry",
+    words: ["verse", "poem", "poetry", "stanza", "line"],
+  },
+  {
     key: "expand",
     label: "expand",
     hint: "a beat from this note",
@@ -78,6 +84,13 @@ const COMMANDS: Command[] = [
     hint: "scaffold the piece",
     words: ["outline", "scaffold", "structure", "skeleton", "beats"],
     author: "outline",
+  },
+  {
+    key: "coin",
+    label: "coin a line",
+    hint: "verse on the poem's measure",
+    words: ["coin", "verse", "rhyme", "meter", "scan", "repair", "line"],
+    author: "coin",
   },
 ];
 

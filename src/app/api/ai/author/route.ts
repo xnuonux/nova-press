@@ -73,8 +73,10 @@ export async function POST(request: NextRequest) {
 
   const context = typeof rawContext === "string" ? rawContext.slice(0, CONTEXT_LIMIT).trim() : "";
   // expand + draft-beat act ON a note/beat ... without one there's nothing to
-  // realize. an outline can scaffold the piece so far, so it's allowed to be bare.
-  if (task !== "outline" && context.length === 0) {
+  // realize. an outline scaffolds the piece so far + a coin fits the poem so far,
+  // so those two are allowed to be bare (they lean on the document).
+  const leansOnDocument = task === "outline" || task === "coin";
+  if (!leansOnDocument && context.length === 0) {
     return NextResponse.json({ error: "give nova a note to work from" }, { status: 400 });
   }
 
@@ -89,9 +91,9 @@ export async function POST(request: NextRequest) {
   // bounded so a long manuscript stays within the token budget.
   const document = plateText(coercePlateValue(piece.body)).slice(0, DOC_LIMIT).trim() || undefined;
 
-  // an outline with no premise and a blank canvas has nothing to scaffold ...
-  // fail soft rather than spend tokens on empty air.
-  if (task === "outline" && context.length === 0 && !document) {
+  // an outline / coin with no seed AND a blank canvas has nothing to work from
+  // ... fail soft rather than spend tokens on empty air.
+  if (leansOnDocument && context.length === 0 && !document) {
     return NextResponse.json({ error: "write a line or two first" }, { status: 400 });
   }
 

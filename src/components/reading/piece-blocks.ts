@@ -14,6 +14,7 @@
 
 export const BULLET_ITEM = "ul_li";
 export const NUMBER_ITEM = "ol_li";
+export const VERSE_LINE = "verse_line";
 
 export interface BodyBlock {
   type?: string;
@@ -27,7 +28,13 @@ export interface ListItem {
 
 export type RenderGroup =
   | { kind: "block"; block: BodyBlock; index: number }
-  | { kind: "list"; ordered: boolean; items: ListItem[] };
+  | { kind: "list"; ordered: boolean; items: ListItem[] }
+  // a poem ... a run of consecutive verse_line blocks. the lines render as a
+  // verse block (preserved breaks); an empty line inside the run reads as a
+  // stanza gap. multiple stanzas = multiple runs (this matches the verse lenses'
+  // line-level grouping, so a form-shape finding's blockIndex lands on the line
+  // the reader sees).
+  | { kind: "verse"; items: ListItem[] };
 
 export function isListType(type: unknown): boolean {
   return type === BULLET_ITEM || type === NUMBER_ITEM;
@@ -51,6 +58,13 @@ export function groupBodyBlocks(value: unknown): RenderGroup[] {
         last.items.push({ block, index: i });
       } else {
         groups.push({ kind: "list", ordered, items: [{ block, index: i }] });
+      }
+    } else if (block.type === VERSE_LINE) {
+      const last = groups[groups.length - 1];
+      if (last && last.kind === "verse") {
+        last.items.push({ block, index: i });
+      } else {
+        groups.push({ kind: "verse", items: [{ block, index: i }] });
       }
     } else {
       groups.push({ kind: "block", block, index: i });

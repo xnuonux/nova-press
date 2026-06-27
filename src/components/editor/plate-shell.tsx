@@ -52,6 +52,7 @@ import { PublishButton } from "./publish-button";
 import { RepurposeLauncher } from "./repurpose-launcher";
 import { SlashMenu } from "./slash-menu";
 import { useAutosave } from "./use-autosave";
+import { VerseLinePlugin } from "./verse-blocks";
 import { XraySpine } from "./xray-spine";
 import { XrayToggle } from "./xray-toggle";
 
@@ -82,6 +83,7 @@ const editorPlugins = [
   HorizontalRulePlugin,
   BulletItemPlugin,
   NumberItemPlugin,
+  VerseLinePlugin,
   NovaLinkPlugin,
   BoldPlugin,
   ItalicPlugin,
@@ -196,7 +198,10 @@ export function PlateShell({
         if (typeof blockIndex === "number") {
           const node = editor.children[blockIndex] as { type?: string } | undefined;
           const type = node?.type;
-          if ((type === "ul_li" || type === "ol_li") && editor.api.string([blockIndex]) === "") {
+          if (
+            (type === "ul_li" || type === "ol_li" || type === "verse_line") &&
+            editor.api.string([blockIndex]) === ""
+          ) {
             event.preventDefault();
             editor.tf.setNodes({ type: "p" }, { at: [blockIndex] });
             return;
