@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
 
+import type { KnownName } from "@/lib/continuity/types";
+
 import { composeBible, type BibleEntityView } from "./bible-compose";
 
 // the world bible read ... the codex the ai author consults so a drafted beat /
@@ -60,6 +62,9 @@ export async function readBibleForWork(client: ServerClient, workId: string): Pr
     const { data, error } = await typed
       .from("np_bible_entities")
       .select("name, kind, summary, np_bible_aliases(alias), np_bible_facts(fact)")
+      // scope to the bible-owning work ... RLS only gates by user, so without this
+      // a writer with several works would read EVERY work's codex into the slot.
+      .eq("work_id", bibleWorkId)
       // most-recent first ... composeBible head-truncates a large bible, so the
       // newly-introduced nouns (the ones a writer drafting the latest chapter
       // needs grounded) are the ones that survive, never the oldest.
@@ -69,5 +74,46 @@ export async function readBibleForWork(client: ServerClient, workId: string): Pr
     return composeBible((data as unknown as EntityRow[]).map(rowToView));
   } catch {
     return "";
+  }
+}
+
+// the embedded row shape for the names read (entity id + name + aliases only).
+interface NameRow {
+  id: string;
+  name: string | null;
+  np_bible_aliases?: { alias: string | null }[] | null;
+}
+
+/**
+ * the work's bible names ... each entity's id + the names it answers to, for the
+ * deterministic continuity pass (name-drift). resolves the effective bible work
+ * like readBibleForWork, RLS owner-scoped, and NEVER throws (a degraded read just
+ * yields no names, so a scan still runs its model layer).
+ */
+export async function readBibleNames(client: ServerClient, workId: string): Promise<KnownName[]> {
+  const typed = client as unknown as TypedClient;
+  try {
+    const { data: work } = await typed
+      .from("np_works")
+      .select("bible_work_id")
+      .eq("id", workId)
+      .maybeSingle();
+    const bibleWorkId = (work?.bible_work_id as string | null) ?? workId;
+
+    const { data, error } = await typed
+      .from("np_bible_entities")
+      .select("id, name, np_bible_aliases(alias)")
+      .eq("work_id", bibleWorkId);
+    if (error || !data) return [];
+
+    return (data as unknown as NameRow[])
+      .map((e) => ({
+        entityId: e.id,
+        name: e.name ?? "",
+        aliases: (e.np_bible_aliases ?? []).map((a) => a.alias ?? "").filter(Boolean),
+      }))
+      .filter((k) => k.name.trim().length > 0);
+  } catch {
+    return [];
   }
 }
