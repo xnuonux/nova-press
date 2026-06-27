@@ -368,6 +368,56 @@ export interface PublishedWork {
   sections: PublishedWorkSection[];
 }
 
+export interface WorkExport {
+  title: string;
+  sections: PublishedWorkSection[];
+}
+
+// the OWNER's read for export (docx / epub). RLS-scoped via the authed client,
+// so a writer only ever exports their own Work ... a stranger's id returns null.
+// unlike the public reader this has NO published gate (you export your drafts)
+// and NO empty-prune (the export is your full manuscript, scaffold and all).
+export async function getWorkSectionsForOwner(
+  client: ServerClient,
+  workId: string,
+): Promise<WorkExport | null> {
+  const typed = client as unknown as TypedClient;
+
+  const work = await getWorkById(client, workId);
+  if (!work) {
+    return null;
+  }
+
+  const skeleton = flattenForReading(await getWorkTree(client, workId));
+  const leafPieceIds = skeleton
+    .filter((s) => s.isLeaf && s.pieceId)
+    .map((s) => s.pieceId as string);
+  const bodyByPiece = new Map<string, unknown>();
+  if (leafPieceIds.length > 0) {
+    const { data: pieces, error } = await typed
+      .from("np_pieces")
+      .select("id, body")
+      .eq("work_id", workId)
+      .in("id", leafPieceIds);
+    if (error) {
+      throw new Error(`failed to read work pieces for export: ${error.message}`);
+    }
+    for (const p of pieces ?? []) {
+      bodyByPiece.set(p.id, p.body);
+    }
+  }
+
+  const sections: PublishedWorkSection[] = skeleton.map((s) => ({
+    id: s.id,
+    title: s.title,
+    depth: s.depth,
+    isLeaf: s.isLeaf,
+    body: s.isLeaf && s.pieceId ? (bodyByPiece.get(s.pieceId) ?? null) : null,
+  }));
+
+  return { title: work.title, sections };
+}
+
 // the public read for /w/[slug]. MUST run on the service-role (admin) client:
 // the reader is anonymous and np_works / np_nodes / np_pieces are all RLS
 // owner-only, so an owner-scoped client returns nothing for a stranger. the

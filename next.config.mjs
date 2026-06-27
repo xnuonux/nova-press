@@ -4,6 +4,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
+  // the epub builder (jsdom + archiver + node fs) must not be bundled by the
+  // server compiler ... left external, it loads at runtime from node_modules the
+  // way it expects, so its filesystem render works.
+  serverExternalPackages: ["@lesjoursfr/html-to-epub"],
 };
 
 // sentry build wrapper. source-map upload is skipped silently when

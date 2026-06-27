@@ -2,17 +2,14 @@ import { NextResponse } from "next/server";
 
 import { coercePlateValue } from "@/components/editor/plate-text";
 import { getPieceById } from "@/lib/db/pieces";
+import { fileSlug } from "@/lib/io/filename";
 import { slateToMarkdown } from "@/lib/io/markdown";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function filenameFor(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return `${slug || "piece"}.md`;
+  return `${fileSlug(title, "piece")}.md`;
 }
 
 // export a piece OUT of Slate JSON. phase 0.3 ships markdown; the html hub
