@@ -841,6 +841,50 @@
     }
   }
 
+  /* the author beat ... nova's whole-beat draft, streamed in greyed below the
+     block you ran it on. the generative sibling of the ghost whisper: a quiet
+     card you tab to weave in, anchored off the block rect (fixed coords). */
+  .np-author-beat {
+    position: fixed;
+    z-index: 41;
+    max-width: 92vw;
+    max-height: 42vh;
+    overflow-y: auto;
+    padding: 10px 14px 12px;
+    border: 1px solid color-mix(in srgb, var(--nova-accent) 22%, var(--lunari-border));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--lunari-bg-surface) 92%, transparent);
+    box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    animation: np-ghost-in var(--t-base) var(--ease-out-soft);
+  }
+
+  .np-author-beat-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75em;
+    margin-bottom: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--nova-accent);
+  }
+
+  .np-author-beat-keys {
+    color: var(--lunari-fg-subtle);
+  }
+
+  .np-author-beat-body {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    color: var(--lunari-fg-muted);
+  }
+
   /* the bubble toolbar ... floats above a selection, portaled to body and
      positioned off the dom selection rect (fixed coords). the translate puts
      it centered + lifted above the text; the keyframe eases it the last few

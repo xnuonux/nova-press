@@ -24,6 +24,18 @@ export function sentenceCut(text: string): number {
 }
 
 /**
+ * where to cut a streamed BEAT: the first paragraph break (a blank line),
+ * exclusive, so the author writes exactly one beat and never bleeds into the
+ * next. returns -1 when no break has arrived yet (the token cap is the backstop).
+ * a lone newline inside a beat doesn't cut ... only a real blank-line paragraph
+ * boundary does, matching how prose separates paragraphs.
+ */
+export function paragraphCut(text: string): number {
+  const m = /\n[ \t]*\n/.exec(text);
+  return m ? m.index : -1;
+}
+
+/**
  * turn the raw continuation into what we show and insert. strips a leading
  * space (we decide that ourselves), collapses a boundary double space the
  * per-chunk dash swap can leave, and adds one leading space when the suggestion

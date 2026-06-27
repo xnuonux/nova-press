@@ -83,3 +83,32 @@ export const COMMAND_CONFIG: Record<Command, CommandConfig> = {
 export function isCommand(value: unknown): value is Command {
   return typeof value === "string" && Object.prototype.hasOwnProperty.call(COMMAND_CONFIG, value);
 }
+
+// the ai AUTHOR ... the generative counterpart to the partner/ghost. where the
+// partner spars and the ghost whispers a line, the author writes a whole beat IN
+// the writer's voice: expand a note into prose, draft the beat described at the
+// caret, or scaffold the piece into an outline. it never runs past what was
+// asked ... a beat is one paragraph, an outline is a skeleton, never a chapter.
+export type AuthorTask = "expand" | "draft-beat" | "outline";
+
+export interface AuthorConfig {
+  temperature: number;
+  maxTokens: number;
+  // a beat is one paragraph: the stream stops at the first paragraph break so
+  // the author never bleeds into a second beat. false for the outline, which is
+  // a multi-line skeleton by design.
+  oneBeat: boolean;
+}
+
+// per-task generation settings. the beat tasks get a paragraph's worth of room
+// and stop at the paragraph break; the outline gets more room for a short list
+// of beats but is still a skeleton, never drafted prose.
+export const AUTHOR_CONFIG: Record<AuthorTask, AuthorConfig> = {
+  expand: { temperature: 0.7, maxTokens: 220, oneBeat: true },
+  "draft-beat": { temperature: 0.7, maxTokens: 240, oneBeat: true },
+  outline: { temperature: 0.6, maxTokens: 380, oneBeat: false },
+};
+
+export function isAuthorTask(value: unknown): value is AuthorTask {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(AUTHOR_CONFIG, value);
+}

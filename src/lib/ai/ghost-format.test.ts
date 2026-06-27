@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { joinGhost, sentenceCut } from "./ghost-format";
+import { joinGhost, paragraphCut, sentenceCut } from "./ghost-format";
 
 describe("sentenceCut", () => {
   it("returns -1 while no boundary has arrived", () => {
@@ -33,6 +33,32 @@ describe("sentenceCut", () => {
 
   it("cuts only the first of several sentences", () => {
     expect(sentenceCut("first one. second one.")).toBe("first one.".length);
+  });
+});
+
+describe("paragraphCut", () => {
+  it("returns -1 while a beat has no paragraph break", () => {
+    expect(paragraphCut("the ferryman waited at the dock all night.")).toBe(-1);
+    expect(paragraphCut("")).toBe(-1);
+  });
+
+  it("does not cut on a lone newline inside a beat", () => {
+    expect(paragraphCut("a line\nstill the same beat")).toBe(-1);
+  });
+
+  it("cuts (exclusive) at the first blank-line paragraph break", () => {
+    const s = "first beat\n\nsecond beat";
+    expect(paragraphCut(s)).toBe("first beat".length);
+    expect(s.slice(0, paragraphCut(s))).toBe("first beat");
+  });
+
+  it("treats a whitespace-only line as a paragraph break", () => {
+    expect(paragraphCut("beat one\n \nbeat two")).toBe("beat one".length);
+    expect(paragraphCut("beat one\n\t\nbeat two")).toBe("beat one".length);
+  });
+
+  it("cuts at the FIRST break when several arrive", () => {
+    expect(paragraphCut("one\n\ntwo\n\nthree")).toBe("one".length);
   });
 });
 

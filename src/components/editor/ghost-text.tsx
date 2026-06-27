@@ -49,6 +49,10 @@ export function GhostText() {
   const genRef = useRef(0);
   const ghostRef = useRef<GhostState | null>(null);
   ghostRef.current = ghost;
+  // while nova is authoring a beat (the slash-menu author flow), the whisper
+  // stands down ... two greyed suggestions at once is noise, and worse, both
+  // would bind tab. the author-beat island raises these on its active<->idle edge.
+  const suppressedRef = useRef(false);
 
   // tear down any pending timer + in-flight stream and hide the suggestion.
   // bumping the generation invalidates a stream that's still resolving.
@@ -162,6 +166,8 @@ export function GhostText() {
   // restarts the quiet timer ... it only ever appears on a pause.
   const schedule = useCallback(() => {
     cancel();
+    // the author beat holds the floor ... don't queue a whisper behind it.
+    if (suppressedRef.current) return;
     // don't even arm the timer unless the editor holds focus ... blur events
     // (a modal opening) fire selectionchange too, and we should go quiet, not
     // queue a suggestion for a surface the writer just left.
@@ -171,6 +177,25 @@ export function GhostText() {
       void request();
     }, DEBOUNCE_MS);
   }, [cancel, request]);
+
+  // the author-beat island raises nova:author-active while a beat is on screen
+  // and nova:author-idle when it clears. suppress + clear any pending whisper on
+  // active; lift the suppression on idle so the whisper resumes after.
+  useEffect(() => {
+    const onActive = () => {
+      suppressedRef.current = true;
+      cancel();
+    };
+    const onIdle = () => {
+      suppressedRef.current = false;
+    };
+    document.addEventListener("nova:author-active", onActive);
+    document.addEventListener("nova:author-idle", onIdle);
+    return () => {
+      document.removeEventListener("nova:author-active", onActive);
+      document.removeEventListener("nova:author-idle", onIdle);
+    };
+  }, [cancel]);
 
   useEffect(() => {
     document.addEventListener("selectionchange", schedule);

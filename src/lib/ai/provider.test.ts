@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveProviderConfig } from "./provider";
+import { AUTHOR_CONFIG, isAuthorTask, isCommand, resolveProviderConfig } from "./provider";
 
 describe("resolveProviderConfig", () => {
   it("defaults to deepseek when AI_PROVIDER is unset", () => {
@@ -52,5 +52,42 @@ describe("resolveProviderConfig", () => {
     expect(resolveProviderConfig({ AI_PROVIDER: "anthropic" }).apiKeyEnvVar).toBe(
       "ANTHROPIC_API_KEY",
     );
+  });
+});
+
+describe("isAuthorTask + AUTHOR_CONFIG", () => {
+  it("accepts the three author tasks, nothing else", () => {
+    expect(isAuthorTask("expand")).toBe(true);
+    expect(isAuthorTask("draft-beat")).toBe(true);
+    expect(isAuthorTask("outline")).toBe(true);
+    expect(isAuthorTask("continue")).toBe(false); // a partner command, not a task
+    expect(isAuthorTask("")).toBe(false);
+    expect(isAuthorTask(42)).toBe(false);
+    expect(isAuthorTask(null)).toBe(false);
+    expect(isAuthorTask(undefined)).toBe(false);
+  });
+
+  it("keeps the author tasks and partner commands as separate namespaces", () => {
+    // a task is never a command and vice versa ... the route validators can't cross.
+    expect(isCommand("expand")).toBe(false);
+    expect(isCommand("outline")).toBe(false);
+    expect(isAuthorTask("respond")).toBe(false);
+  });
+
+  it("gives every task a sane generation budget", () => {
+    for (const cfg of Object.values(AUTHOR_CONFIG)) {
+      expect(cfg.temperature).toBeGreaterThan(0);
+      expect(cfg.temperature).toBeLessThanOrEqual(1);
+      expect(cfg.maxTokens).toBeGreaterThan(0);
+      expect(typeof cfg.oneBeat).toBe("boolean");
+    }
+  });
+
+  it("stops the beat tasks at one paragraph, lets the outline run as a list", () => {
+    expect(AUTHOR_CONFIG.expand.oneBeat).toBe(true);
+    expect(AUTHOR_CONFIG["draft-beat"].oneBeat).toBe(true);
+    expect(AUTHOR_CONFIG.outline.oneBeat).toBe(false);
+    // an outline needs the most room (a list of beats); a beat is one paragraph.
+    expect(AUTHOR_CONFIG.outline.maxTokens).toBeGreaterThan(AUTHOR_CONFIG.expand.maxTokens);
   });
 });

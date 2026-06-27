@@ -17,11 +17,17 @@ import { createPortal } from "react-dom";
 
 import { useEditorRef } from "platejs/react";
 
+import type { AuthorTask } from "@/lib/ai/provider";
+
 interface Command {
   key: string;
   label: string;
   hint: string;
   words: string[];
+  // an author command streams a beat instead of transforming the block ... it
+  // hands off to the AuthorBeat island via a nova:author event. block commands
+  // leave this undefined.
+  author?: AuthorTask;
 }
 
 const COMMANDS: Command[] = [
@@ -51,6 +57,27 @@ const COMMANDS: Command[] = [
     label: "divider",
     hint: "a line between",
     words: ["divider", "hr", "rule", "line", "break"],
+  },
+  {
+    key: "expand",
+    label: "expand",
+    hint: "a beat from this note",
+    words: ["expand", "flesh", "elaborate", "beat", "author"],
+    author: "expand",
+  },
+  {
+    key: "draft-beat",
+    label: "draft this beat",
+    hint: "nova writes it",
+    words: ["draft", "write", "beat", "author", "nova"],
+    author: "draft-beat",
+  },
+  {
+    key: "outline",
+    label: "outline",
+    hint: "scaffold the piece",
+    words: ["outline", "scaffold", "structure", "skeleton", "beats"],
+    author: "outline",
   },
 ];
 
@@ -147,6 +174,26 @@ export function SlashMenu() {
       };
       try {
         editor.tf.delete({ at: range });
+        if (command.author) {
+          // an author command leaves the block as-is (the writer's note stays)
+          // and hands the task to the AuthorBeat island: the note to work from is
+          // the block's text after the slash run is stripped, the block index
+          // anchors the streamed preview. all the async lives over there.
+          const blockIndex = trig.path[0] ?? 0;
+          let context = "";
+          try {
+            context = editor.api.string([blockIndex]);
+          } catch {
+            context = "";
+          }
+          editor.tf.focus();
+          document.dispatchEvent(
+            new CustomEvent("nova:author", {
+              detail: { task: command.author, context: context.trim(), blockIndex },
+            }),
+          );
+          return;
+        }
         if (command.key === "divider") {
           editor.tf.insertNodes({ type: "hr", children: [{ text: "" }] });
           editor.tf.insertNodes({ type: "p", children: [{ text: "" }] }, { select: true });

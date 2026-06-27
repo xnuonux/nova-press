@@ -39,6 +39,7 @@ import { ParagraphPlugin, Plate, PlateContent, usePlateEditor } from "platejs/re
 
 import { countWords } from "@/lib/utils";
 
+import { AuthorBeat } from "./author-beat";
 import { BlurRisePlugin } from "./blur-rise";
 import { BubbleToolbar } from "./bubble-toolbar";
 import { CommandPalette } from "./command-palette";
@@ -335,6 +336,7 @@ export function PlateShell({
         <SlashMenu />
         <CommandPalette />
         <GhostText />
+        <AuthorBeat pieceId={pieceId} />
         <XraySpine />
         <PlateContent
           className="editor-body min-h-[55vh] outline-none"
@@ -344,7 +346,7 @@ export function PlateShell({
         />
       </Plate>
     ),
-    [editor, handleValueChange, handleEditorKeyDown],
+    [editor, handleValueChange, handleEditorKeyDown, pieceId],
   );
 
   return (
