@@ -48,6 +48,8 @@ export function useAutosave({ trigger, onSave }: UseAutosaveOptions): UseAutosav
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const isFirstRun = useRef(true);
+  // the live debounce timer, so an outside flush can cancel it (see below).
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // keep the latest onSave without making it a dependency of the debounce
   // effect ... otherwise a new closure on every render would reset the timer.
@@ -65,6 +67,7 @@ export function useAutosave({ trigger, onSave }: UseAutosaveOptions): UseAutosav
     let cancelled = false;
     setState("saving");
     const timer = setTimeout(async () => {
+      timerRef.current = null;
       try {
         await onSaveRef.current();
         if (cancelled) return;
@@ -75,11 +78,48 @@ export function useAutosave({ trigger, onSave }: UseAutosaveOptions): UseAutosav
         setState("error");
       }
     }, DEBOUNCE_MS);
+    timerRef.current = timer;
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      if (timerRef.current === timer) timerRef.current = null;
     };
   }, [trigger]);
+
+  // let the editorial panel force a pending save to land NOW: it runs a pass
+  // against the SAVED body, so the body must be current first. cancelling the
+  // pending debounce is the point ... otherwise that timer would fire AFTER the
+  // pass and bump last_edited_at past the pass's watermark, re-staling a fresh
+  // pass. when nothing is pending the body on disk is already current, so we
+  // skip the redundant save (which would falsely stale every other stage's
+  // pass) and just acknowledge. fires nova:save-flushed when settled either way.
+  useEffect(() => {
+    const onFlush = () => {
+      const pending = timerRef.current !== null;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      if (!pending) {
+        document.dispatchEvent(new CustomEvent("nova:save-flushed"));
+        return;
+      }
+      void (async () => {
+        try {
+          setState("saving");
+          await onSaveRef.current();
+          setState("saved");
+          setLastSavedAt(Date.now());
+        } catch {
+          setState("error");
+        } finally {
+          document.dispatchEvent(new CustomEvent("nova:save-flushed"));
+        }
+      })();
+    };
+    document.addEventListener("nova:flush-save", onFlush);
+    return () => document.removeEventListener("nova:flush-save", onFlush);
+  }, []);
 
   // tick once a second so "saved Xs ago" stays honest
   useEffect(() => {

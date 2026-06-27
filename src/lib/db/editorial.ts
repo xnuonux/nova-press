@@ -136,6 +136,33 @@ export async function getPass(
   return data ? rowToPass(data as PassRow) : null;
 }
 
+// triage one finding in a (piece, stage) pass: set its status (accept / dismiss
+// / re-open) so the gate can see it cleared. a targeted findings-column update,
+// RLS-scoped via the (piece_id, stage) filter. returns the updated pass, or null
+// if no pass has run / the index is out of range.
+export async function triageFinding(
+  client: ServerClient,
+  pieceId: string,
+  stage: EditorialStage,
+  index: number,
+  status: Finding["status"],
+): Promise<EditorialPass | null> {
+  const pass = await getPass(client, pieceId, stage);
+  if (!pass) return null;
+  if (index < 0 || index >= pass.findings.length) return pass;
+  const findings = pass.findings.map((f, i) => (i === index ? { ...f, status } : f));
+  const typed = client as unknown as TypedClient;
+  const { error } = await typed
+    .from("np_editorial_passes")
+    .update({ findings: findings as unknown as Json })
+    .eq("piece_id", pieceId)
+    .eq("stage", stage);
+  if (error) {
+    throw new Error(`failed to triage finding: ${error.message}`);
+  }
+  return { ...pass, findings };
+}
+
 export interface PassWithStaleness {
   pass: EditorialPass;
   stale: boolean;

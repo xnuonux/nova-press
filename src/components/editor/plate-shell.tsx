@@ -152,6 +152,8 @@ export function PlateShell({
     markFlow();
     setRevision((current) => current + 1);
     setWordCount(countWords(plateText(editor.children as Value)));
+    // tell the editorial panel its last pass now trails the words (mark it stale).
+    document.dispatchEvent(new CustomEvent("nova:piece-edited"));
   }, [editor, markFlow]);
 
   const handleTitleChange = useCallback(
