@@ -10,7 +10,8 @@ import {
   updateNode,
   getNodeById,
 } from "@/lib/db/nodes";
-import { publishWork } from "@/lib/db/works";
+import { setWorkParent } from "@/lib/db/series";
+import { getWorkById, publishWork } from "@/lib/db/works";
 import { midpointPosition } from "@/lib/works/tree";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -111,6 +112,34 @@ export async function publishWorkAction(formData: FormData): Promise<void> {
   if (!workId) return;
 
   await publishWork(supabase, workId);
+  revalidatePath(`/work/${workId}`);
+}
+
+// attach this work under a parent (joining its series + sharing its codex) or
+// detach it (a blank parent). owner-gated (getWorkById reads null for a stranger)
+// + cycle-guarded inside setWorkParent. invoked from the work page's series form;
+// re-checks the session and refreshes so the breadcrumb + the shared codex update.
+export async function setWorkParentAction(formData: FormData): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const workId = String(formData.get("workId") ?? "");
+  // np_works.id is a uuid ... a non-uuid would make getWorkById throw 22P02
+  // instead of a clean no-op, so shape-guard before the lookup.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workId)) return;
+  const parentRaw = formData.get("parentId");
+  const parentId = parentRaw && String(parentRaw) ? String(parentRaw) : null;
+
+  // owner gate before any write ... a stranger's work reads null (RLS).
+  const work = await getWorkById(supabase, workId);
+  if (!work) return;
+
+  await setWorkParent(supabase, workId, parentId);
   revalidatePath(`/work/${workId}`);
 }
 

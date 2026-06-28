@@ -3,12 +3,24 @@ import { notFound } from "next/navigation";
 
 import { Binder } from "@/components/binder/binder";
 import { Atmosphere } from "@/components/chrome/atmosphere";
+import { CodexPanel } from "@/components/codex/codex-panel";
+import { ContinuityRail } from "@/components/continuity/continuity-rail";
 import { VoiceTrainer } from "@/components/editor/voice-trainer";
+import { listCodexEntities } from "@/lib/db/codex";
+import { listOpenFlags } from "@/lib/db/continuity";
+import { listSeriesWorks } from "@/lib/db/series";
 import { getWorkById, getWorkTree } from "@/lib/db/works";
+import { parentCandidateIds } from "@/lib/works/series";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { TreeNode } from "@/types/works";
 
-import { createLeafAction, reorderNodeAction, setCardAction, publishWorkAction } from "./actions";
+import {
+  createLeafAction,
+  reorderNodeAction,
+  setCardAction,
+  setWorkParentAction,
+  publishWorkAction,
+} from "./actions";
 
 function countLeaves(tree: TreeNode[]): number {
   let n = 0;
@@ -28,6 +40,21 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   }
   const tree = await getWorkTree(supabase, id);
   const pages = countLeaves(tree);
+
+  // the work-scoped surfaces: the codex (the world bible, editable), the
+  // continuity flags (the prose read against that bible), and the series graph
+  // (this work's place in a Work-of-Works). all owner-scoped reads.
+  const entities = await listCodexEntities(supabase, id);
+  const flags = await listOpenFlags(supabase, id);
+  const seriesWorks = await listSeriesWorks(supabase);
+  const seriesNodes = seriesWorks.map((w) => ({ id: w.id, parentWorkId: w.parentWorkId }));
+  const candidateIds = new Set(parentCandidateIds(seriesNodes, id));
+  const parentCandidates = seriesWorks.filter((w) => candidateIds.has(w.id));
+  const parentWork = work.parentWorkId
+    ? (seriesWorks.find((w) => w.id === work.parentWorkId) ?? null)
+    : null;
+  // the codex is shared from a parent when this work reads someone else's bible.
+  const sharedFromSeries = !!work.bibleWorkId && work.bibleWorkId !== work.id;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -138,6 +165,52 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
                   write a page or two to publish
                 </span>
               )}
+
+              {/* series ... this work's place in a Work-of-Works. attach it under
+                  a parent (sharing the parent's codex) or leave it standalone. */}
+              <form
+                action={setWorkParentAction}
+                className="flex flex-wrap items-center gap-2.5"
+                data-testid="series-form"
+              >
+                <input type="hidden" name="workId" value={work.id} />
+                <span
+                  className="font-mono text-[11px] uppercase tracking-[0.2em]"
+                  style={{ color: "var(--lunari-fg-subtle)" }}
+                >
+                  series
+                </span>
+                <select
+                  name="parentId"
+                  defaultValue={work.parentWorkId ?? ""}
+                  data-testid="series-parent"
+                  className="rounded-md border bg-transparent px-2 py-1 font-mono text-[11px] lowercase outline-none"
+                  style={{ borderColor: "var(--lunari-border)", color: "var(--lunari-fg-muted)" }}
+                >
+                  <option value="">a standalone work</option>
+                  {parentCandidates.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      part of: {c.title}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="font-mono text-[11px] uppercase tracking-[0.18em] transition-opacity hover:opacity-80"
+                  style={{ color: "var(--nova-accent)" }}
+                >
+                  set
+                </button>
+                {parentWork ? (
+                  <span
+                    className="font-serif text-[12px] italic"
+                    style={{ color: "var(--lunari-fg-subtle)" }}
+                    data-testid="series-parent-label"
+                  >
+                    in {parentWork.title}
+                  </span>
+                ) : null}
+              </form>
             </div>
           </div>
 
@@ -148,6 +221,17 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             reorder={reorderNodeAction}
             setCard={setCardAction}
           />
+
+          {/* the world bible, editable ... the codex the author prompt reads + the
+              continuity scan checks the prose against. */}
+          <CodexPanel
+            workId={work.id}
+            initialEntities={entities}
+            sharedFromSeries={sharedFromSeries}
+          />
+
+          {/* the work read against its codex ... scan for drift, triage the flags. */}
+          <ContinuityRail workId={work.id} initialFlags={flags} />
         </main>
       </div>
     </div>

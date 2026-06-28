@@ -106,6 +106,39 @@ export async function listOpenFlags(
   return (data ?? []).map((r) => rowToFlag(r as FlagRow));
 }
 
+// the only triage states a flag may take. validated at the boundary because a
+// server action is a public surface ... a caller outside the typed client could
+// hand any string. mirrors the editorial finding triage.
+const FLAG_STATES: readonly ContinuityStatus[] = ["open", "accepted", "dismissed"];
+export function isContinuityStatus(s: string): s is ContinuityStatus {
+  return (FLAG_STATES as readonly string[]).includes(s);
+}
+
+/**
+ * accept / dismiss / re-open one continuity flag. RLS scopes the write to the
+ * owner; the work_id scope ties it to this work (so a forged flag id from another
+ * work can't be flipped here). returns the updated flag, or null when it wasn't
+ * found / not owned. a dismissed flag stays dismissed across re-scans ... the scan
+ * writes deterministic-id flags and ignores a collision, so triage is durable.
+ */
+export async function triageFlag(
+  client: ServerClient,
+  workId: string,
+  flagId: string,
+  status: ContinuityStatus,
+): Promise<ContinuityFlag | null> {
+  const typed = client as unknown as TypedClient;
+  const { data, error } = await typed
+    .from("np_continuity_flags")
+    .update({ status })
+    .eq("id", flagId)
+    .eq("work_id", workId)
+    .select("*")
+    .maybeSingle();
+  if (error || !data) return null;
+  return rowToFlag(data as FlagRow);
+}
+
 // de-dupe the merged findings: one flag per (kind, piece, message). the
 // deterministic + model passes can land on the same concern from two angles.
 function dedupe(findings: readonly ContinuityFinding[]): ContinuityFinding[] {

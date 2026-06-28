@@ -7,7 +7,12 @@ import type { Database } from "@/types/supabase";
 
 import type { KnownName } from "@/lib/continuity/types";
 
-import { composeBible, type BibleEntityView } from "./bible-compose";
+import {
+  composeBible,
+  composeBibleForMentions,
+  type BibleEntityView,
+  type BibleEntityViewWithId,
+} from "./bible-compose";
 
 // the world bible read ... the codex the ai author consults so a drafted beat /
 // coined line stays in-world. given a work, it resolves the bible-owning work (a
@@ -23,7 +28,9 @@ type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type TypedClient = SupabaseClient<Database>;
 
 // the embedded row shape PostgREST returns for the entities + their aliases/facts.
+// it carries the id so retrieval-by-mention can filter on it.
 interface EntityRow {
+  id: string;
   name: string | null;
   kind: string | null;
   summary: string | null;
@@ -41,6 +48,37 @@ function rowToView(row: EntityRow): BibleEntityView {
   };
 }
 
+// resolve the effective bible-owning work ... a series volume shares its series'
+// codex via np_works.bible_work_id, defaulting to the work itself.
+async function resolveBibleWorkId(typed: TypedClient, workId: string): Promise<string> {
+  const { data: work } = await typed
+    .from("np_works")
+    .select("bible_work_id")
+    .eq("id", workId)
+    .maybeSingle();
+  return (work?.bible_work_id as string | null) ?? workId;
+}
+
+// the work's bible rows (entities + embedded aliases/facts), most-recent first,
+// scoped to the bible-owning work. the shared read behind both the full compose
+// and the retrieval-narrowed one. callers wrap in try/catch ... a bible read must
+// never break a generation.
+async function readBibleRows(typed: TypedClient, workId: string): Promise<EntityRow[]> {
+  const bibleWorkId = await resolveBibleWorkId(typed, workId);
+  const { data, error } = await typed
+    .from("np_bible_entities")
+    .select("id, name, kind, summary, np_bible_aliases(alias), np_bible_facts(fact)")
+    // scope to the bible-owning work ... RLS only gates by user, so without this a
+    // writer with several works would read EVERY work's codex into the slot.
+    .eq("work_id", bibleWorkId)
+    // most-recent first ... composeBible head-truncates a large bible, so the
+    // newly-introduced nouns (the ones a writer drafting the latest chapter needs
+    // grounded) survive, never the oldest.
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data as unknown as EntityRow[];
+}
+
 /**
  * the compact world bible for a work, ready for the author prompt's reserved
  * slot. resolves the effective bible work (bible_work_id ?? the work itself, so
@@ -52,26 +90,33 @@ function rowToView(row: EntityRow): BibleEntityView {
 export async function readBibleForWork(client: ServerClient, workId: string): Promise<string> {
   const typed = client as unknown as TypedClient;
   try {
-    const { data: work } = await typed
-      .from("np_works")
-      .select("bible_work_id")
-      .eq("id", workId)
-      .maybeSingle();
-    const bibleWorkId = (work?.bible_work_id as string | null) ?? workId;
+    return composeBible((await readBibleRows(typed, workId)).map(rowToView));
+  } catch {
+    return "";
+  }
+}
 
-    const { data, error } = await typed
-      .from("np_bible_entities")
-      .select("name, kind, summary, np_bible_aliases(alias), np_bible_facts(fact)")
-      // scope to the bible-owning work ... RLS only gates by user, so without this
-      // a writer with several works would read EVERY work's codex into the slot.
-      .eq("work_id", bibleWorkId)
-      // most-recent first ... composeBible head-truncates a large bible, so the
-      // newly-introduced nouns (the ones a writer drafting the latest chapter
-      // needs grounded) are the ones that survive, never the oldest.
-      .order("created_at", { ascending: false });
-    if (error || !data) return "";
-
-    return composeBible((data as unknown as EntityRow[]).map(rowToView));
+/**
+ * the world bible NARROWED to what a beat actually names (retrieval-by-mention) ...
+ * the author prompt's bible slot for a drafted beat. reads the same rows, but
+ * composes only the entities the text mentions (an exact / token / trigram hit on
+ * a name or alias), so a beat carries just its relevant cast, not the whole codex.
+ * a beat that names nothing established yields "" ... the honest empty slot. like
+ * readBibleForWork it returns "" on any error: a degraded read never breaks a
+ * generation.
+ */
+export async function readBibleForWorkMentioned(
+  client: ServerClient,
+  workId: string,
+  text: string,
+): Promise<string> {
+  const typed = client as unknown as TypedClient;
+  try {
+    const views: BibleEntityViewWithId[] = (await readBibleRows(typed, workId)).map((r) => ({
+      entityId: r.id,
+      ...rowToView(r),
+    }));
+    return composeBibleForMentions(views, text);
   } catch {
     return "";
   }
@@ -93,12 +138,7 @@ interface NameRow {
 export async function readBibleNames(client: ServerClient, workId: string): Promise<KnownName[]> {
   const typed = client as unknown as TypedClient;
   try {
-    const { data: work } = await typed
-      .from("np_works")
-      .select("bible_work_id")
-      .eq("id", workId)
-      .maybeSingle();
-    const bibleWorkId = (work?.bible_work_id as string | null) ?? workId;
+    const bibleWorkId = await resolveBibleWorkId(typed, workId);
 
     const { data, error } = await typed
       .from("np_bible_entities")

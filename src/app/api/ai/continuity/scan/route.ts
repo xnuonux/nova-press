@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { scanWork } from "@/lib/db/continuity";
+import { listOpenFlags, scanWork } from "@/lib/db/continuity";
 import { getWorkById } from "@/lib/db/works";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -54,7 +54,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await scanWork(supabase, user.id, workId);
-    return NextResponse.json({ ok: true, ...result });
+    // hand back the work's open flags so the rail renders the result without a
+    // second round-trip ... the same owner-scoped read the page loads with.
+    const flags = await listOpenFlags(supabase, workId);
+    return NextResponse.json({ ok: true, ...result, flags });
   } catch (err) {
     reportError(err, { tag: "continuity-scan-failed", userId: user.id });
     return NextResponse.json(

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { coercePlateValue, plateText } from "@/components/editor/plate-text";
 import { streamAuthor } from "@/lib/ai/author";
 import { isAuthorTask } from "@/lib/ai/provider";
-import { readBibleForWork } from "@/lib/db/bible";
+import { readBibleForWorkMentioned } from "@/lib/db/bible";
 import { getPieceById } from "@/lib/db/pieces";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
@@ -104,10 +104,16 @@ export async function POST(request: NextRequest) {
     // re-aims the source to a named strand's snapshot. the read never throws.
     const activeFork = await getActiveWritingFork(supabase, user.id);
     const voice = await getWriterVoice(supabase, user.id, activeFork);
-    // the world bible ... when the piece belongs to a work, fold its codex into
-    // the reserved prompt slot so a drafted beat / coined line stays in-world. ""
-    // for a standalone library piece or an empty bible; the read never throws.
-    const bible = piece.work_id ? await readBibleForWork(supabase, piece.work_id) : "";
+    // the world bible, NARROWED to what this beat names (retrieval-by-mention) ...
+    // when the piece belongs to a work, fold ONLY the entities the note + the piece
+    // so far mention into the reserved prompt slot, so a drafted beat / coined line
+    // stays in-world without flooding the prompt with the whole cast. "" for a
+    // standalone library piece, an empty bible, or a beat that names nothing
+    // established; the read never throws.
+    const mentionSource = `${context}\n\n${document ?? ""}`;
+    const bible = piece.work_id
+      ? await readBibleForWorkMentioned(supabase, piece.work_id, mentionSource)
+      : "";
     const stream = streamAuthor({
       task,
       title: piece.title,

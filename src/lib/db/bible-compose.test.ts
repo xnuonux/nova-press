@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { composeBible, type BibleEntityView } from "./bible-compose";
+import {
+  composeBible,
+  composeBibleForMentions,
+  type BibleEntityView,
+  type BibleEntityViewWithId,
+} from "./bible-compose";
 
 const entity = (over: Partial<BibleEntityView> = {}): BibleEntityView => ({
   name: "marik",
@@ -83,5 +88,37 @@ describe("composeBible", () => {
       entity({ name: "lethe", summary: null, kind: "place" }),
     ]);
     expect(out).toBe("marik (character)\nlethe (place)");
+  });
+});
+
+const withId = (id: string, over: Partial<BibleEntityView> = {}): BibleEntityViewWithId => ({
+  entityId: id,
+  ...entity(over),
+});
+
+describe("composeBibleForMentions", () => {
+  const codex: BibleEntityViewWithId[] = [
+    withId("e-marik", { name: "marik", summary: "the mute ferryman", aliases: ["the ferryman"] }),
+    withId("e-sable", { name: "sable", summary: "the grey witch", kind: "character", aliases: [] }),
+  ];
+
+  it("narrows the slot to only the mentioned entity, not the whole codex", () => {
+    const out = composeBibleForMentions(codex, "Marik stood at the water.");
+    expect(out).toContain("marik (character)");
+    expect(out).not.toContain("sable");
+  });
+
+  it("retrieves more than one when the beat names more than one", () => {
+    const out = composeBibleForMentions(codex, "Sable followed Marik to the gate.");
+    expect(out).toContain("marik");
+    expect(out).toContain("sable");
+  });
+
+  it("returns an empty slot when the beat names nothing established", () => {
+    expect(composeBibleForMentions(codex, "the wind crossed the empty plain.")).toBe("");
+  });
+
+  it("returns empty for an empty codex", () => {
+    expect(composeBibleForMentions([], "Marik stood there.")).toBe("");
   });
 });

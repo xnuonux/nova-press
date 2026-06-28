@@ -3,6 +3,9 @@
 // server bible reader (bible.ts) just hands it the rows. bounded in breadth,
 // depth, and total length so the slot grounds the model rather than flooding it.
 
+import { mentionedEntityIds } from "@/lib/continuity/retrieve";
+import type { KnownName } from "@/lib/continuity/types";
+
 /** an entity as the prompt sees it: who/what it is, the names it answers to, and
  *  the established truths about it. */
 export interface BibleEntityView {
@@ -11,6 +14,11 @@ export interface BibleEntityView {
   summary: string | null;
   aliases: string[];
   facts: string[];
+}
+
+/** the same view carrying its entity id ... what retrieval-by-mention filters on. */
+export interface BibleEntityViewWithId extends BibleEntityView {
+  entityId: string;
 }
 
 // the bible grounds the model, it doesn't drown it. a long manuscript's bible
@@ -68,4 +76,28 @@ export function composeBible(entities: readonly BibleEntityView[]): string {
   }
 
   return blocks.join("\n");
+}
+
+/**
+ * retrieval-by-mention: compose ONLY the entities the text actually names, not the
+ * whole codex. reuses the continuity mention matcher (an exact / token / trigram
+ * hit on a name or alias) to pick the relevant entities, then composes them. a
+ * beat that names nothing established yields "" ... the honest empty slot, which
+ * keeps the author prompt small and on-topic instead of flooding it with the whole
+ * cast. pure: the matcher + composeBible are both pure, so this is unit-tested
+ * headless and the server reader just hands it the rows + the beat text.
+ */
+export function composeBibleForMentions(
+  entities: readonly BibleEntityViewWithId[],
+  text: string,
+): string {
+  if (entities.length === 0) return "";
+  const known: KnownName[] = entities.map((e) => ({
+    entityId: e.entityId,
+    name: e.name,
+    aliases: e.aliases,
+  }));
+  const ids = mentionedEntityIds(text, known);
+  if (ids.size === 0) return "";
+  return composeBible(entities.filter((e) => ids.has(e.entityId)));
 }
