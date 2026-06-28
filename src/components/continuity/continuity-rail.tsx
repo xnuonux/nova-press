@@ -17,7 +17,9 @@
 
 import { useCallback, useId, useState } from "react";
 
+import { proposeEntityDraftAction } from "@/app/(authed)/work/[id]/codex-actions";
 import { triageContinuityFlagAction } from "@/app/(authed)/work/[id]/continuity-actions";
+import { flagToCodexDraft } from "@/lib/continuity/flag-draft";
 import type { ContinuityFlag } from "@/lib/db/continuity";
 
 const ACCENT = "var(--nova-accent)";
@@ -43,6 +45,7 @@ export function ContinuityRail({ workId, initialFlags }: ContinuityRailProps) {
   const [flags, setFlags] = useState<ContinuityFlag[]>(initialFlags);
   const [open, setOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [proposing, setProposing] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const listId = useId();
 
@@ -117,6 +120,31 @@ export function ContinuityRail({ workId, initialFlags }: ContinuityRailProps) {
       }
     },
     [workId],
+  );
+
+  // close the detect -> codex loop: an "unintroduced" flag is a recurring name the
+  // bible hasn't met, so offer to add it. propose a kind + summary from the prose
+  // (degrades to just the name with no model), then hand the draft to the codex
+  // panel via a document event ... it opens + pre-fills its add form.
+  const addToCodex = useCallback(
+    async (flag: ContinuityFlag) => {
+      const base = flagToCodexDraft(flag);
+      if (!base || proposing) return;
+      setProposing(flag.id);
+      setNote(null);
+      try {
+        const res = await proposeEntityDraftAction(workId, base.name);
+        const draft = res.ok && res.draft ? res.draft : base;
+        document.dispatchEvent(new CustomEvent("nova:codex-prefill", { detail: draft }));
+        setNote(`"${draft.name}" is ready in the codex ... review + save it above.`);
+      } catch {
+        // even on a failure, hand the deterministic name up so the writer can add it.
+        document.dispatchEvent(new CustomEvent("nova:codex-prefill", { detail: base }));
+      } finally {
+        setProposing(null);
+      }
+    },
+    [workId, proposing],
   );
 
   const openCount = flags.filter((f) => f.status === "open").length;
@@ -207,6 +235,17 @@ export function ContinuityRail({ workId, initialFlags }: ContinuityRailProps) {
                         </button>
                       ) : (
                         <>
+                          {f.kind === "unintroduced" ? (
+                            <button
+                              type="button"
+                              data-testid="add-to-codex"
+                              onClick={() => void addToCodex(f)}
+                              disabled={proposing === f.id}
+                              style={{ color: ACCENT }}
+                            >
+                              {proposing === f.id ? "..." : "add to codex"}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             data-testid="flag-accept"

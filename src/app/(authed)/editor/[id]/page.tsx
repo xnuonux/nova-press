@@ -53,7 +53,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
           onSave={savePieceContentAction.bind(null, piece.id)}
           onPublish={publishPieceAction.bind(null, piece.id)}
         />
-        <PartnerRail activeWritingFork={activeWritingFork} />
+        <PartnerRail activeWritingFork={activeWritingFork} pieceId={piece.id} />
       </div>
       {/* the editorial ladder + pass panel ... the craft axis, made visible. a
           fixed slim bar across the top, calm until you run a pass. */}

@@ -16,6 +16,10 @@ export interface PromptParts {
   // the piece the writer is working on (rail only) ... so a "respond" riposte
   // spars over the actual draft, not a disconnected line. empty otherwise.
   document?: string;
+  // the relevant world bible (retrieval-by-mention) when the piece belongs to a
+  // work ... so the sparring partner stays in-world the way the author does. empty
+  // for a standalone piece, an empty codex, or a line that names nothing.
+  bible?: string;
 }
 
 const IDENTITY =
@@ -61,12 +65,21 @@ export function buildPartnerPrompt(parts: PromptParts): {
         parts.exemplars.map((e) => `- ${e}`).join("\n")
       : "lines in the writer's voice: none yet.";
 
+  // the world bible slot, mirroring the author prompt's: the entities this line
+  // names (retrieval-by-mention), so a riposte stays consistent with the
+  // established world. an honest "nothing recorded" keeps the block order stable
+  // when there's no work / no bible.
+  const bible = parts.bible?.trim()
+    ? `the world so far (stay consistent with this, never contradict it):\n${parts.bible.trim()}`
+    : "the world so far: nothing recorded yet.";
+
   const system = [
     IDENTITY,
     VOICE_RULES,
     compact,
     FORBIDDEN_PREAMBLE,
     exemplars,
+    bible,
     COMMAND_INSTRUCTION[parts.command],
   ].join("\n\n");
 
@@ -80,7 +93,9 @@ export function buildPartnerPrompt(parts: PromptParts): {
   const recent = (parts.history ?? []).filter((h) => h.text.trim().length > 0);
   const histBlock = recent.length
     ? "the exchange so far ... respond to the writer's last line:\n" +
-      recent.map((h) => `${h.role === "writer" ? "the writer" : "you (nova)"}: ${h.text}`).join("\n") +
+      recent
+        .map((h) => `${h.role === "writer" ? "the writer" : "you (nova)"}: ${h.text}`)
+        .join("\n") +
       "\n\n"
     : "";
 

@@ -2,11 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { runPartnerCommand, streamPartnerCommand } from "@/lib/ai/partner";
 import { isCommand } from "@/lib/ai/provider";
+import { readBibleForWorkMentioned } from "@/lib/db/bible";
+import { getPieceById } from "@/lib/db/pieces";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+// np_pieces.id is a uuid ... shape-guard before a lookup so a malformed id is a
+// clean skip (no bible) rather than a thrown 22P02.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // the AI partner command endpoint. auth-gated ... only a logged-in writer
 // can spend tokens. validates the command, runs it through the partner
@@ -45,12 +51,14 @@ export async function POST(request: NextRequest) {
     stream,
     history: rawHistory,
     document: rawDocument,
+    pieceId: rawPieceId,
   } = (body ?? {}) as {
     command?: unknown;
     context?: unknown;
     stream?: unknown;
     history?: unknown;
     document?: unknown;
+    pieceId?: unknown;
   };
   if (!isCommand(command)) {
     return NextResponse.json({ error: "unknown command" }, { status: 400 });
@@ -94,6 +102,29 @@ export async function POST(request: NextRequest) {
   const activeFork = await getActiveWritingFork(supabase, user.id);
   const voice = await getWriterVoice(supabase, user.id, activeFork);
 
+  // the world bible, NARROWED to what this line names (retrieval-by-mention) ...
+  // when the rail sends the piece it's sparring over and that piece belongs to a
+  // work, fold only the entities the writer's line + the draft mention into the
+  // partner's reserved slot, so a riposte stays in-world like the author's beats.
+  // owner-scoped (getPieceById is RLS-gated); "" for a standalone piece, an empty
+  // codex, a line that names nothing, or a missing / malformed pieceId. the read
+  // never throws.
+  let bible = "";
+  try {
+    if (typeof rawPieceId === "string" && UUID_RE.test(rawPieceId)) {
+      const piece = await getPieceById(supabase, rawPieceId);
+      if (piece?.work_id) {
+        const mentionSource = `${context}\n\n${pieceDocument ?? ""}`;
+        bible = await readBibleForWorkMentioned(supabase, piece.work_id, mentionSource);
+      }
+    }
+  } catch {
+    // the bible is OPTIONAL grounding ... a transient piece-lookup error must
+    // degrade to an honest empty slot, never break the riposte (getPieceById
+    // throws on a db error, unlike the internally-guarded reads around it).
+    bible = "";
+  }
+
   // streaming path: powers the conversation rail. the reply streams token by
   // token, dash-safe at the source; the client runs the full voice-keeper at
   // stream end. getPartnerModel throws synchronously on a missing key, so a
@@ -107,6 +138,7 @@ export async function POST(request: NextRequest) {
         voiceCompactView: voice.voiceCompactView,
         exemplars: voice.exemplars,
         document: pieceDocument,
+        bible: bible || undefined,
       });
       return new Response(responseStream, {
         headers: {
@@ -128,6 +160,7 @@ export async function POST(request: NextRequest) {
       voiceCompactView: voice.voiceCompactView,
       exemplars: voice.exemplars,
       document: pieceDocument,
+      bible: bible || undefined,
     });
     return NextResponse.json(result);
   } catch (err) {

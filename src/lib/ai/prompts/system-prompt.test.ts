@@ -71,6 +71,21 @@ describe("buildPartnerPrompt", () => {
     expect(system).toContain("the comma you keep");
   });
 
+  it("injects the world-bible slot when a bible is provided (retrieval-by-mention)", () => {
+    const { system } = buildPartnerPrompt({
+      command: "respond",
+      context: "does marik speak here",
+      bible: "marik (character) ... the mute ferryman\n- he has never spoken a word.",
+    });
+    expect(system).toContain("the world so far");
+    expect(system).toContain("he has never spoken a word.");
+  });
+
+  it("keeps an honest empty world-bible slot by default, so the block order is stable", () => {
+    const { system } = buildPartnerPrompt({ command: "respond", context: "x" });
+    expect(system.toLowerCase()).toContain("the world so far: nothing recorded yet");
+  });
+
   it("puts the writer's context into the user prompt", () => {
     const { prompt } = buildPartnerPrompt({
       command: "continue",

@@ -5,6 +5,7 @@ import type { Value } from "platejs";
 
 import { countWords } from "@/lib/utils";
 import { deriveExcerpt, plateText } from "@/components/editor/plate-text";
+import { scanPiece } from "@/lib/db/continuity";
 import { savePieceContent } from "@/lib/db/pieces";
 import { recomputeWorkWordCounts } from "@/lib/db/works";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -44,6 +45,12 @@ export async function savePieceContentAction(
   // no workId, so this is a strict no-op and the plain editor flow is untouched.
   if (workId) {
     await recomputeWorkWordCounts(supabase, workId);
+    // the ambient per-piece continuity scan: the DETERMINISTIC pass (no model,
+    // cheap) over just this piece, so the work's continuity rail stays fresh as
+    // the writer edits. best-effort + self-gating (a no-op until a bible exists),
+    // so it never blocks or breaks a save. the whole-work model scan stays a
+    // deliberate, button-driven act.
+    await scanPiece(supabase, user.id, pieceId).catch(() => {});
     revalidatePath(`/work/${workId}`);
   }
 }

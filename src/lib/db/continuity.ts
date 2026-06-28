@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { coercePlateValue, plateText } from "@/components/editor/plate-text";
 import { analyzeContinuity } from "@/lib/ai/continuity-analyze";
-import { detectWork } from "@/lib/continuity/detect";
+import { detectPiece, detectWork } from "@/lib/continuity/detect";
 import { contentHash } from "@/lib/continuity/hash";
 import type {
   ContinuityFinding,
@@ -18,6 +18,7 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/supabase";
 
 import { readBibleForWork, readBibleNames } from "./bible";
+import { getPieceById } from "./pieces";
 
 // the continuity db layer + the resumable scan orchestration. it reads a work's
 // prose + its bible, runs the deterministic pass (detect) THEN the model pass
@@ -153,14 +154,27 @@ function dedupe(findings: readonly ContinuityFinding[]): ContinuityFinding[] {
   return out;
 }
 
-// a deterministic flag id (a uuid derived from the concern's identity), so the
-// SAME concern always lands on the SAME row. two effects: a concurrent re-scan's
-// double-insert collides on the PK instead of duplicating, and a concern the
-// writer already DISMISSED (its row keeps this id) is not re-raised by a later
-// scan ... the insert collides + is ignored, the dismissal stands.
+// the STABLE identity of a concern, for its deterministic id. a deterministic flag
+// carries scope.mention (the proper noun it's about), which does NOT change as the
+// writer edits ... unlike the 'unintroduced' MESSAGE, whose recurrence count ticks
+// up every time the noun reappears. keying on the mention (not the message) keeps a
+// dismissed flag's id stable, so a later scan can never re-raise it under a fresh
+// id when the count changes. a model flag (contradiction / timeline) has no stable
+// mention, so it keys on its message ... that text IS its identity.
+function flagIdentity(f: ContinuityFinding): string {
+  const mention =
+    f.scope && typeof f.scope.mention === "string" ? f.scope.mention.trim().toLowerCase() : "";
+  return mention ? `${f.kind}|${mention}` : `${f.kind}|${f.message}`;
+}
+
+// a deterministic flag id (a uuid derived from the concern's stable identity), so
+// the SAME concern always lands on the SAME row. two effects: a concurrent re-scan's
+// double-insert collides on the PK instead of duplicating, and a concern the writer
+// already DISMISSED (its row keeps this id) is not re-raised by a later scan ... the
+// insert collides + is ignored, the dismissal stands.
 function flagId(workId: string, f: ContinuityFinding): string {
   const h = createHash("sha256")
-    .update(`${workId}|${f.kind}|${f.pieceId ?? ""}|${f.message}`)
+    .update(`${workId}|${f.pieceId ?? ""}|${flagIdentity(f)}`)
     .digest("hex");
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
@@ -293,4 +307,72 @@ export async function scanWork(
   if (doneErr) throw new Error(`failed to complete continuity scan: ${doneErr.message}`);
 
   return { status: "complete", flagsFound: findings.length, bodyHash };
+}
+
+export interface PieceScanResult {
+  // false when there was nothing to scan: no piece, no work, or no bible yet (the
+  // ambient per-piece scan stays quiet until a codex exists, so it doesn't nag a
+  // writer who hasn't started worldbuilding).
+  scanned: boolean;
+  flagsFound: number;
+}
+
+/**
+ * the DETERMINISTIC pass over a SINGLE piece (no model, cheap) ... keeps the
+ * continuity flags fresh as a writer edits one page, without a whole-work model
+ * scan. it replaces ONLY this piece's deterministic open flags (name_drift +
+ * unintroduced, the two kinds detect produces), so the whole-work scan's model
+ * flags (contradiction / timeline) and every other piece's flags are untouched. it
+ * reuses the SAME deterministic flag ids, so it dovetails with the whole-work
+ * scan's idempotency: a dismissed concern is never re-raised, a concurrent write
+ * collides harmlessly. RLS owner-scopes every read + write. it stays QUIET until a
+ * bible exists (so an un-codexed work isn't flooded with "unintroduced" on save).
+ */
+export async function scanPiece(
+  client: ServerClient,
+  userId: string,
+  pieceId: string,
+): Promise<PieceScanResult> {
+  const piece = await getPieceById(client, pieceId);
+  if (!piece || !piece.work_id) return { scanned: false, flagsFound: 0 };
+  const workId = piece.work_id;
+
+  const known = await readBibleNames(client, workId);
+  if (known.length === 0) return { scanned: false, flagsFound: 0 };
+
+  const text = plateText(coercePlateValue(piece.body));
+  const findings = detectPiece(pieceId, text, known);
+
+  const typed = client as unknown as TypedClient;
+  // clear ONLY this piece's deterministic open flags, then re-raise the fresh set.
+  // a fixed misspelling's flag is dropped (not re-detected, not re-inserted); a
+  // still-present concern keeps its deterministic id.
+  const { error: delErr } = await typed
+    .from("np_continuity_flags")
+    .delete()
+    .eq("work_id", workId)
+    .eq("piece_id", pieceId)
+    .eq("status", "open")
+    .in("kind", ["name_drift", "unintroduced"]);
+  if (delErr) throw new Error(`failed to clear piece flags: ${delErr.message}`);
+
+  if (findings.length > 0) {
+    const rows = findings.map((f) => ({
+      id: flagId(workId, f),
+      user_id: userId,
+      work_id: workId,
+      piece_id: f.pieceId ?? pieceId,
+      entity_id: f.entityId ?? null,
+      kind: f.kind,
+      message: f.message,
+      status: "open",
+      scope: (f.scope ?? {}) as unknown as Json,
+    }));
+    const { error: insErr } = await typed
+      .from("np_continuity_flags")
+      .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
+    if (insErr) throw new Error(`failed to write piece flags: ${insErr.message}`);
+  }
+
+  return { scanned: true, flagsFound: findings.length };
 }

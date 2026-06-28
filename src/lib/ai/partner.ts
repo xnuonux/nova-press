@@ -28,6 +28,10 @@ export interface PartnerInput {
   // the draft the writer is working on (rail only) ... so nova spars over the
   // actual piece, not a line in a vacuum.
   document?: string;
+  // the relevant world bible (retrieval-by-mention) ... folded into the prompt's
+  // reserved slot so a riposte stays in-world. flows straight into
+  // buildPartnerPrompt; empty for a standalone piece or an empty codex.
+  bible?: string;
 }
 
 export interface PartnerResult {
@@ -105,7 +109,8 @@ export function streamPartnerCommand(input: PartnerInput): ReadableStream<Uint8A
     maxTokens: cfg.maxTokens,
     // the body streams after a 200 is already on the wire, so a mid-stream
     // provider failure can't reach the route's try/catch ... log it here.
-    onError: ({ error }) => reportError(error, { tag: "ai-partner-stream", command: input.command }),
+    onError: ({ error }) =>
+      reportError(error, { tag: "ai-partner-stream", command: input.command }),
   });
 
   const encoder = new TextEncoder();

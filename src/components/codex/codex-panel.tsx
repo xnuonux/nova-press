@@ -12,7 +12,7 @@
  * lowercase voice, lunari tokens, the golden accent. it never shouts.
  */
 
-import { useCallback, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 
 import {
   createEntityAction,
@@ -20,7 +20,7 @@ import {
   updateEntityAction,
   type EntityFormInput,
 } from "@/app/(authed)/work/[id]/codex-actions";
-import { ENTITY_KINDS, type EntityKind } from "@/lib/codex/validate";
+import { ENTITY_KINDS, isEntityKind, type EntityKind } from "@/lib/codex/validate";
 import type { CodexEntity } from "@/lib/db/codex";
 
 const ACCENT = "var(--nova-accent)";
@@ -250,7 +250,41 @@ export function CodexPanel({ workId, initialEntities, sharedFromSeries }: CodexP
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState<{
+    name: string;
+    kind: EntityKind;
+    summary: string;
+  } | null>(null);
+  // bumped on every prefill event so the add form re-mounts + re-initializes even
+  // when a second proposal arrives for the SAME name (an enriched kind / summary).
+  const [prefillNonce, setPrefillNonce] = useState(0);
   const listId = useId();
+
+  // the continuity rail's "add to codex" hands a recurring name up via this event
+  // (closing the detect -> codex loop): open the panel + the add form, pre-filled
+  // with the proposed name (and a model-proposed kind / summary when present). a
+  // document event is the cross-island bridge, like nova:piece-edited.
+  useEffect(() => {
+    const onPrefill = (e: Event) => {
+      const detail = (e as CustomEvent).detail as
+        | { name?: unknown; kind?: unknown; summary?: unknown }
+        | undefined;
+      const name = typeof detail?.name === "string" ? detail.name.trim() : "";
+      if (!name) return;
+      setPrefill({
+        name,
+        kind: isEntityKind(detail?.kind) ? detail.kind : "character",
+        summary: typeof detail?.summary === "string" ? detail.summary : "",
+      });
+      setPrefillNonce((n) => n + 1);
+      setOpen(true);
+      setAdding(true);
+      setEditingId(null);
+      setNote(null);
+    };
+    document.addEventListener("nova:codex-prefill", onPrefill);
+    return () => document.removeEventListener("nova:codex-prefill", onPrefill);
+  }, []);
 
   const create = useCallback(
     async (input: EntityFormInput) => {
@@ -261,6 +295,7 @@ export function CodexPanel({ workId, initialEntities, sharedFromSeries }: CodexP
       if (res.ok) {
         setEntities(res.entities);
         setAdding(false);
+        setPrefill(null);
       } else {
         setNote(res.error ?? "couldn't save that.");
       }
@@ -377,10 +412,29 @@ export function CodexPanel({ workId, initialEntities, sharedFromSeries }: CodexP
               style={{ borderColor: "var(--lunari-border)" }}
             >
               <EntityForm
+                // re-mount on every prefill (keyed on the nonce, not the name) so
+                // the form re-initializes from the proposed draft ... even a second
+                // proposal for the same name lands its enriched kind / summary.
+                key={prefill ? `prefill-${prefillNonce}` : "new"}
+                initial={
+                  prefill
+                    ? {
+                        id: "",
+                        name: prefill.name,
+                        kind: prefill.kind,
+                        summary: prefill.summary || null,
+                        aliases: [],
+                        facts: [],
+                      }
+                    : undefined
+                }
                 busy={busy}
                 submitLabel="add to codex"
                 onSubmit={(input) => void create(input)}
-                onCancel={() => setAdding(false)}
+                onCancel={() => {
+                  setAdding(false);
+                  setPrefill(null);
+                }}
               />
             </div>
           ) : (
@@ -390,6 +444,7 @@ export function CodexPanel({ workId, initialEntities, sharedFromSeries }: CodexP
                 setAdding(true);
                 setEditingId(null);
                 setNote(null);
+                setPrefill(null);
               }}
               data-testid="codex-add"
               className="self-start font-mono text-[10px] uppercase tracking-[0.16em]"

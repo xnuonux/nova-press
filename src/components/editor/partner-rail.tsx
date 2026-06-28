@@ -36,10 +36,15 @@ import { voiceKeeperAudit } from "@/lib/ai/voice-keeper";
 
 export function PartnerRail({
   activeWritingFork = null,
+  pieceId,
 }: {
   // the named strand nova is writing in, or null for your live voice. drives the
   // footer indicator so a writer always knows whose voice nova mirrors.
   activeWritingFork?: string | null;
+  // the piece the rail spars over ... sent with each ask so the command route can
+  // ground a riposte in the work's bible (retrieval-by-mention). undefined for a
+  // standalone editor with no piece context.
+  pieceId?: string;
 } = {}) {
   const [messages, dispatch] = useReducer(threadReducer, []);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -121,6 +126,7 @@ export function PartnerRail({
             context,
             history,
             document: pieceText || undefined,
+            pieceId,
             stream: true,
           }),
           signal: controller.signal,
@@ -149,7 +155,7 @@ export function PartnerRail({
         dispatch({ type: "fail", id: novaId });
       }
     })();
-  }, [messages]);
+  }, [messages, pieceId]);
 
   const onSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
