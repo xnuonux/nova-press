@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { Binder } from "@/components/binder/binder";
 import { Atmosphere } from "@/components/chrome/atmosphere";
 import { CodexPanel } from "@/components/codex/codex-panel";
+import { ConlangPanel } from "@/components/conlang/conlang-panel";
 import { ContinuityRail } from "@/components/continuity/continuity-rail";
 import { VoiceTrainer } from "@/components/editor/voice-trainer";
 import { listCodexEntities } from "@/lib/db/codex";
 import { listOpenFlags } from "@/lib/db/continuity";
+import { listLexemes } from "@/lib/db/lexicon";
 import { listSeriesWorks } from "@/lib/db/series";
 import { getWorkById, getWorkTree } from "@/lib/db/works";
 import { parentCandidateIds } from "@/lib/works/series";
@@ -55,6 +57,11 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
     : null;
   // the codex is shared from a parent when this work reads someone else's bible.
   const sharedFromSeries = !!work.bibleWorkId && work.bibleWorkId !== work.id;
+
+  // the conlang surface: only a constructed-language work gets the language panel
+  // (the phonology rails + the lexicon). its words are node_type "lexeme" records.
+  const isConlang = work.formProfile === "conlang";
+  const lexemes = isConlang ? await listLexemes(supabase, id) : [];
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -221,6 +228,16 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             reorder={reorderNodeAction}
             setCard={setCardAction}
           />
+
+          {/* a constructed language ... the phonology rails + the lexicon, words
+              coined to obey the sound rules. only for conlang works. */}
+          {isConlang ? (
+            <ConlangPanel
+              workId={work.id}
+              initialPhonology={work.settings.phonology}
+              initialLexemes={lexemes}
+            />
+          ) : null}
 
           {/* the world bible, editable ... the codex the author prompt reads + the
               continuity scan checks the prose against. */}

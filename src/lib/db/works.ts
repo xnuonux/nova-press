@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/supabase";
+import type { Database, Json } from "@/types/supabase";
 import type { Work, TreeNode } from "@/types/works";
 
 import { coercePlateValue, plateText } from "@/components/editor/plate-text";
@@ -72,6 +72,25 @@ export async function getWorkById(client: ServerClient, id: string): Promise<Wor
     throw new Error(`failed to fetch np_works row: ${error.message}`);
   }
   return data ? rowToWork(data as WorkRow) : null;
+}
+
+// patch a work's settings / metadata jsonb (RLS owner-scoped). settings carries
+// per-form payloads ... the conlang phonology rides settings.phonology. the caller
+// merges (read-modify-write) so a patch never clobbers a sibling key.
+export async function updateWork(
+  client: ServerClient,
+  workId: string,
+  patch: Partial<{ settings: Record<string, unknown>; metadata: Record<string, unknown> }>,
+): Promise<void> {
+  const typed = client as unknown as TypedClient;
+  const update: Database["public"]["Tables"]["np_works"]["Update"] = {};
+  if (patch.settings !== undefined) update.settings = patch.settings as unknown as Json;
+  if (patch.metadata !== undefined) update.metadata = patch.metadata as unknown as Json;
+  if (Object.keys(update).length === 0) return;
+  const { error } = await typed.from("np_works").update(update).eq("id", workId);
+  if (error) {
+    throw new Error(`failed to update np_works: ${error.message}`);
+  }
 }
 
 // create a work for a form profile, seeding its skeleton (a novel's three acts,
