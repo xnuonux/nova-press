@@ -132,6 +132,7 @@ export async function createLeafNode(
     title?: string;
     position?: number;
     pieceKind?: string;
+    record?: Record<string, unknown>;
   },
 ): Promise<{ node: StructureNode; pieceId: string }> {
   const typed = client as unknown as TypedClient;
@@ -144,6 +145,7 @@ export async function createLeafNode(
     position: input.position,
     isLeaf: true,
     pieceId,
+    record: input.record,
   });
   const { error } = await typed
     .from("np_pieces")

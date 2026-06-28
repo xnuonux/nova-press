@@ -7,6 +7,8 @@ import { CodexPanel } from "@/components/codex/codex-panel";
 import { ConlangPanel } from "@/components/conlang/conlang-panel";
 import { ContinuityRail } from "@/components/continuity/continuity-rail";
 import { VoiceTrainer } from "@/components/editor/voice-trainer";
+import { EncyclopaediaPanel } from "@/components/encyclopaedia/encyclopaedia-panel";
+import { listArticles } from "@/lib/db/articles";
 import { listCodexEntities } from "@/lib/db/codex";
 import { listOpenFlags } from "@/lib/db/continuity";
 import { listLexemes } from "@/lib/db/lexicon";
@@ -62,6 +64,12 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   // (the phonology rails + the lexicon). its words are node_type "lexeme" records.
   const isConlang = work.formProfile === "conlang";
   const lexemes = isConlang ? await listLexemes(supabase, id) : [];
+
+  // the encyclopaedia surface: only an encyclopaedia work gets the article panel
+  // (the A-Z index + the infobox/xref/citation reading). articles are record_prose
+  // nodes (an infobox record + a prose piece).
+  const isEncyclopaedia = work.formProfile === "encyclopaedia";
+  const articles = isEncyclopaedia ? await listArticles(supabase, id) : [];
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -237,6 +245,12 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
               initialPhonology={work.settings.phonology}
               initialLexemes={lexemes}
             />
+          ) : null}
+
+          {/* an encyclopaedia ... the A-Z index + articles, each an infobox + prose
+              with [[xref]] links + ((citations)). only for encyclopaedia works. */}
+          {isEncyclopaedia ? (
+            <EncyclopaediaPanel workId={work.id} initialArticles={articles} />
           ) : null}
 
           {/* the world bible, editable ... the codex the author prompt reads + the
