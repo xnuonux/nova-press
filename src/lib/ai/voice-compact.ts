@@ -17,6 +17,8 @@ export interface VoiceProfileFields {
   register?: string | null;
   vocabulary_signature?: string | null;
   sentence_length_avg?: number | null;
+  // 0 (raw / informal) .. 1 (formal / composed); rendered as a steer band when set.
+  formality_score?: number | null;
   avoided_phrases?: string[] | null;
   idiosyncratic_phrases?: string[] | null;
   opening_patterns?: unknown;
@@ -31,7 +33,9 @@ export interface VoiceProfileFields {
 // drift in opening_patterns / closing_patterns.
 function asStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0).map((v) => v.trim());
+    return value
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .map((v) => v.trim());
   }
   if (typeof value === "string" && value.trim().length > 0) return [value.trim()];
   return [];
@@ -47,7 +51,10 @@ function pickString(obj: unknown, key: string): string | undefined {
 }
 
 function cleanList(list: string[] | null | undefined, max: number): string[] {
-  return (list ?? []).filter((s) => typeof s === "string" && s.trim().length > 0).map((s) => s.trim()).slice(0, max);
+  return (list ?? [])
+    .filter((s) => typeof s === "string" && s.trim().length > 0)
+    .map((s) => s.trim())
+    .slice(0, max);
 }
 
 /**
@@ -62,13 +69,26 @@ export function composeVoiceCompactView(p: VoiceProfileFields): string | undefin
 
   // nova's manual override leads ... it's the writer's explicit steer and
   // outranks the extracted stats.
-  const override = pickString(p.writing_overrides, "summary") ?? pickString(p.writing_overrides, "note");
+  const override =
+    pickString(p.writing_overrides, "summary") ?? pickString(p.writing_overrides, "note");
   if (override) clauses.push(override);
 
-  if (typeof p.register === "string" && p.register.trim()) clauses.push(`register: ${p.register.trim()}`);
+  if (typeof p.register === "string" && p.register.trim())
+    clauses.push(`register: ${p.register.trim()}`);
 
   if (typeof p.sentence_length_avg === "number" && p.sentence_length_avg > 0) {
     clauses.push(`sentences run about ${Math.round(p.sentence_length_avg)} words`);
+  }
+
+  if (typeof p.formality_score === "number" && p.formality_score >= 0 && p.formality_score <= 1) {
+    const f = p.formality_score;
+    clauses.push(
+      f < 0.34
+        ? "leans plainspoken + informal"
+        : f > 0.66
+          ? "leans formal + composed"
+          : "balanced formality",
+    );
   }
 
   if (typeof p.vocabulary_signature === "string" && p.vocabulary_signature.trim()) {

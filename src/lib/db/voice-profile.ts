@@ -103,6 +103,34 @@ export async function getWriterVoice(
   }
 }
 
+/**
+ * the writer's RAW base voice fields (the readable subset CLAUDE.md allows), for
+ * the multi-voice resolve + drift gate ... unlike getWriterVoice this does NOT
+ * compose the compact line, it hands back the fields a delta merges into / is
+ * measured against. RLS owner-scoped, never throws (a missing / mirroring-off
+ * profile yields {} so the gate just measures the delta against neutral
+ * defaults). never writes voice_profiles, never touches the outreach_* columns.
+ */
+export async function readWriterVoiceFields(
+  client: ServerClient,
+  userId: string,
+): Promise<VoiceProfileFields> {
+  const typed = client as unknown as TypedClient;
+  try {
+    const { data, error } = await typed
+      .from("voice_profiles")
+      .select(VOICE_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error || !data) return {};
+    const fields = data as unknown as VoiceProfileFields;
+    if (fields.active_for_writing === false) return {};
+    return fields;
+  } catch {
+    return {};
+  }
+}
+
 // a read-only, display-ready view of the writer's distilled voice ... the
 // columns CLAUDE.md lets nova read, camelCased, for the studio's "your voice at
 // a glance" card. never the outreach_* columns.

@@ -6,6 +6,7 @@ import { isAuthorTask } from "@/lib/ai/provider";
 import { readBibleForWorkMentioned } from "@/lib/db/bible";
 import { getPieceById } from "@/lib/db/pieces";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
+import { resolveGenerationVoice } from "@/lib/db/voice-resolve";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -104,6 +105,13 @@ export async function POST(request: NextRequest) {
     // re-aims the source to a named strand's snapshot. the read never throws.
     const activeFork = await getActiveWritingFork(supabase, user.id);
     const voice = await getWriterVoice(supabase, user.id, activeFork);
+    // overlay the character voice governing this moment (the per-block span tag if
+    // the beat targets a tagged block, else the work's active voice), drift-gated.
+    // degrades to the base voice ... never the reason a beat fails.
+    const genVoice = await resolveGenerationVoice(supabase, user.id, {
+      workId: piece.work_id ?? null,
+      base: voice,
+    });
     // the world bible, NARROWED to what this beat names (retrieval-by-mention) ...
     // when the piece belongs to a work, fold ONLY the entities the note + the piece
     // so far mention into the reserved prompt slot, so a drafted beat / coined line
@@ -119,8 +127,8 @@ export async function POST(request: NextRequest) {
       title: piece.title,
       context,
       document,
-      voiceCompactView: voice.voiceCompactView,
-      exemplars: voice.exemplars,
+      voiceCompactView: genVoice.voiceCompactView,
+      exemplars: genVoice.exemplars,
       bible: bible || undefined,
     });
     return new Response(stream, {

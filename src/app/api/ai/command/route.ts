@@ -5,6 +5,7 @@ import { isCommand } from "@/lib/ai/provider";
 import { readBibleForWorkMentioned } from "@/lib/db/bible";
 import { getPieceById } from "@/lib/db/pieces";
 import { getActiveWritingFork } from "@/lib/db/user-settings";
+import { resolveGenerationVoice } from "@/lib/db/voice-resolve";
 import { getWriterVoice } from "@/lib/db/voice-profile";
 import { reportError } from "@/lib/observability/report-error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -102,21 +103,28 @@ export async function POST(request: NextRequest) {
   const activeFork = await getActiveWritingFork(supabase, user.id);
   const voice = await getWriterVoice(supabase, user.id, activeFork);
 
-  // the world bible, NARROWED to what this line names (retrieval-by-mention) ...
-  // when the rail sends the piece it's sparring over and that piece belongs to a
-  // work, fold only the entities the writer's line + the draft mention into the
-  // partner's reserved slot, so a riposte stays in-world like the author's beats.
-  // owner-scoped (getPieceById is RLS-gated); "" for a standalone piece, an empty
-  // codex, a line that names nothing, or a missing / malformed pieceId. the read
-  // never throws.
-  let bible = "";
+  // resolve the piece once ... its work grounds BOTH the bible + the active voice.
+  // getPieceById is RLS-gated (owner-scoped) but CAN throw on a db error, so it's
+  // guarded; a malformed / not-owned / missing id just leaves the work null.
+  let pieceWorkId: string | null = null;
   try {
     if (typeof rawPieceId === "string" && UUID_RE.test(rawPieceId)) {
       const piece = await getPieceById(supabase, rawPieceId);
-      if (piece?.work_id) {
-        const mentionSource = `${context}\n\n${pieceDocument ?? ""}`;
-        bible = await readBibleForWorkMentioned(supabase, piece.work_id, mentionSource);
-      }
+      pieceWorkId = piece?.work_id ?? null;
+    }
+  } catch {
+    pieceWorkId = null;
+  }
+
+  // the world bible, NARROWED to what this line names (retrieval-by-mention): fold
+  // only the entities the writer's line + the draft mention into the partner's
+  // reserved slot, so a riposte stays in-world. "" for a standalone piece, an empty
+  // codex, or a line that names nothing.
+  let bible = "";
+  try {
+    if (pieceWorkId) {
+      const mentionSource = `${context}\n\n${pieceDocument ?? ""}`;
+      bible = await readBibleForWorkMentioned(supabase, pieceWorkId, mentionSource);
     }
   } catch {
     // the bible is OPTIONAL grounding ... a transient piece-lookup error must
@@ -124,6 +132,14 @@ export async function POST(request: NextRequest) {
     // throws on a db error, unlike the internally-guarded reads around it).
     bible = "";
   }
+
+  // the active character voice: when this work has a voice selected, overlay it on
+  // the writer's base voice (drift-gated) so the riposte speaks in THAT voice, not
+  // just the narrator. never throws ... degrades to the base voice.
+  const genVoice = await resolveGenerationVoice(supabase, user.id, {
+    workId: pieceWorkId,
+    base: voice,
+  });
 
   // streaming path: powers the conversation rail. the reply streams token by
   // token, dash-safe at the source; the client runs the full voice-keeper at
@@ -135,8 +151,8 @@ export async function POST(request: NextRequest) {
         command,
         context,
         history,
-        voiceCompactView: voice.voiceCompactView,
-        exemplars: voice.exemplars,
+        voiceCompactView: genVoice.voiceCompactView,
+        exemplars: genVoice.exemplars,
         document: pieceDocument,
         bible: bible || undefined,
       });
@@ -157,8 +173,8 @@ export async function POST(request: NextRequest) {
     const result = await runPartnerCommand({
       command,
       context,
-      voiceCompactView: voice.voiceCompactView,
-      exemplars: voice.exemplars,
+      voiceCompactView: genVoice.voiceCompactView,
+      exemplars: genVoice.exemplars,
       document: pieceDocument,
       bible: bible || undefined,
     });

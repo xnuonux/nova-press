@@ -8,7 +8,10 @@ import { ConlangPanel } from "@/components/conlang/conlang-panel";
 import { ContinuityRail } from "@/components/continuity/continuity-rail";
 import { VoiceTrainer } from "@/components/editor/voice-trainer";
 import { EncyclopaediaPanel } from "@/components/encyclopaedia/encyclopaedia-panel";
+import { VoicesPanel } from "@/components/voices/voices-panel";
 import { listArticles } from "@/lib/db/articles";
+import { readWriterVoiceFields } from "@/lib/db/voice-profile";
+import { getActiveVoiceId, listVoices } from "@/lib/db/voices";
 import { listCodexEntities } from "@/lib/db/codex";
 import { listOpenFlags } from "@/lib/db/continuity";
 import { listLexemes } from "@/lib/db/lexicon";
@@ -70,6 +73,24 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   // nodes (an infobox record + a prose piece).
   const isEncyclopaedia = work.formProfile === "encyclopaedia";
   const articles = isEncyclopaedia ? await listArticles(supabase, id) : [];
+
+  // the cast of voices ... every work can hold more than one voice (a narrator +
+  // named character overlays), so this isn't form-gated. the active one drives
+  // nova's beats + ripostes for the work.
+  const voices = await listVoices(supabase, id);
+  const activeVoiceId = await getActiveVoiceId(supabase, id);
+
+  // the writer's own average sentence length (their base voice), so the voices
+  // panel's drift meter measures against the SAME base generation gates against.
+  // RLS-scoped read of the caller's own row; null when untrained; never throws.
+  const {
+    data: { user: voiceUser },
+  } = await supabase.auth.getUser();
+  const baseVoiceFields = voiceUser ? await readWriterVoiceFields(supabase, voiceUser.id) : {};
+  const baseSentenceLength =
+    typeof baseVoiceFields.sentence_length_avg === "number"
+      ? baseVoiceFields.sentence_length_avg
+      : null;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -252,6 +273,15 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
           {isEncyclopaedia ? (
             <EncyclopaediaPanel workId={work.id} initialArticles={articles} />
           ) : null}
+
+          {/* the cast of voices ... the narrator + named character overlays, and
+              who's speaking. drives nova's beats + ripostes for this work. */}
+          <VoicesPanel
+            workId={work.id}
+            initialVoices={voices}
+            initialActiveVoiceId={activeVoiceId}
+            baseSentenceLength={baseSentenceLength}
+          />
 
           {/* the world bible, editable ... the codex the author prompt reads + the
               continuity scan checks the prose against. */}

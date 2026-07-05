@@ -8556,6 +8556,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      np_voices: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          overrides: Json;
+          position: number;
+          register: string;
+          summary: string;
+          updated_at: string;
+          user_id: string;
+          work_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          overrides?: Json;
+          position?: number;
+          register?: string;
+          summary?: string;
+          updated_at?: string;
+          user_id: string;
+          work_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          overrides?: Json;
+          position?: number;
+          register?: string;
+          summary?: string;
+          updated_at?: string;
+          user_id?: string;
+          work_id?: string;
+        };
+        Relationships: [];
+      };
       np_works: {
         Row: {
           bible_work_id: string | null;
