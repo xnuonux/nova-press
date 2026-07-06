@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --silent",
     "test:watch": "vitest",
+    "worker:publish": "node --env-file=.env.local scripts/publish-worker.mjs",
     "prepare": "husky"
   },
   "dependencies": {
@@ -29,10 +30,12 @@
     "@sparticuz/chromium": "^149.0.0",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",
+    "adm-zip": "^0.5.18",
     "ai": "^4.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^9.7.1",
+    "fast-xml-parser": "^5.9.3",
     "hyphen": "^1.14.1",
     "lucide-react": "^0.460.0",
     "mammoth": "^1.12.0",
@@ -47,6 +50,7 @@
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "^22.9.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

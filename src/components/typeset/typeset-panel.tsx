@@ -20,6 +20,15 @@ const ACCENT = "var(--nova-accent)";
 const SUBTLE = "var(--lunari-fg-subtle)";
 const MUTED = "var(--lunari-fg-muted)";
 
+/** one export receipt (shaped by the server page ... a local mirror of the
+ *  db layer's ExportReceipt, kept here so this client island never imports a
+ *  server-only module). */
+interface ReceiptLine {
+  format: string;
+  status: string;
+  createdAt: string;
+}
+
 interface TypesetPanelProps {
   workId: string;
   /** the work's derived editorial stage (min over its pieces) ... null when
@@ -27,9 +36,19 @@ interface TypesetPanelProps {
   stage: EditorialStage | null;
   /** the download name the server will also suggest ("<slug>.pdf"). */
   fileName: string;
+  /** the work's recent export receipts, newest first (np_exports). */
+  initialExports: ReceiptLine[];
 }
 
-export function TypesetPanel({ workId, stage, fileName }: TypesetPanelProps) {
+function receiptLabel(r: ReceiptLine): string {
+  const at = new Date(r.createdAt);
+  const day = Number.isNaN(at.getTime())
+    ? ""
+    : ` · ${at.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  return `${r.format}${r.status === "failed" ? " (failed)" : ""}${day}`;
+}
+
+export function TypesetPanel({ workId, stage, fileName, initialExports }: TypesetPanelProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -145,6 +164,17 @@ export function TypesetPanel({ workId, stage, fileName }: TypesetPanelProps) {
               data-testid="typeset-note"
             >
               {note}
+            </p>
+          ) : null}
+
+          {/* what left the studio lately ... the np_exports receipts. */}
+          {initialExports.length > 0 ? (
+            <p
+              className="font-mono text-[10px] lowercase tracking-[0.1em]"
+              style={{ color: SUBTLE }}
+              data-testid="typeset-recent"
+            >
+              lately: {initialExports.map(receiptLabel).join("  ·  ")}
             </p>
           ) : null}
         </div>

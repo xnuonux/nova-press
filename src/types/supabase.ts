@@ -8133,6 +8133,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      np_exports: {
+        Row: {
+          byte_size: number | null;
+          created_at: string;
+          detail: string;
+          format: string;
+          id: string;
+          piece_id: string | null;
+          status: string;
+          updated_at: string;
+          user_id: string;
+          work_id: string | null;
+        };
+        Insert: {
+          byte_size?: number | null;
+          created_at?: string;
+          detail?: string;
+          format: string;
+          id?: string;
+          piece_id?: string | null;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+          work_id?: string | null;
+        };
+        Update: {
+          byte_size?: number | null;
+          created_at?: string;
+          detail?: string;
+          format?: string;
+          id?: string;
+          piece_id?: string | null;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+          work_id?: string | null;
+        };
+        Relationships: [];
+      };
       np_links: {
         Row: {
           context: Json;

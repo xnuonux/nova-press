@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { coercePlateValue } from "@/components/editor/plate-text";
+import { recordExport } from "@/lib/db/exports";
 import { getPieceById } from "@/lib/db/pieces";
 import { fileSlug } from "@/lib/io/filename";
 import { slateToMarkdown } from "@/lib/io/markdown";
@@ -33,9 +34,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // hoisted so the failure receipt can still name the piece.
+  let pieceId = "";
   try {
     const payload = (await request.json()) as { pieceId?: unknown; format?: unknown };
-    const pieceId = typeof payload.pieceId === "string" ? payload.pieceId : "";
+    pieceId = typeof payload.pieceId === "string" ? payload.pieceId : "";
     if (!pieceId) {
       return NextResponse.json({ ok: false, error: "which piece?" }, { status: 400 });
     }
@@ -53,6 +56,12 @@ export async function POST(request: Request) {
     }
 
     const markdown = slateToMarkdown(coercePlateValue(piece.body));
+    await recordExport(supabase, user.id, {
+      pieceId,
+      format: "markdown",
+      ok: true,
+      byteSize: Buffer.byteLength(markdown, "utf8"),
+    });
     return NextResponse.json({
       ok: true,
       markdown,
@@ -61,6 +70,12 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     reportError(err, { tag: "export-failed", userId: user.id });
+    await recordExport(supabase, user.id, {
+      pieceId: pieceId || null,
+      format: "markdown",
+      ok: false,
+      detail: err instanceof Error ? err.message : "export failed",
+    });
     return NextResponse.json(
       { ok: false, error: "couldn't export that ... give it another go" },
       { status: 502 },

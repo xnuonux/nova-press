@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { coercePlateValue } from "@/components/editor/plate-text";
+import { recordExport } from "@/lib/db/exports";
 import { getPieceById } from "@/lib/db/pieces";
 import { getWorkSectionsForOwner } from "@/lib/db/works";
 import { slateToDocx, sectionsToDocx } from "@/lib/io/docx";
@@ -43,10 +44,13 @@ export async function POST(request: Request) {
     );
   }
 
+  // hoisted so the failure receipt can still name the source.
+  let pieceId = "";
+  let workId = "";
   try {
     const payload = (await request.json()) as { pieceId?: unknown; workId?: unknown };
-    const pieceId = typeof payload.pieceId === "string" ? payload.pieceId : "";
-    const workId = typeof payload.workId === "string" ? payload.workId : "";
+    pieceId = typeof payload.pieceId === "string" ? payload.pieceId : "";
+    workId = typeof payload.workId === "string" ? payload.workId : "";
 
     if (workId) {
       const work = await getWorkSectionsForOwner(supabase, workId);
@@ -54,6 +58,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: false, error: "work not found" }, { status: 404 });
       }
       const buffer = await sectionsToDocx(work.title, work.sections);
+      await recordExport(supabase, user.id, {
+        workId,
+        format: "docx",
+        ok: true,
+        byteSize: buffer.length,
+      });
       return docxResponse(buffer, fileSlug(work.title, "work"));
     }
 
@@ -63,12 +73,25 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: false, error: "piece not found" }, { status: 404 });
       }
       const buffer = await slateToDocx(coercePlateValue(piece.body), piece.title);
+      await recordExport(supabase, user.id, {
+        pieceId,
+        format: "docx",
+        ok: true,
+        byteSize: buffer.length,
+      });
       return docxResponse(buffer, fileSlug(piece.title, "piece"));
     }
 
     return NextResponse.json({ ok: false, error: "which piece or work?" }, { status: 400 });
   } catch (err) {
     reportError(err, { tag: "export-docx-failed", userId: user.id });
+    await recordExport(supabase, user.id, {
+      workId: workId || null,
+      pieceId: pieceId || null,
+      format: "docx",
+      ok: false,
+      detail: err instanceof Error ? err.message : "export failed",
+    });
     return NextResponse.json(
       { ok: false, error: "couldn't export that ... give it another go" },
       { status: 502 },

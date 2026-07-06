@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { coercePlateValue } from "@/components/editor/plate-text";
+import { recordExport } from "@/lib/db/exports";
 import { getWorkSectionsForOwner } from "@/lib/db/works";
 import { fileSlug } from "@/lib/io/filename";
 import { slateToHtml } from "@/lib/io/html";
@@ -42,9 +43,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // hoisted so the failure receipt can still name the work.
+  let workId = "";
   try {
     const payload = (await request.json()) as { workId?: unknown };
-    const workId = typeof payload.workId === "string" ? payload.workId : "";
+    workId = typeof payload.workId === "string" ? payload.workId : "";
     if (!workId) {
       return NextResponse.json({ ok: false, error: "which work?" }, { status: 400 });
     }
@@ -75,6 +78,12 @@ export async function POST(request: Request) {
     }
 
     const buffer = await renderBookPdf(html);
+    await recordExport(supabase, user.id, {
+      workId,
+      format: "pdf",
+      ok: true,
+      byteSize: buffer.length,
+    });
 
     return new Response(new Uint8Array(buffer), {
       status: 200,
@@ -87,13 +96,20 @@ export async function POST(request: Request) {
   } catch (err) {
     if (err instanceof TypesetUnavailableError) {
       // no chromium on this host ... an honest 503, not a crash. the writer's
-      // words are untouched; the typesetter just isn't home.
+      // words are untouched; the typesetter just isn't home. no receipt: the
+      // host said no before an attempt was really made.
       return NextResponse.json(
         { ok: false, error: "the typesetter isn't available on this host yet" },
         { status: 503 },
       );
     }
     reportError(err, { tag: "export-pdf-failed", userId: user.id });
+    await recordExport(supabase, user.id, {
+      workId: workId || null,
+      format: "pdf",
+      ok: false,
+      detail: err instanceof Error ? err.message : "export failed",
+    });
     return NextResponse.json(
       { ok: false, error: "couldn't set those pages ... give it another go" },
       { status: 502 },

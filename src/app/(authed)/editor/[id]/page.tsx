@@ -14,6 +14,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { publishPieceAction } from "./publish-action";
 import { savePieceContentAction } from "./save-action";
+import { schedulePieceAction } from "./schedule-action";
 
 export default async function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -50,8 +51,10 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
           initialValue={coercePlateValue(piece.body)}
           initialStatus={piece.status}
           initialSlug={piece.slug}
+          initialScheduledAt={piece.scheduled_publish_at}
           onSave={savePieceContentAction.bind(null, piece.id)}
           onPublish={publishPieceAction.bind(null, piece.id)}
+          onSchedule={schedulePieceAction.bind(null, piece.id)}
         />
         <PartnerRail activeWritingFork={activeWritingFork} pieceId={piece.id} />
       </div>

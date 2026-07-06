@@ -62,6 +62,7 @@ interface PlateShellProps {
   initialValue: Value;
   initialStatus: string;
   initialSlug: string | null;
+  initialScheduledAt: string | null;
   // a server action bound to this piece's id (page does the bind). taking
   // it as a prop keeps the shell decoupled from the action module ... it
   // just persists whatever it's handed.
@@ -69,6 +70,10 @@ interface PlateShellProps {
   // publishes the piece and hands back the outcome (the public path, or a
   // reason it couldn't ship).
   onPublish: () => Promise<{ ok: true; slug: string; url: string } | { ok: false; error: string }>;
+  // schedules (an iso time) or cancels (null) a later publish.
+  onSchedule: (
+    whenIso: string | null,
+  ) => Promise<{ ok: true; scheduledAt: string | null } | { ok: false; error: string }>;
 }
 
 // the editor block set ... basic blocks + basic marks, plus nova's flat list
@@ -99,8 +104,10 @@ export function PlateShell({
   initialValue,
   initialStatus,
   initialSlug,
+  initialScheduledAt,
   onSave,
   onPublish,
+  onSchedule,
 }: PlateShellProps) {
   const [title, setTitle] = useState(initialTitle);
   const [wordCount, setWordCount] = useState(() => countWords(plateText(initialValue)));
@@ -402,7 +409,9 @@ export function PlateShell({
         <PublishButton
           initialStatus={initialStatus}
           initialSlug={initialSlug}
+          initialScheduledAt={initialScheduledAt}
           onPublish={onPublish}
+          onSchedule={onSchedule}
         />
       </footer>
 

@@ -12,6 +12,7 @@ import { TypesetPanel } from "@/components/typeset/typeset-panel";
 import { VoicesPanel } from "@/components/voices/voices-panel";
 import { listArticles } from "@/lib/db/articles";
 import { deriveWorkStage } from "@/lib/db/editorial";
+import { listRecentWorkExports } from "@/lib/db/exports";
 import { fileSlug } from "@/lib/io/filename";
 import { readWriterVoiceFields } from "@/lib/db/voice-profile";
 import { getActiveVoiceId, listVoices } from "@/lib/db/voices";
@@ -94,6 +95,9 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   } catch {
     // the typesetter just skips its ladder line.
   }
+
+  // what left the studio lately (np_exports receipts) ... never throws.
+  const recentExports = await listRecentWorkExports(supabase, id);
 
   // the writer's own average sentence length (their base voice), so the voices
   // panel's drift meter measures against the SAME base generation gates against.
@@ -314,6 +318,7 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             workId={work.id}
             stage={workEditorialStage}
             fileName={`${fileSlug(work.title, "work")}.pdf`}
+            initialExports={recentExports}
           />
         </main>
       </div>

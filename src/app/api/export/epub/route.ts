@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { coercePlateValue } from "@/components/editor/plate-text";
+import { recordExport } from "@/lib/db/exports";
 import { getWorkSectionsForOwner } from "@/lib/db/works";
 import { epubChaptersFromSections, workToEpub, type EpubSection } from "@/lib/io/epub";
 import { fileSlug } from "@/lib/io/filename";
@@ -34,9 +35,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // hoisted so the failure receipt can still name the work.
+  let workId = "";
   try {
     const payload = (await request.json()) as { workId?: unknown };
-    const workId = typeof payload.workId === "string" ? payload.workId : "";
+    workId = typeof payload.workId === "string" ? payload.workId : "";
     if (!workId) {
       return NextResponse.json({ ok: false, error: "which work?" }, { status: 400 });
     }
@@ -54,6 +57,12 @@ export async function POST(request: Request) {
     }));
     const chapters = epubChaptersFromSections(epubSections);
     const buffer = await workToEpub(work.title, chapters);
+    await recordExport(supabase, user.id, {
+      workId,
+      format: "epub",
+      ok: true,
+      byteSize: buffer.length,
+    });
 
     return new Response(new Uint8Array(buffer), {
       status: 200,
@@ -65,6 +74,12 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     reportError(err, { tag: "export-epub-failed", userId: user.id });
+    await recordExport(supabase, user.id, {
+      workId: workId || null,
+      format: "epub",
+      ok: false,
+      detail: err instanceof Error ? err.message : "export failed",
+    });
     return NextResponse.json(
       { ok: false, error: "couldn't build that epub ... give it another go" },
       { status: 502 },
