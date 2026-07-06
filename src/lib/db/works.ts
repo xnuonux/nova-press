@@ -389,6 +389,9 @@ export interface PublishedWork {
 
 export interface WorkExport {
   title: string;
+  /** the work's form ("novel", "encyclopaedia", ...) ... the typeset title
+   *  page names it; docx/epub ignore it. */
+  formProfile: string;
   sections: PublishedWorkSection[];
 }
 
@@ -434,7 +437,7 @@ export async function getWorkSectionsForOwner(
     body: s.isLeaf && s.pieceId ? (bodyByPiece.get(s.pieceId) ?? null) : null,
   }));
 
-  return { title: work.title, sections };
+  return { title: work.title, formProfile: work.formProfile, sections };
 }
 
 // the public read for /w/[slug]. MUST run on the service-role (admin) client:

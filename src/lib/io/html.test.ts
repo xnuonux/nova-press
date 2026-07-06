@@ -58,4 +58,26 @@ describe("slateToHtml serializes a plate value to safe, escaped html", () => {
   it("renders an hr as a self-closed rule", () => {
     expect(slateToHtml([{ type: "hr", children: [{ text: "" }] }] as never)).toBe("<hr/>");
   });
+
+  it("restitches a run of verse lines into one verse div with kept breaks", () => {
+    const html = slateToHtml([
+      { type: "verse_line", children: [{ text: "the water remembers" }] },
+      { type: "verse_line", children: [{ text: "what the living forget" }] },
+      { type: "p", children: [{ text: "prose resumes." }] },
+    ] as never);
+    expect(html).toBe(
+      '<div class="np-verse">the water remembers<br/>what the living forget</div>\n<p>prose resumes.</p>',
+    );
+  });
+
+  it("keeps verse and lists as separate runs", () => {
+    const html = slateToHtml([
+      { type: "verse_line", children: [{ text: "a line" }] },
+      { type: "ul_li", children: [{ text: "an item" }] },
+      { type: "verse_line", children: [{ text: "another line" }] },
+    ] as never);
+    expect(html).toBe(
+      '<div class="np-verse">a line</div>\n<ul><li>an item</li></ul>\n<div class="np-verse">another line</div>',
+    );
+  });
 });

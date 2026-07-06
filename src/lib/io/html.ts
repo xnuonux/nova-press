@@ -11,7 +11,7 @@ import type { Value } from "platejs";
 
 import { isSafeHref } from "@/components/reading/sanitize-href";
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -58,12 +58,15 @@ function renderChildren(children: unknown): string {
 }
 
 /** a plate Value -> a safe html string. consecutive list items restitch into a
- *  single ul/ol; headings shift down one level (the chapter title is the h1). */
+ *  single ul/ol; a run of verse lines restitches into one .np-verse div (lines
+ *  kept by <br/>, so verse reads as verse even with zero css); headings shift
+ *  down one level (the chapter title is the h1). */
 export function slateToHtml(value: Value): string {
   if (!Array.isArray(value)) return "";
   const out: string[] = [];
   let listKind: "ul" | "ol" | null = null;
   const items: string[] = [];
+  const verseLines: string[] = [];
 
   const flushList = (): void => {
     if (listKind && items.length > 0) {
@@ -73,16 +76,30 @@ export function slateToHtml(value: Value): string {
     items.length = 0;
   };
 
+  const flushVerse = (): void => {
+    if (verseLines.length > 0) {
+      out.push(`<div class="np-verse">${verseLines.join("<br/>")}</div>`);
+    }
+    verseLines.length = 0;
+  };
+
   for (const node of value) {
     const block = (node ?? {}) as { type?: string; children?: unknown };
     const kind = block.type === "ul_li" ? "ul" : block.type === "ol_li" ? "ol" : null;
     if (kind) {
+      flushVerse();
       if (listKind && listKind !== kind) flushList();
       listKind = kind;
       items.push(renderChildren(block.children));
       continue;
     }
+    if (block.type === "verse_line") {
+      flushList();
+      verseLines.push(renderChildren(block.children));
+      continue;
+    }
     flushList();
+    flushVerse();
     const inner = renderChildren(block.children);
     switch (block.type) {
       case "h1":
@@ -105,5 +122,6 @@ export function slateToHtml(value: Value): string {
     }
   }
   flushList();
+  flushVerse();
   return out.join("\n");
 }

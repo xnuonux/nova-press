@@ -8,8 +8,11 @@ import { ConlangPanel } from "@/components/conlang/conlang-panel";
 import { ContinuityRail } from "@/components/continuity/continuity-rail";
 import { VoiceTrainer } from "@/components/editor/voice-trainer";
 import { EncyclopaediaPanel } from "@/components/encyclopaedia/encyclopaedia-panel";
+import { TypesetPanel } from "@/components/typeset/typeset-panel";
 import { VoicesPanel } from "@/components/voices/voices-panel";
 import { listArticles } from "@/lib/db/articles";
+import { deriveWorkStage } from "@/lib/db/editorial";
+import { fileSlug } from "@/lib/io/filename";
 import { readWriterVoiceFields } from "@/lib/db/voice-profile";
 import { getActiveVoiceId, listVoices } from "@/lib/db/voices";
 import { listCodexEntities } from "@/lib/db/codex";
@@ -19,6 +22,7 @@ import { listSeriesWorks } from "@/lib/db/series";
 import { getWorkById, getWorkTree } from "@/lib/db/works";
 import { parentCandidateIds } from "@/lib/works/series";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { EditorialStage } from "@/types/editorial";
 import type { TreeNode } from "@/types/works";
 
 import {
@@ -79,6 +83,17 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   // nova's beats + ripostes for the work.
   const voices = await listVoices(supabase, id);
   const activeVoiceId = await getActiveVoiceId(supabase, id);
+
+  // where the work stands on the craft ladder (the min over its pieces) ... a
+  // decorative label in a closed-by-default panel, so a transient read failure
+  // degrades to no label (the page's sibling reads never throw either), never
+  // a 500 over cosmetics.
+  let workEditorialStage: EditorialStage | null = null;
+  try {
+    workEditorialStage = await deriveWorkStage(supabase, id);
+  } catch {
+    // the typesetter just skips its ladder line.
+  }
 
   // the writer's own average sentence length (their base voice), so the voices
   // panel's drift meter measures against the SAME base generation gates against.
@@ -293,6 +308,13 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
 
           {/* the work read against its codex ... scan for drift, triage the flags. */}
           <ContinuityRail workId={work.id} initialFlags={flags} />
+
+          {/* the typesetter ... the whole work set into a print-grade pdf. */}
+          <TypesetPanel
+            workId={work.id}
+            stage={workEditorialStage}
+            fileName={`${fileSlug(work.title, "work")}.pdf`}
+          />
         </main>
       </div>
     </div>
