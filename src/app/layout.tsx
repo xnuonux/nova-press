@@ -3,6 +3,8 @@ import { IBM_Plex_Serif, Inter } from "next/font/google";
 import "@fontsource/iosevka/latin-400.css";
 import "@fontsource/iosevka/latin-500.css";
 import "./globals.css";
+import "../styles/deep-nova.css";
+import DeepBackdrop from "./DeepBackdrop";
 
 const plexSerif = IBM_Plex_Serif({
   subsets: ["latin"],
@@ -39,8 +41,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plexSerif.variable} ${inter.variable}`}>
-      <body>{children}</body>
+    <html lang="en" data-theme="deep" className={`${plexSerif.variable} ${inter.variable}`}>
+      <body>
+        <DeepBackdrop />
+        {children}
+      </body>
     </html>
   );
 }

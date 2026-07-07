@@ -1,0 +1,46 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'C:\\Users\\xnuon\\Desktop\\nova press\\nova-press-titan-init\\.codex\\hooks\\pre-bash-safety.sh'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'C:\\Users\\xnuon\\Desktop\\nova press\\nova-press-titan-init\\.codex\\hooks\\post-edit-format-lint.sh'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'C:\\Users\\xnuon\\Desktop\\nova press\\nova-press-titan-init\\.codex\\hooks\\session-start-context.sh'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'C:\\Users\\xnuon\\Desktop\\nova press\\nova-press-titan-init\\.codex\\hooks\\stop-tests.sh'"
+          }
+        ]
+      }
+    ]
+  }
+}

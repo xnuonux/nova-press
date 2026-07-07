@@ -1,0 +1,69 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   THE DEEP · NOVA PRESS · ancient greek/roman ... moonstone + marble + gold wreaths
+   on the shared oxblood dreamslur. nova's edge in the family: the muse's temple at night.
+   scoped to [data-theme='deep'] (set on <html> in layout.tsx).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="deep"] {
+  /* retint nova's tokens ... the oxblood substrate + moonstone stone + classical gold */
+  --lunari-bg-deep: transparent; /* let the dithering show */
+  --lunari-bg-surface: rgba(22, 13, 17, 0.5); /* dark oxblood marble-glass */
+  --lunari-bg-elevated: rgba(30, 18, 23, 0.58);
+  --lunari-border: rgba(201, 168, 76, 0.18); /* gold hairline ... the wreath edge */
+  --nova-accent: #d8b968; /* classical gold, a touch brighter for laurels */
+  --nova-accent-soft: rgba(216, 185, 104, 0.14);
+  --nova-shadow-accent: 0 8px 26px -12px rgba(216, 185, 104, 0.7);
+  --lunari-fg-primary: #f2ead6; /* moonstone cream */
+  --lunari-fg-muted: #bcb6a6;
+  --lunari-fg-subtle: #9a9384;
+}
+
+[data-theme="deep"] body {
+  background: transparent !important;
+}
+
+/* the moonlit-marble sheen ... pale veined luminance over the dithering, screen-blended (carved stone) */
+[data-theme="deep"] .deep-marble {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(58% 42% at 50% -4%, rgba(228, 226, 216, 0.12), transparent 66%),
+    repeating-linear-gradient(63deg, rgba(228, 226, 216, 0.03) 0 2px, transparent 2px 33px),
+    repeating-linear-gradient(-57deg, rgba(214, 194, 144, 0.022) 0 1px, transparent 1px 44px);
+}
+
+/* content floats above the substrate + marble */
+[data-theme="deep"] main {
+  position: relative;
+  z-index: 2;
+  background: transparent !important;
+}
+
+/* the shared atmosphere glow lets the dreamslur through */
+[data-theme="deep"] [class*="atmosphere"],
+[data-theme="deep"] [class*="Atmosphere"] {
+  background: transparent !important;
+  mix-blend-mode: screen;
+}
+
+/* a gold hairline horizon (the skyline) reads as a temple cornice */
+[data-theme="deep"] .np-skyline {
+  background: linear-gradient(90deg, transparent, rgba(216, 185, 104, 0.5), transparent) !important;
+}
+
+/* the primary CTA ... polished gold with a soft laurel glow.
+   the button text uses color:var(--lunari-bg-deep) inline, which we set transparent for the substrate ...
+   so give the label an explicit dark ink here (dark-on-gold, the engraved-laurel look). */
+[data-theme="deep"] .np-btn {
+  box-shadow: 0 10px 30px -12px rgba(216, 185, 104, 0.75);
+  color: #1a0c0a !important;
+}
+
+[data-theme="deep"] ::selection {
+  background: rgba(201, 168, 76, 0.32);
+  color: #f6f2e6;
+}
