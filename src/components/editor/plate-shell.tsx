@@ -45,6 +45,7 @@ import { BubbleToolbar } from "./bubble-toolbar";
 import { CommandPalette } from "./command-palette";
 import { EmojiPicker } from "./emoji-picker";
 import { GhostText } from "./ghost-text";
+import { ManuscriptDesk } from "./manuscript-desk";
 import { NovaLinkPlugin } from "./link-block";
 import { BulletItemPlugin, NumberItemPlugin } from "./list-blocks";
 import { plateText } from "./plate-text";
@@ -110,6 +111,9 @@ export function PlateShell({
   onSchedule,
 }: PlateShellProps) {
   const [title, setTitle] = useState(initialTitle);
+  const titleRef = useRef(initialTitle);
+  titleRef.current = title;
+  const getTitle = useCallback(() => titleRef.current, []);
   const [wordCount, setWordCount] = useState(() => countWords(plateText(initialValue)));
   const [revision, setRevision] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
@@ -167,7 +171,10 @@ export function PlateShell({
   }, [editor, markFlow]);
 
   const handleTitleChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => setTitle(event.target.value),
+    (event: ChangeEvent<HTMLInputElement>) => {
+      titleRef.current = event.target.value;
+      setTitle(event.target.value);
+    },
     [],
   );
 
@@ -343,6 +350,7 @@ export function PlateShell({
   const editorTree = useMemo(
     () => (
       <Plate editor={editor} onValueChange={handleValueChange}>
+        <ManuscriptDesk pieceId={pieceId} getTitle={getTitle} />
         <BubbleToolbar />
         <EmojiPicker />
         <SlashMenu />
@@ -358,7 +366,7 @@ export function PlateShell({
         />
       </Plate>
     ),
-    [editor, handleValueChange, handleEditorKeyDown, pieceId],
+    [editor, handleValueChange, handleEditorKeyDown, pieceId, getTitle],
   );
 
   return (
