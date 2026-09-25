@@ -16,11 +16,13 @@
  * voice. it never touches the editor value.
  */
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { EditorialPass, EditorialStage, Finding, FindingStatus } from "@/types/editorial";
 import { evaluateTransition } from "@/lib/editorial/state-machine";
 import { STAGES, nextStage, stageRank } from "@/lib/editorial/stages";
+import { requestSaveFlush } from "@/lib/editor/save-handshake";
+import { createReviewFreshness } from "@/lib/editor/review-freshness";
 
 import { setStageAction, triageFindingAction } from "@/app/(authed)/editor/[id]/editorial-actions";
 
@@ -43,24 +45,6 @@ const ACCENT = "var(--nova-accent)";
 const SUBTLE = "var(--lunari-fg-subtle)";
 const MUTED = "var(--lunari-fg-muted)";
 
-// ask the editor to land any pending autosave, then wait for the ack (or a short
-// ceiling) so a pass reads the just-saved body. resolves at once when nothing is
-// pending ... the shell acks immediately in that case.
-function flushAutosave(timeoutMs = 4000): Promise<void> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      document.removeEventListener("nova:save-flushed", finish);
-      resolve();
-    };
-    document.addEventListener("nova:save-flushed", finish);
-    document.dispatchEvent(new CustomEvent("nova:flush-save"));
-    window.setTimeout(finish, timeoutMs);
-  });
-}
-
 export function EditorialPanel({
   pieceId,
   initialStage,
@@ -76,70 +60,138 @@ export function EditorialPanel({
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const listId = useId();
+  const freshness = useRef(createReviewFreshness()).current;
+  const operation = useRef<AbortController | null>(null);
+
+  // one operation at a time, including before react paints a disabled button.
+  const beginOperation = useCallback(() => {
+    if (operation.current) return null;
+    const controller = new AbortController();
+    operation.current = controller;
+    setRunning(true);
+    setNote(null);
+    return controller;
+  }, []);
+  const finishOperation = useCallback((controller: AbortController) => {
+    if (operation.current !== controller) return;
+    operation.current = null;
+    setRunning(false);
+  }, []);
+
+  useEffect(() => () => {
+    operation.current?.abort();
+    operation.current = null;
+    freshness.invalidate();
+  }, [freshness, pieceId]);
 
   // the editor dispatches nova:piece-edited on a real edit ... the pass it
   // reviewed is now behind the words, so mark it stale (re-run before advancing).
   useEffect(() => {
-    const onEdit = () => setStale((s) => (hasPass ? true : s));
+    const onEdit = () => {
+      freshness.edited();
+      setStale((s) => (hasPass ? true : s));
+    };
     document.addEventListener("nova:piece-edited", onEdit);
     return () => document.removeEventListener("nova:piece-edited", onEdit);
-  }, [hasPass]);
+  }, [hasPass, freshness]);
 
   const runPass = useCallback(async () => {
-    if (running) return;
-    setRunning(true);
-    setNote(null);
-    // land any pending edit first, so the pass reads the current body and the
-    // "not stale" state it returns is honest rather than optimistic.
-    await flushAutosave();
+    const controller = beginOperation();
+    if (!controller) return;
     try {
+      // no successful, correlated acknowledgement means no pass request.
+      await requestSaveFlush(document, crypto.randomUUID(), { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      const stamp = freshness.begin();
       const res = await fetch("/api/ai/editor/pass", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ pieceId }),
+        signal: controller.signal,
       });
       const data = (await res.json().catch(() => ({}))) as PassResponse;
-      if (res.ok && data.ok) {
-        setFindings(data.findings ?? []);
+      if (controller.signal.aborted || !freshness.isLatest(stamp)) return;
+      if (res.ok && data.ok === true && data.stage === stage && Array.isArray(data.findings)) {
+        setFindings(data.findings);
         setHasPass(true);
-        setStale(false);
+        const current = freshness.isCurrent(stamp);
+        setStale(!current);
         setOpen(true);
+        if (!current) setNote("you kept writing ... this pass is behind the page. run it again when ready.");
       } else {
-        setNote(data.error ?? "couldn't run that pass.");
+        setNote(data.error ?? "that pass was not confirmed. your previous review is still here.");
       }
-    } catch {
-      setNote("couldn't reach nova ... try again in a sec.");
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setNote(error instanceof Error ? error.message : "couldn't reach nova ... try again in a sec.");
+      }
     } finally {
-      setRunning(false);
+      finishOperation(controller);
     }
-  }, [pieceId, running]);
+  }, [pieceId, stage, freshness, beginOperation, finishOperation]);
 
   const triage = useCallback(
     async (index: number, status: FindingStatus) => {
-      const res = await triageFindingAction(pieceId, stage, index, status);
-      if (res.ok) setFindings(res.findings);
-      else setNote("couldn't update that flag ... try again.");
+      const controller = beginOperation();
+      if (!controller) return;
+      try {
+        const res = await triageFindingAction(pieceId, stage, index, status);
+        if (controller.signal.aborted) return;
+        if (res.ok) setFindings(res.findings);
+        else setNote("couldn't update that flag ... try again.");
+      } catch {
+        if (!controller.signal.aborted) setNote("couldn't update that flag ... try again.");
+      } finally {
+        finishOperation(controller);
+      }
     },
-    [pieceId, stage],
+    [pieceId, stage, beginOperation, finishOperation],
   );
 
   const move = useCallback(
     async (target: EditorialStage) => {
-      setNote(null);
-      const result = await setStageAction(pieceId, target);
-      if (result.allowed && result.target) {
-        setStage(target);
-        // a retreat restores the target stage's stored review; an advance lands
-        // on a fresh, not-yet-run stage (target comes back empty).
-        setFindings(result.target.findings);
-        setHasPass(result.target.hasPass);
-        setStale(result.target.stale);
-        setOpen(result.target.hasPass);
-      } else {
-        setNote(result.reason);
+      const controller = beginOperation();
+      if (!controller) return;
+      const stamp = freshness.begin();
+      try {
+        // retreat remains free. advancing needs both a current local review and
+        // a confirmed save; the server remains the authority for the transition.
+        if (stageRank(target) > stageRank(stage)) {
+          const permission = evaluateTransition(stage, target, {
+            pass: hasPass ? ({ findings } as unknown as EditorialPass) : null,
+            stale,
+          });
+          if (!permission.allowed) {
+            setNote(permission.reason);
+            return;
+          }
+          await requestSaveFlush(document, crypto.randomUUID(), { signal: controller.signal });
+          if (!freshness.isCurrent(stamp)) {
+            setNote("the page changed ... run a fresh pass before advancing.");
+            return;
+          }
+        }
+        if (controller.signal.aborted) return;
+        const result = await setStageAction(pieceId, target);
+        if (controller.signal.aborted || !freshness.isLatest(stamp)) return;
+        if (result.allowed && result.target) {
+          setStage(target);
+          setFindings(result.target.findings);
+          setHasPass(result.target.hasPass);
+          setStale(result.target.stale || !freshness.isCurrent(stamp));
+          setOpen(result.target.hasPass);
+        } else {
+          setNote(result.reason);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setNote(error instanceof Error ? error.message : "couldn't change stages ... try again.");
+        }
+      } finally {
+        finishOperation(controller);
       }
     },
-    [pieceId],
+    [pieceId, stage, hasPass, findings, stale, freshness, beginOperation, finishOperation],
   );
 
   const up = nextStage(stage);
@@ -180,7 +232,7 @@ export function EditorialPanel({
                   <button
                     type="button"
                     onClick={() => (isPast ? void move(s) : undefined)}
-                    disabled={!isPast}
+                    disabled={!isPast || running}
                     aria-current={isCurrent ? "step" : undefined}
                     title={isPast ? `step back to ${s}` : s}
                     className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] transition-opacity disabled:cursor-default"
@@ -212,13 +264,14 @@ export function EditorialPanel({
               className="np-btn inline-flex h-7 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.16em] disabled:opacity-50"
               style={{ background: "var(--nova-accent-soft)", color: ACCENT }}
             >
-              {running ? "reading ..." : hasPass ? "re-run pass" : "run a pass"}
+              {running ? "working ..." : hasPass ? "re-run pass" : "run a pass"}
             </button>
             {up ? (
               <button
                 type="button"
                 onClick={() => void move(up)}
-                aria-disabled={!gate.allowed}
+                disabled={!gate.allowed || running}
+                aria-disabled={!gate.allowed || running}
                 data-testid="advance"
                 title={gate.allowed ? `advance to ${up}` : gate.reason}
                 className={`inline-flex h-7 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.16em] transition-opacity ${gate.allowed ? "" : "cursor-not-allowed opacity-40"}`}
@@ -283,6 +336,7 @@ export function EditorialPanel({
                         {done ? (
                           <button
                             type="button"
+                            disabled={running}
                             onClick={() => void triage(i, "open")}
                             style={{ color: SUBTLE }}
                           >
@@ -292,6 +346,7 @@ export function EditorialPanel({
                           <>
                             <button
                               type="button"
+                              disabled={running}
                               data-testid="triage-accept"
                               onClick={() => void triage(i, "accepted")}
                               style={{ color: ACCENT }}
@@ -300,6 +355,7 @@ export function EditorialPanel({
                             </button>
                             <button
                               type="button"
+                              disabled={running}
                               data-testid="triage-dismiss"
                               onClick={() => void triage(i, "dismissed")}
                               style={{ color: SUBTLE }}
