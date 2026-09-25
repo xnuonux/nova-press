@@ -12,7 +12,7 @@ opening the desk does not call a model, save, publish or access a database.
 - a heading outline and literal passage search, including across inline marks.
   selection uses the existing editor. it rechecks exact source before navigating;
   a stale map refreshes instead of selecting an unrelated passage. no replacement.
-- named session checkpoints, frozen and owner-piece scoped in memory. 12 slots,
+- named session checkpoints, frozen and piece-scoped in memory. 12 slots,
   8 mib total, no silent eviction. duplicate source does not consume another slot.
   the interface warns that refresh or navigation discards them. beforeunload is a
   best-effort warning, not persistence or a reliable mobile lifecycle guarantee.
