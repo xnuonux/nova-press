@@ -32,6 +32,7 @@ interface EditorialPanelProps {
   initialFindings: Finding[];
   initialHasPass: boolean;
   initialStale: boolean;
+  embedded?: boolean;
 }
 
 interface PassResponse {
@@ -51,6 +52,7 @@ export function EditorialPanel({
   initialFindings,
   initialHasPass,
   initialStale,
+  embedded = false,
 }: EditorialPanelProps) {
   const [stage, setStage] = useState<EditorialStage>(initialStage);
   const [findings, setFindings] = useState<Finding[]>(initialFindings);
@@ -211,7 +213,7 @@ export function EditorialPanel({
 
   return (
     <div
-      className="np-rise pointer-events-auto fixed left-1/2 top-16 z-30 w-[min(90vw,640px)] -translate-x-1/2 lg:left-[calc(50%-160px)]"
+      className={embedded ? "w-full" : "np-rise pointer-events-auto fixed left-1/2 top-16 z-30 w-[min(90vw,640px)] -translate-x-1/2 lg:left-[calc(50%-160px)]"}
       data-testid="editorial-panel"
     >
       <div
@@ -222,7 +224,7 @@ export function EditorialPanel({
         }}
       >
         {/* the ladder */}
-        <div className="flex items-center justify-between gap-3">
+        <div className={embedded ? "flex flex-col gap-3" : "flex items-center justify-between gap-3"}>
           <ol className="flex items-center gap-1.5 overflow-x-auto">
             {STAGES.map((s) => {
               const isCurrent = s === stage;

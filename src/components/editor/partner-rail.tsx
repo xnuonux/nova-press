@@ -37,10 +37,13 @@ import { voiceKeeperAudit } from "@/lib/ai/voice-keeper";
 export function PartnerRail({
   activeWritingFork = null,
   pieceId,
+  embedded = false,
 }: {
   // the named strand nova is writing in, or null for your live voice. drives the
   // footer indicator so a writer always knows whose voice nova mirrors.
   activeWritingFork?: string | null;
+  // the room shell owns disclosure; leave the conversation and transport intact.
+  embedded?: boolean;
   // the piece the rail spars over ... sent with each ask so the command route can
   // ground a riposte in the work's bible (retrieval-by-mention). undefined for a
   // standalone editor with no piece context.
@@ -70,7 +73,7 @@ export function PartnerRail({
   // hand focus back to the floating button on close. inert at lg+ where the
   // rail is a static sidebar and never "open".
   useEffect(() => {
-    if (!open) return;
+    if (!open || embedded) return;
     const body = document.body;
     // capture the fab now (it's stable) so the cleanup restores focus to the
     // same node, no stale-ref lint warning.
@@ -87,7 +90,7 @@ export function PartnerRail({
       document.removeEventListener("keydown", onKey);
       fab?.focus();
     };
-  }, [open]);
+  }, [open, embedded]);
 
   const send = useCallback(() => {
     const el = inputRef.current;
@@ -180,7 +183,7 @@ export function PartnerRail({
     <>
       {/* mobile: a floating nova button opens the drawer; hidden at lg+ where
           the rail is always the sidebar. */}
-      <button
+      {!embedded ? <button
         ref={fabRef}
         type="button"
         onClick={() => setOpen(true)}
@@ -189,10 +192,10 @@ export function PartnerRail({
         style={{ background: "var(--nova-accent)", color: "var(--lunari-bg-deep)" }}
       >
         N
-      </button>
+      </button> : null}
 
       {/* mobile backdrop ... tap to dismiss. */}
-      {open ? (
+      {!embedded && open ? (
         <div
           className="fixed inset-0 z-40 lg:hidden"
           style={{ background: "var(--lunari-overlay-light)", backdropFilter: "blur(2px)" }}
@@ -202,7 +205,7 @@ export function PartnerRail({
       ) : null}
 
       <aside
-        className={`np-partner-rail fixed inset-y-0 right-0 z-50 flex h-screen w-80 max-w-[86vw] shrink-0 flex-col border-l lg:static lg:z-auto lg:max-w-none lg:translate-x-0 ${drawerSlide}`}
+        className={embedded ? "np-partner-rail flex min-h-0 w-full flex-col" : `np-partner-rail fixed inset-y-0 right-0 z-50 flex h-screen w-80 max-w-[86vw] shrink-0 flex-col border-l lg:static lg:z-auto lg:max-w-none lg:translate-x-0 ${drawerSlide}`}
         style={{
           background: "var(--lunari-bg-surface)",
           borderColor: "var(--lunari-border)",
@@ -230,7 +233,7 @@ export function PartnerRail({
             style={{ background: busy ? "var(--nova-accent)" : "var(--lunari-fg-subtle)" }}
             aria-hidden
           />
-          <button
+          {!embedded ? <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label="close nova"
@@ -238,7 +241,7 @@ export function PartnerRail({
             style={{ color: "var(--lunari-fg-subtle)" }}
           >
             ×
-          </button>
+          </button> : null}
         </header>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-7">
