@@ -1,286 +1,245 @@
 "use client";
 
-/**
- * author beat ... nova writing a whole beat into the page, on command.
- *
- * the generative counterpart to the ghost whisper. where the ghost continues
- * one line on a pause, the author drafts a finished beat (a paragraph) or an
- * outline when you ask it from the slash menu (expand / draft this beat /
- * outline). it streams in greyed, anchored just below the block you ran it on
- * (or above it when there's no room), the way the ghost feels ... tab weaves it
- * into the page, escape (or any edit) waves it off. it never touches the
- * document until you accept.
- *
- * the slash menu fires a `nova:author` event with the task, the note to work
- * from (the block's text), and the block index. this island owns the stream, the
- * preview, and the accept-insert ... so the slash menu stays a pure block-command
- * list and all the async lives in one place. the voice-keeper runs here at stream
- * end (lowercase / preamble / dash pass), PER beat line, before a character lands.
- */
-
+/** a proposal beside the page ... source-pinned, never an automatic rewrite. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
 import { useEditorRef } from "platejs/react";
-
 import { auditedLines } from "@/lib/ai/author-format";
-import type { AuthorTask } from "@/lib/ai/provider";
+import { captureDraft } from "@/lib/editor/manuscript-desk";
+import {
+  createAuthorProposal, isProposalTask, MAX_AUTHOR_STREAM_CHARS, type ProposalTask,
+} from "@/lib/editor/author-proposal";
+import "./author-proposal.css";
 
-interface AuthorEventDetail {
-  task: AuthorTask;
-  context: string;
-  blockIndex: number;
-}
-
+interface AuthorEventDetail { task: ProposalTask; context: string; blockIndex: number; }
 interface BeatState {
-  task: AuthorTask;
-  blockIndex: number;
-  text: string; // streamed text so far (dash-cleaned at the source)
-  done: boolean;
-  error: string | null;
-  // exactly one of top / bottom is set ... below the block by default, flipped to
-  // anchor above it (bottom) when there isn't room below, so a low or tall beat
-  // never streams off the fold.
-  top: number | null;
-  bottom: number | null;
-  left: number;
-  width: number;
+  task: ProposalTask; blockIndex: number; text: string; done: boolean;
+  error: string | null; stale: boolean; feedback: string | null;
+  top: number | null; bottom: number | null; left: number; width: number;
 }
-
-const LABEL: Record<AuthorTask, string> = {
-  expand: "expanding",
-  "draft-beat": "drafting",
-  outline: "scaffolding",
-  coin: "coining",
+const LABEL: Record<ProposalTask, string> = {
+  expand: "expanding", "draft-beat": "drafting", outline: "scaffolding", coin: "coining",
 };
 
-export function AuthorBeat({ pieceId }: { pieceId: string }) {
+export function AuthorBeat({ pieceId, getTitle }: { pieceId: string; getTitle?: () => string }) {
   const editor = useEditorRef();
   const [beat, setBeat] = useState<BeatState | null>(null);
+  const beatRef = useRef<BeatState | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const genRef = useRef(0);
-  const beatRef = useRef<BeatState | null>(null);
-  beatRef.current = beat;
-
-  // tear down any in-flight stream and hide the preview. bumping the generation
-  // invalidates a stream that's still resolving.
-  const cancel = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-    genRef.current += 1;
-    if (beatRef.current) setBeat(null);
+  const proposalRef = useRef<ReturnType<typeof createAuthorProposal> | null>(null);
+  const show = useCallback((next: BeatState | null) => {
+    // event handlers see the new state immediately, before react paints it.
+    beatRef.current = next;
+    setBeat(next);
   }, []);
+  const readSource = useCallback(() => {
+    if (!getTitle) throw new Error("the source title is unavailable");
+    return captureDraft(pieceId, getTitle(), editor.children);
+  }, [pieceId, getTitle, editor]);
+  const cancel = useCallback(() => {
+    genRef.current++;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    proposalRef.current?.dismiss();
+    proposalRef.current = null;
+    show(null);
+  }, [show]);
+
+  const observeSource = useCallback(() => {
+    const b = beatRef.current;
+    const proposal = proposalRef.current;
+    if (!b || !proposal) return;
+    try {
+      if (proposal.observe(readSource()) === "stale" && !b.stale) show({ ...b, stale: true });
+    } catch {
+      proposal.block();
+      show({ ...b, error: "the current source could not be confirmed ... nothing can be inserted" });
+    }
+  }, [readSource, show]);
 
   const accept = useCallback(() => {
     const b = beatRef.current;
-    if (!b || !b.done || b.error) return;
-    const lines = auditedLines(b.task, b.text);
-    cancel();
-    if (lines.length === 0) return;
-    // a coined line weaves in as a verse line so it sits inside the poem; every
-    // other task lands as a paragraph.
-    const nodeType = b.task === "coin" ? "verse_line" : "p";
-    const nodes = lines.map((line) => ({ type: nodeType, children: [{ text: line }] }));
-    try {
-      editor.tf.focus();
-      // weave the beat in right after the block it was run on, clamped to the
-      // current document length in case it shrank ... never over the writer's
-      // note (non-destructive: their seed line stays).
-      const at = Math.min(b.blockIndex + 1, editor.children.length);
-      editor.tf.insertNodes(nodes, { at: [at], select: true });
-    } catch {
-      // transform api mismatch ... fail closed, leave the page untouched.
+    const proposal = proposalRef.current;
+    if (!b || !proposal || !b.done || b.error) return;
+    let plan: ReturnType<typeof proposal.take>;
+    try { plan = proposal.take(readSource()); }
+    catch {
+      proposal.block();
+      show({ ...b, error: "the current source could not be confirmed ... nothing can be inserted" });
+      return;
     }
-  }, [editor, cancel]);
+    if (!plan.ok) {
+      show({ ...b, stale: plan.reason === "stale", feedback: "this proposal cannot be applied ... ask for a fresh one" });
+      return;
+    }
+    // the gate has already consumed the offer. no retry, even if a transform
+    // reports an error after changing part of the document.
+    cancel();
+    try {
+      editor.tf.insertNodes(plan.nodes, { at: [plan.at], select: true });
+      editor.tf.focus();
+    } catch {
+      show({ ...b, done: true, error: "insertion was not confirmed ... inspect the page before asking again" });
+    }
+  }, [readSource, editor, cancel, show]);
 
-  // run a task: anchor near the block, then stream the beat from the author route.
-  const run = useCallback(
-    async (detail: AuthorEventDetail) => {
-      cancel();
-      const editable = document.querySelector('[data-slate-editor="true"]');
-      const blockEl = editable?.children?.[detail.blockIndex] as HTMLElement | undefined;
-      if (!editable || !blockEl) return;
-      const rect = blockEl.getBoundingClientRect();
-      const left = rect.left;
-      const width = Math.max(220, rect.width);
-      // below the block by default; if there isn't room, anchor above it (set
-      // bottom, grow upward) so a low/tall beat stays on screen.
-      const below = window.innerHeight - rect.bottom >= 220;
-      const top = below ? rect.bottom + 6 : null;
-      const bottom = below ? null : Math.max(8, window.innerHeight - rect.top + 6);
-
-      const gen = ++genRef.current;
-      const controller = new AbortController();
-      abortRef.current = controller;
-      setBeat({
-        task: detail.task,
-        blockIndex: detail.blockIndex,
-        text: "",
-        done: false,
-        error: null,
-        top,
-        bottom,
-        left,
-        width,
+  const run = useCallback(async (detail: AuthorEventDetail) => {
+    cancel();
+    const root = Array.from(document.querySelectorAll<HTMLElement>("[data-nova-editor-piece]"))
+      .find((element) => element.dataset.novaEditorPiece === pieceId);
+    const editable = root?.querySelector('[data-slate-editor="true"]');
+    const blockEl = editable?.children[detail.blockIndex] as HTMLElement | undefined;
+    if (!editable || !blockEl) return;
+    const rect = blockEl.getBoundingClientRect();
+    const width = Math.max(1, Math.min(rect.width, window.innerWidth - 24));
+    const below = window.innerHeight - rect.bottom >= 240;
+    const initial: BeatState = {
+      task: detail.task, blockIndex: detail.blockIndex, text: "", done: false,
+      error: null, stale: false, feedback: null,
+      top: below ? rect.bottom + 6 : null,
+      bottom: below ? null : Math.max(8, window.innerHeight - rect.top + 6),
+      left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)), width,
+    };
+    let proposal: ReturnType<typeof createAuthorProposal>;
+    try { proposal = createAuthorProposal(readSource(), detail.task, detail.blockIndex); }
+    catch {
+      show({ ...initial, done: true, error: "this request could not be anchored to the source ... nothing was sent" });
+      return;
+    }
+    proposalRef.current = proposal;
+    const gen = ++genRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    show(initial);
+    const update = (patch: Partial<BeatState>) => {
+      if (gen === genRef.current && beatRef.current) show({ ...beatRef.current, ...patch });
+    };
+    let response: Response;
+    try {
+      response = await fetch("/api/ai/author", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pieceId, task: detail.task, context: detail.context }),
+        signal: controller.signal,
       });
-
-      let res: Response;
-      try {
-        res = await fetch("/api/ai/author", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ pieceId, task: detail.task, context: detail.context }),
-          signal: controller.signal,
-        });
-      } catch {
-        if (gen === genRef.current) setBeat(null); // aborted or offline ... go quiet
-        return;
-      }
-      if (gen !== genRef.current) return;
-      if (!res.ok || !res.body) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setBeat((b) =>
-          b && gen === genRef.current
-            ? { ...b, done: true, error: data.error ?? "nova couldn't write that one" }
-            : b,
-        );
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let acc = "";
-      try {
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (gen !== genRef.current) return;
-          acc += decoder.decode(value, { stream: true });
-          setBeat((b) => (b && gen === genRef.current ? { ...b, text: acc } : b));
+    } catch {
+      proposal.block();
+      update({ done: true, error: "nova could not finish this request ... nothing was inserted" });
+      return;
+    }
+    if (gen !== genRef.current) return;
+    if (!response.ok || !response.body) {
+      const data = await response.json().catch(() => null) as { error?: unknown } | null;
+      proposal.block();
+      update({ done: true, error: typeof data?.error === "string" ? data.error.slice(0, 240) : "nova couldn't write that one" });
+      return;
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let text = "";
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (gen !== genRef.current) return;
+        if (chunk.done) break;
+        text += decoder.decode(chunk.value, { stream: true });
+        if (text.length > MAX_AUTHOR_STREAM_CHARS) {
+          controller.abort();
+          throw new Error("proposal limit");
         }
-        acc += decoder.decode();
-      } catch {
-        if (gen === genRef.current) setBeat(null);
-        return;
+        update({ text });
       }
+      text += decoder.decode();
       if (gen !== genRef.current) return;
-      setBeat((b) =>
-        b && gen === genRef.current
-          ? {
-              ...b,
-              text: acc,
-              done: true,
-              error: auditedLines(b.task, acc).length === 0 ? "nova came back empty" : null,
-            }
-          : b,
-      );
-    },
-    [pieceId, cancel],
-  );
+      const lines = auditedLines(detail.task, text);
+      const state = proposal.finish(lines, readSource());
+      update({ text, done: true, stale: state === "stale", error: state === "blocked" ? "nova's reply was empty or exceeded the proposal limits" : null });
+    } catch {
+      proposal.block();
+      update({ done: true, error: "the proposal was not completed safely ... nothing was inserted" });
+    } finally { reader.releaseLock(); }
+  }, [cancel, pieceId, readSource, show]);
 
-  // the slash menu's command to write. listen on the document so the menu stays
-  // a pure list ... it just announces the task + the note + the block.
   useEffect(() => {
     const onAuthor = (event: Event) => {
       const detail = (event as CustomEvent<AuthorEventDetail>).detail;
-      if (!detail || typeof detail.blockIndex !== "number") return;
+      if (!detail || !isProposalTask(detail.task) || typeof detail.context !== "string" ||
+        detail.context.length > MAX_AUTHOR_STREAM_CHARS || !Number.isSafeInteger(detail.blockIndex) || detail.blockIndex < 0) return;
       void run(detail);
     };
     document.addEventListener("nova:author", onAuthor);
     return () => document.removeEventListener("nova:author", onAuthor);
   }, [run]);
 
-  // tab weaves it in, escape waves it off. capture phase so tab beats the
-  // editor's own tab-indent, exactly like the ghost + slash menu ... and tab is
-  // swallowed even mid-stream / on an error card so it never leaks a literal tab
-  // into the note. scroll/resize dismiss too, except a scroll that originates
-  // inside the card's own overflow.
-  //
-  // a real edit (nova:piece-edited, the same gated event the editorial panel
-  // uses ... never a raw selectionchange, which would self-kill on slate's
-  // re-applied selection) dismisses the beat ONCE IT'S DONE and sitting there ...
-  // that's the long-lived window where the captured block index + the anchor can
-  // go stale under the writer. while streaming we do NOT arm it: the summoning
-  // slash-command's own delete + normalization echo would otherwise cancel the
-  // beat the instant it appears.
+  const active = beat !== null;
   useEffect(() => {
-    if (!beat) return;
+    if (!active) return;
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (
-        event.key === "Tab" &&
-        !event.shiftKey &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.altKey
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (beat.done && !beat.error) accept();
+      if (event.isComposing || event.defaultPrevented) return;
+      const b = beatRef.current;
+      const editable = event.target instanceof Element ? event.target.closest('[data-slate-editor="true"]') : null;
+      const root = editable?.closest<HTMLElement>("[data-nova-editor-piece]");
+      if (event.key === "Tab" && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey &&
+        root?.dataset.novaEditorPiece === pieceId && b?.done && !b.error && !b.stale) {
+        event.preventDefault(); event.stopPropagation(); accept();
       } else if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        cancel();
+        event.preventDefault(); event.stopPropagation(); cancel();
       }
     };
     const onScroll = (event: Event) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest(".np-author-beat")) return;
+      if (event.target instanceof Element && event.target.closest(".np-author-beat")) return;
       cancel();
     };
     document.addEventListener("keydown", onKey, true);
-    if (beat.done) document.addEventListener("nova:piece-edited", cancel);
+    document.addEventListener("nova:piece-edited", observeSource);
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", cancel);
     return () => {
       document.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("nova:piece-edited", cancel);
+      document.removeEventListener("nova:piece-edited", observeSource);
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", cancel);
     };
-  }, [beat, accept, cancel]);
+  }, [active, pieceId, accept, cancel, observeSource]);
 
-  // tell the ghost whisper to stand down while a beat is on screen ... the
-  // author has the writer's attention, and the two must never both claim tab.
-  // fires idle again the moment the beat clears (accept / escape / edit), so the
-  // whisper resumes. a value dep, so it only fires on the active<->idle edge.
-  const active = !!beat;
   useEffect(() => {
     document.dispatchEvent(new CustomEvent(active ? "nova:author-active" : "nova:author-idle"));
   }, [active]);
+  useEffect(() => () => {
+    genRef.current++;
+    abortRef.current?.abort();
+    proposalRef.current?.dismiss();
+    proposalRef.current = null;
+    beatRef.current = null;
+  }, [pieceId]);
 
-  // abort an in-flight stream if the editor unmounts mid-beat.
-  useEffect(() => () => abortRef.current?.abort(), []);
-
+  const copy = async () => {
+    const b = beatRef.current;
+    if (!b || !b.done || b.error) return;
+    const gen = genRef.current;
+    try {
+      await navigator.clipboard.writeText(auditedLines(b.task, b.text).join("\n"));
+      if (gen === genRef.current && beatRef.current) show({ ...beatRef.current, feedback: "proposal copied ... nothing inserted" });
+    } catch {
+      if (gen === genRef.current && beatRef.current) show({ ...beatRef.current, feedback: "the copy could not be confirmed" });
+    }
+  };
   if (!beat) return null;
-  const preview = beat.error ? beat.error : auditedLines(beat.task, beat.text).join("\n");
-  const streaming = !beat.done;
-
+  const preview = beat.error ?? auditedLines(beat.task, beat.text).join("\n");
+  const canAccept = beat.done && !beat.error && !beat.stale && proposalRef.current?.state() === "ready";
   return createPortal(
-    <div
-      className="np-author-beat"
-      data-testid="author-beat"
-      style={{
-        top: beat.top ?? undefined,
-        bottom: beat.bottom ?? undefined,
-        left: beat.left,
-        width: beat.width,
-      }}
-    >
-      <div className="np-author-beat-head">
-        <span>nova ... {LABEL[beat.task]}</span>
-        {beat.done ? (
-          <span className="np-author-beat-keys">
-            {beat.error ? "esc" : "tab to weave in · esc"}
-          </span>
-        ) : null}
+    <div className="np-author-beat np-proposal" data-testid="author-beat" role="region" aria-label="nova's proposed addition"
+      style={{ top: beat.top ?? undefined, bottom: beat.bottom ?? undefined, left: beat.left, width: beat.width }}>
+      <div className="np-author-beat-head"><span>nova ... {LABEL[beat.task]}</span><span className="np-author-beat-keys">{canAccept ? "tab to weave in · esc" : "esc to dismiss"}</span></div>
+      <p className="np-proposal__anchor">adds after block {beat.blockIndex + 1} ... existing text stays</p>
+      <div className="np-author-beat-body" aria-busy={!beat.done} data-testid="author-beat-body">{preview}{!beat.done ? <span className="np-caret" aria-hidden /> : null}</div>
+      {beat.stale ? <p className="np-proposal__notice" role="status">the page changed while this proposal was open ... copy it or ask for a fresh one</p> : null}
+      {beat.feedback ? <p className="np-proposal__notice" role="status">{beat.feedback}</p> : null}
+      <div className="np-proposal__actions">
+        <button type="button" disabled={!canAccept} onClick={accept}>weave into page</button>
+        <button type="button" disabled={!beat.done || !!beat.error} onClick={() => void copy()}>copy proposal</button>
+        <button type="button" onClick={cancel}>dismiss</button>
       </div>
-      <div className="np-author-beat-body" aria-busy={streaming} data-testid="author-beat-body">
-        {preview}
-        {streaming ? <span className="np-caret" aria-hidden /> : null}
-      </div>
-    </div>,
-    document.body,
+    </div>, document.body,
   );
 }
