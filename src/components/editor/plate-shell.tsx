@@ -356,7 +356,7 @@ export function PlateShell({
         <SlashMenu />
         <CommandPalette />
         <GhostText />
-        <AuthorBeat pieceId={pieceId} />
+        <AuthorBeat key={pieceId} pieceId={pieceId} getTitle={getTitle} />
         <XraySpine />
         <PlateContent
           className="editor-body min-h-[55vh] outline-none"
@@ -371,6 +371,7 @@ export function PlateShell({
 
   return (
     <div
+      data-nova-editor-piece={pieceId}
       className={focusMode ? "np-focus flex h-full flex-1 flex-col" : "flex h-full flex-1 flex-col"}
     >
       <header className="flex items-center justify-end gap-4 px-8 py-3" style={chromeStyle}>
