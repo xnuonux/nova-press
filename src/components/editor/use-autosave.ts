@@ -1,26 +1,16 @@
 /**
- * autosave for the writing room.
- *
- * watches a trigger value, debounces 1500ms, then calls onSave and reflects
- * the real result in the chip label. the next edit after a failed save
- * re-triggers the debounce, so a transient failure self-heals as the writer
- * keeps typing.
+ * autosave for the writing room. debounce edits, serialize writes, and only
+ * acknowledge a flush once every revision observed by the queue is saved.
  */
-
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export type AutosaveState = "idle" | "saving" | "saved" | "error";
+import { createSaveQueue, type SaveState } from "@/lib/editor/save-queue";
+import type { SaveAcknowledgement } from "@/lib/editor/save-handshake";
 
+export type AutosaveState = SaveState;
 const DEBOUNCE_MS = 1500;
 
-/**
- * the autosave chip label. pure, so it can be tested without a dom.
- */
-export function formatSavedLabel(
-  state: AutosaveState,
-  lastSavedAt: number | null,
-  now: number,
-): string {
+export function formatSavedLabel(state: AutosaveState, lastSavedAt: number | null, now: number): string {
   if (state === "saving") return "saving...";
   if (state === "error") return "couldn't save";
   if (state === "idle" || lastSavedAt === null) return "ready";
@@ -30,107 +20,79 @@ export function formatSavedLabel(
   return `saved ${Math.floor(seconds / 60)}m ago`;
 }
 
-export interface UseAutosaveOptions {
-  // a lightweight value that changes whenever the piece changes (title +
-  // a body revision counter). the actual content to persist is read inside
-  // onSave, so we don't mirror the whole document into react state.
-  trigger: unknown;
-  onSave: () => Promise<void>;
-}
-
-export interface UseAutosaveResult {
-  state: AutosaveState;
-  savedLabel: string;
-}
+export interface UseAutosaveOptions { trigger: unknown; onSave: () => Promise<void>; }
+export interface UseAutosaveResult { state: AutosaveState; savedLabel: string; }
 
 export function useAutosave({ trigger, onSave }: UseAutosaveOptions): UseAutosaveResult {
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const isFirstRun = useRef(true);
-  // the live debounce timer, so an outside flush can cancel it (see below).
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // keep the latest onSave without making it a dependency of the debounce
-  // effect ... otherwise a new closure on every render would reset the timer.
   const onSaveRef = useRef(onSave);
-  useEffect(() => {
-    onSaveRef.current = onSave;
-  }, [onSave]);
+  const lastTrigger = useRef(trigger);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueRef = useRef<ReturnType<typeof createSaveQueue> | null>(null);
+  onSaveRef.current = onSave;
 
-  // skip the mount pass so a freshly loaded piece never flashes "saving..."
+  // create per-effect, not once per render: strict-mode's setup/cleanup replay
+  // must not leave the mounted editor holding an already disposed queue.
   useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false;
-      return;
-    }
-    let cancelled = false;
-    setState("saving");
-    const timer = setTimeout(async () => {
+    const queue = createSaveQueue({
+      save: () => onSaveRef.current(),
+      onState: setState,
+      onSaved: () => setLastSavedAt(Date.now()),
+    });
+    queueRef.current = queue;
+    const onFlush = (event: Event) => {
+      const requestedId: unknown = (event as CustomEvent<{ requestId?: unknown }>).detail?.requestId;
+      const requestId = typeof requestedId === "string" ? requestedId : undefined;
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
       timerRef.current = null;
-      try {
-        await onSaveRef.current();
-        if (cancelled) return;
-        setState("saved");
-        setLastSavedAt(Date.now());
-      } catch {
-        if (cancelled) return;
-        setState("error");
+      void queue.flush().then(
+        () => acknowledge({ requestId, ok: true }),
+        () => acknowledge({ requestId, ok: false, error: "your draft could not be saved. the pass did not run." }),
+      );
+    };
+    const acknowledge = (detail: SaveAcknowledgement) => {
+      if (queueRef.current === queue) {
+        document.dispatchEvent(new CustomEvent("nova:save-flushed", { detail }));
       }
+    };
+    document.addEventListener("nova:flush-save", onFlush);
+    return () => {
+      document.removeEventListener("nova:flush-save", onFlush);
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      timerRef.current = null;
+      queueRef.current = null;
+      queue.dispose();
+    };
+  }, []);
+
+  useEffect(() => {
+    // skip mount and strict-mode replay; do not save a newly opened document.
+    if (Object.is(lastTrigger.current, trigger)) return;
+    lastTrigger.current = trigger;
+    const queue = queueRef.current;
+    if (!queue) return;
+    queue.markDirty();
+    // includes title edits, which the plate body event alone does not cover.
+    document.dispatchEvent(new CustomEvent("nova:piece-edited"));
+    const timer = setTimeout(() => {
+      timerRef.current = null;
+      // failure is represented by the chip, and remains dirty for a later retry.
+      void queue.flush().catch(() => {});
     }, DEBOUNCE_MS);
     timerRef.current = timer;
     return () => {
-      cancelled = true;
       clearTimeout(timer);
       if (timerRef.current === timer) timerRef.current = null;
     };
   }, [trigger]);
 
-  // let the editorial panel force a pending save to land NOW: it runs a pass
-  // against the SAVED body, so the body must be current first. cancelling the
-  // pending debounce is the point ... otherwise that timer would fire AFTER the
-  // pass and bump last_edited_at past the pass's watermark, re-staling a fresh
-  // pass. when nothing is pending the body on disk is already current, so we
-  // skip the redundant save (which would falsely stale every other stage's
-  // pass) and just acknowledge. fires nova:save-flushed when settled either way.
   useEffect(() => {
-    const onFlush = () => {
-      const pending = timerRef.current !== null;
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      if (!pending) {
-        document.dispatchEvent(new CustomEvent("nova:save-flushed"));
-        return;
-      }
-      void (async () => {
-        try {
-          setState("saving");
-          await onSaveRef.current();
-          setState("saved");
-          setLastSavedAt(Date.now());
-        } catch {
-          setState("error");
-        } finally {
-          document.dispatchEvent(new CustomEvent("nova:save-flushed"));
-        }
-      })();
-    };
-    document.addEventListener("nova:flush-save", onFlush);
-    return () => document.removeEventListener("nova:flush-save", onFlush);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  // tick once a second so "saved Xs ago" stays honest
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const savedLabel = useMemo(
-    () => formatSavedLabel(state, lastSavedAt, now),
-    [state, lastSavedAt, now],
-  );
-
+  const savedLabel = useMemo(() => formatSavedLabel(state, lastSavedAt, now), [state, lastSavedAt, now]);
   return { state, savedLabel };
 }
