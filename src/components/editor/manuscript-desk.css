@@ -1,0 +1,38 @@
+/* a quiet desk inside the page, not another full-screen workspace. */
+.np-desk { margin: 0 0 28px; border-block: 1px solid var(--lunari-border, #393631); font: 13px/1.65 Inter, system-ui, sans-serif; color: var(--lunari-fg-primary, #e9e4d9); }
+.np-desk > summary { display: flex; align-items: center; gap: 14px; min-height: 48px; cursor: pointer; list-style: none; padding: 8px 2px; }
+.np-desk > summary::-webkit-details-marker { display: none; }
+.np-desk > summary > span:first-child { color: var(--nova-accent, #c9a84c); font-size: 10px; letter-spacing: .14em; }
+.np-desk > summary > span:last-child { margin-left: auto; color: var(--nova-accent, #c9a84c); font-size: 19px; }
+.np-desk > summary strong { font-weight: 400; }
+.np-desk[open] > summary > span:last-child { transform: rotate(45deg); }
+.np-desk__inside { padding: 6px 0 24px; }
+.np-desk__lede { font: italic 17px/1.65 Georgia, serif; margin: 0 0 12px; }
+.np-desk .np-desk__note { color: var(--lunari-fg-muted, #b4ac9c); font: 12px/1.6 Inter, system-ui, sans-serif; margin: 10px 0; }
+.np-desk .np-desk__notice { font: 12px/1.6 Inter, system-ui, sans-serif; color: var(--nova-accent, #c9a84c); overflow-wrap: anywhere; }
+.np-desk__notice:empty { display: none; }
+.np-desk__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
+.np-desk section, .np-desk__grid > div { min-width: 0; }
+.np-desk h2 { font: 400 15px/1.5 Georgia, serif; margin: 22px 0 10px; }
+.np-desk h3 { font: 500 12px/1.5 Inter, system-ui, sans-serif; margin: 12px 0; overflow-wrap: anywhere; }
+.np-desk button { color: inherit; background: transparent; border: 1px solid var(--lunari-border, #393631); border-radius: 3px; font: inherit; min-height: 44px; padding: 8px 12px; text-align: start; cursor: pointer; overflow-wrap: anywhere; max-width: 100%; }
+.np-desk button:hover:not(:disabled), .np-desk button[aria-pressed="true"] { border-color: var(--nova-accent, #c9a84c); background: var(--nova-accent-soft, #c9a84c0f); }
+.np-desk button:disabled { opacity: .5; cursor: not-allowed; }
+.np-desk :is(button,input,summary):focus-visible { outline: 2px solid var(--nova-accent, #c9a84c); outline-offset: 3px; }
+.np-desk__field { display: grid; gap: 6px; margin: 14px 0 10px; }
+.np-desk__field input { color: inherit; background: var(--lunari-bg-surface, #19181c); border: 1px solid var(--lunari-border, #393631); border-radius: 3px; width: 100%; min-width: 0; min-height: 44px; font: inherit; padding: 9px 11px; }
+.np-desk__field input::placeholder { color: var(--lunari-fg-muted, #b4ac9c); }
+.np-desk__check { display: flex; align-items: center; gap: 9px; min-height: 36px; }
+.np-desk__check input { accent-color: var(--nova-accent, #c9a84c); }
+.np-desk__map { list-style: none; padding: 0; margin: 12px 0; max-height: 250px; overflow: auto; scrollbar-gutter: stable; }
+.np-desk__map li { padding: 0; margin: 4px 0; }
+.np-desk__map button { border-color: transparent; width: 100%; white-space: pre-wrap; }
+.np-desk__map small { color: var(--lunari-fg-muted, #b4ac9c); font-size: 10px; margin-inline-end: 8px; }
+.np-desk__map button > small:last-child:not(:first-child) { display: block; }
+.np-desk__actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.np-desk__comparison, .np-desk__way-out { border-top: 1px solid var(--lunari-border, #393631); margin-top: 24px; }
+.np-desk__comparison pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 15px/1.8 Georgia, serif; color: inherit; background: var(--lunari-bg-surface, #19181c); padding: 16px; border-inline-start: 2px solid var(--nova-accent, #c9a84c); max-height: 330px; overflow-y: auto; tab-size: 4; }
+.np-desk__proof { display: block; width: 100%; height: 560px; border: 1px solid var(--lunari-border, #393631); margin: 18px 0; background: #f5f1e9; }
+body.np-focus-on .np-desk { display: none; }
+@media (max-width: 650px) { .np-desk__grid { grid-template-columns: minmax(0, 1fr); gap: 8px; } .np-desk__proof { height: 440px; } }
+@media (prefers-reduced-motion: reduce) { .np-desk *, .np-desk *::before, .np-desk *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
